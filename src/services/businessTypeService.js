@@ -1,0 +1,10 @@
+import { apiRequest } from '../api/httpClient'
+export const getBusinessTypes = () => apiRequest('/business-types')
+export const getPlatformBusinessTypes = () => apiRequest('/platform/business-types')
+export const createBusinessType = (data) => apiRequest('/platform/business-types', { method:'POST', body:JSON.stringify(data) })
+export const updateBusinessType = (id,data) => apiRequest(`/platform/business-types/${id}`, { method:'PATCH', body:JSON.stringify(data) })
+export const deleteBusinessType = (id) => apiRequest(`/platform/business-types/${id}`, { method:'DELETE' })
+export const getIndustryCategories = () => apiRequest('/industry-categories')
+export const getPlatformIndustryCategories = () => apiRequest('/platform/industry-categories')
+export const createIndustryCategory = (data) => apiRequest('/platform/industry-categories', { method:'POST', body:JSON.stringify(data) })
+export const updateIndustryCategory = (id,data) => apiRequest(`/platform/industry-categories/${id}`, { method:'PATCH', body:JSON.stringify(data) })

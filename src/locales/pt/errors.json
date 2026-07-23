@@ -1,0 +1,7 @@
+{
+  "errors": {
+    "invalidCredentials": "Telefone ou senha incorretos.",
+    "restrictedAction": "Seu perfil nao permite esta acao.",
+    "restrictedTitle": "Acao restrita"
+  }
+}

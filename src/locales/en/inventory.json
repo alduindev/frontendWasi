@@ -1,0 +1,50 @@
+{
+  "inventory": {
+    "actions": {
+      "addProduct": "Add product",
+      "changeCategory": "Change category",
+      "changeStatus": "Change status"
+    },
+    "confirmDeleteDescription": "{{count}} product(s) will be deleted. This action cannot be undone.",
+    "confirmDeleteTitle": "Delete products",
+    "empty": "No products",
+    "emptyDescription": "Adjust filters or add the first product to start managing inventory.",
+    "filters": {
+      "advanced": "Filters",
+      "category": "Category",
+      "direction": "Direction",
+      "hasImage": "Image",
+      "hide": "Hide",
+      "maxPrice": "Max price",
+      "maxStock": "Max stock",
+      "minPrice": "Min price",
+      "minStock": "Min stock",
+      "sortBy": "Sort by",
+      "status": "Status",
+      "stock": "Stock"
+    },
+    "removedCount": "{{count}} item(s) removed.",
+    "searchPlaceholder": "Search by name, SKU, brand, supplier, description, category, or code...",
+    "selectProduct": "Select {{name}}",
+    "selected": "{{count}} selected",
+    "newBySimulation": "New by simulation",
+    "subtitle": "Operational view to create, edit, import, export, and manage products.",
+    "table": {
+      "actions": "Actions",
+      "brand": "Brand",
+      "category": "Category",
+      "price": "Price",
+      "product": "Product",
+      "profit": "Profit",
+      "selectAll": "Select all",
+      "status": "Status",
+      "stock": "Stock"
+    },
+    "title": "Operational inventory",
+    "toast": {
+      "categoryUpdated": "Category updated",
+      "productsDuplicated": "Products duplicated",
+      "statusUpdated": "Status updated"
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "alerts": {
+    "duplicateSku": "Duplicate SKU",
+    "duplicateSkuMessage": "{{sku}} is repeated in inventory.",
+    "emptyDescription": "There are no alerts with this filter. You can change the category or review inventory.",
+    "emptyTitle": "All calm",
+    "expiringSoon": "Expiring soon",
+    "expiringSoonMessage": "{{name}} expires soon.",
+    "missingImage": "No image",
+    "missingImageMessage": "{{name}} still has no image.",
+    "outOfStock": "Out of stock",
+    "outOfStockMessage": "{{name}} has no units available.",
+    "stockLow": "Low stock",
+    "stockLowMessage": "{{name}} is below the minimum.",
+    "filterHelp": "Use filters to review urgent items first and open product details.",
+    "filters": {
+      "all": "All",
+      "critical": "Critical",
+      "info": "Informational",
+      "warning": "Warnings"
+    },
+    "pageSubtitle": "Prioritize low stock, expirations, duplicates, and incomplete products from a clear view.",
+    "pageTitle": "Alert center"
+  },
+  "dashboard": {
+    "breadcrumbRoot": "Wasita",
+    "executiveSummary": "Executive summary",
+    "featuredActivity": "Products with the most activity",
+    "charts": {
+      "inventoryValue": "Inventory value",
+      "productsByCategory": "Products by category",
+      "revenue": "Recorded revenue",
+      "stockByCategory": "Stock by category"
+    },
+    "metrics": {
+      "available": "Everything available",
+      "bestSeller": "Best seller",
+      "inventoryValue": "Inventory value",
+      "lowStock": "Low stock",
+      "monthlyIndicator": "Monthly indicator",
+      "sales": "{{count}} sales",
+      "monthlyProducts": "Compared with the previous month",
+      "monthlyValue": "Compared with the previous month",
+      "noComparison": "No comparison available",
+      "monthlyVariation": "Monthly variation",
+      "mostExpensive": "Most expensive",
+      "needsAction": "Needs action",
+      "noAlerts": "No alerts",
+      "outOfStock": "Out of stock",
+      "reviewRestock": "Review restock",
+      "topCategory": "Top category",
+      "totalProducts": "Total products"
+    },
+    "metricEmpty": "There are no products for this indicator. You can go back or open inventory to add new data.",
+    "noAlerts": "No alerts for now.",
+    "relatedProducts": "Related products",
+    "searchPlaceholder": "Search from operational inventory...",
+    "subtitle": "Executive view with metrics, trends, and featured products.",
+    "tabs": {
+      "alerts": "Alerts",
+      "charts": "Charts",
+      "products": "Featured"
+    },
+    "viewAll": "View all",
+    "visualization": "Visualization",
+    "visualizationHelp": "Switch between charts, alerts, and products without making the page longer."
+  },
+  "header": {
+    "alerts": "Recent alerts",
+    "alertsSubtitle": "Detected inventory events",
+    "noAlerts": "No active alerts right now.",
+    "searchEmpty": "Try searching by SKU, brand, supplier, category, or barcode.",
+    "searchPlaceholder": "Search products...",
+    "searchResults": "Results",
+    "showMore": "Show more"
+  },
+  "nav": {
+    "alerts": "Alerts",
+    "history": "History",
+    "invoices": "Receipts",
+    "inventory": "Inventory",
+    "overview": "Overview",
+    "profile": "Profile",
+    "settings": "Settings",
+    "team": "Team",
+    "subscription": "Subscription"
+  },
+  "sidebar": {
+    "collapse": "Collapse sidebar",
+    "close": "Close navigation",
+    "expand": "Expand sidebar",
+    "navigation": "Navigation",
+    "open": "Open navigation"
+  }
+}

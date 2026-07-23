@@ -1,0 +1,7 @@
+{
+  "errors": {
+    "invalidCredentials": "Telefono o contrasena incorrectos.",
+    "restrictedAction": "Tu rol no permite realizar esta accion.",
+    "restrictedTitle": "Accion restringida"
+  }
+}

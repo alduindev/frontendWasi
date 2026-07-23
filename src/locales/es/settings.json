@@ -1,0 +1,14 @@
+{
+  "settings": {
+    "appearance": "Apariencia",
+    "behavior": "Comportamiento",
+    "confirmations": "Mostrar confirmaciones",
+    "currency": "Moneda",
+    "dateFormat": "Formato de fecha",
+    "language": "Idioma",
+    "primaryColor": "Color principal",
+    "regional": "Preferencias regionales",
+    "subtitle": "Controla apariencia, idioma, moneda y comportamiento general de Wasita.",
+    "title": "Configuracion"
+  }
+}

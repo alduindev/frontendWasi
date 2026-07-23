@@ -1,0 +1,12 @@
+import { apiDownload,apiRequest } from '../api/httpClient'
+export const getMyAttendance=()=>apiRequest('/attendance/me')
+export const clockIn=()=>apiRequest('/attendance/clock-in',{method:'POST'})
+export const clockOut=()=>apiRequest('/attendance/clock-out',{method:'POST'})
+export const getSchedule=userId=>apiRequest(`/attendance/users/${userId}/schedule`)
+export const updateSchedule=(userId,days)=>apiRequest(`/attendance/users/${userId}/schedule`,{method:'PUT',body:JSON.stringify({days})})
+export const getBusinessSchedule=()=>apiRequest('/attendance/business-schedule')
+export const updateBusinessSchedule=(days,applyToAll=true)=>apiRequest('/attendance/business-schedule',{method:'PUT',body:JSON.stringify({days,apply_to_all:applyToAll})})
+export const getTodayAttendance=()=>apiRequest('/attendance/today')
+export const getAttendanceHistory=(start,end,userId='')=>apiRequest(`/attendance/history?start=${start}&end=${end}${userId?`&user_id=${userId}`:''}`)
+export const correctAttendance=(id,data)=>apiRequest(`/attendance/records/${id}`,{method:'PATCH',body:JSON.stringify(data)})
+export const exportAttendance=(start,end)=>apiDownload(`/attendance/export.csv?start=${start}&end=${end}`)

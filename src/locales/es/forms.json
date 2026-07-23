@@ -1,0 +1,12 @@
+{
+  "forms": {
+    "placeholder": {
+      "business": "Ej. Bodega Mi Esperanza",
+      "name": "Ej. Juan Perez",
+      "password": "********",
+      "phone": "999999999",
+      "product": "Ej. Cafe organico",
+      "sku": "CF-0012"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "app": {
+    "name": "Wasita",
+    "tagline": "Inventario local"
+  },
+  "actions": {
+    "add": "Agregar",
+    "back": "Volver",
+    "cancel": "Cancelar",
+    "change": "Cambiar",
+    "clear": "Limpiar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "duplicate": "Duplicar",
+    "edit": "Editar",
+    "export": "Exportar",
+    "finish": "Finalizar",
+    "hide": "Ocultar",
+    "import": "Importar",
+    "logout": "Salir",
+    "next": "Siguiente",
+    "open": "Abrir",
+    "openInventory": "Abrir inventario",
+    "previous": "Atras",
+    "reset": "Restablecer",
+    "save": "Guardar",
+    "saveChanges": "Guardar cambios",
+    "showMore": "Mostrar mas",
+    "upload": "Subir"
+  },
+  "common": {
+    "active": "Activo",
+    "all": "Todos",
+    "dark": "Oscuro",
+    "date": "Fecha",
+    "description": "Descripcion",
+    "detail": "Detalle",
+    "language": "Idioma",
+    "light": "Claro",
+    "loading": "Cargando",
+    "noData": "Sin datos",
+    "none": "Ninguno",
+    "search": "Buscar",
+    "settings": "Configuracion",
+    "system": "Sistema",
+    "theme": "Tema"
+  },
+  "languages": {
+    "en": "Ingles",
+    "es": "Español",
+    "pt": "Portugues"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "operator": "Operador"
+  },
+  "plurals": {
+    "alerts": {
+      "one": "{{count}} alerta",
+      "other": "{{count}} alertas"
+    },
+    "products": {
+      "one": "{{count}} producto",
+      "other": "{{count}} productos"
+    },
+    "units": {
+      "one": "{{count}} unidad",
+      "other": "{{count}} unidades"
+    },
+    "matches": {
+      "one": "{{count}} coincidencia",
+      "other": "{{count}} coincidencias"
+    }
+  },
+  "search": {
+    "noMatches": "Sin coincidencias"
+  }
+}

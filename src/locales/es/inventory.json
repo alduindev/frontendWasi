@@ -1,0 +1,50 @@
+{
+  "inventory": {
+    "actions": {
+      "addProduct": "Agregar producto",
+      "changeCategory": "Cambiar categoria",
+      "changeStatus": "Cambiar estado"
+    },
+    "confirmDeleteDescription": "Se eliminaran {{count}} producto(s). Esta accion no se puede deshacer.",
+    "confirmDeleteTitle": "Eliminar productos",
+    "empty": "No hay productos",
+    "emptyDescription": "Ajusta los filtros o agrega el primer producto para empezar a gestionar tu inventario.",
+    "filters": {
+      "advanced": "Filtros",
+      "category": "Categoria",
+      "direction": "Direccion",
+      "hasImage": "Imagen",
+      "hide": "Ocultar",
+      "maxPrice": "Precio max.",
+      "maxStock": "Stock max.",
+      "minPrice": "Precio min.",
+      "minStock": "Stock min.",
+      "sortBy": "Ordenar por",
+      "status": "Estado",
+      "stock": "Stock"
+    },
+    "removedCount": "{{count}} elemento(s) removidos.",
+    "searchPlaceholder": "Buscar por nombre, SKU, marca, proveedor, descripcion, categoria o codigo...",
+    "selectProduct": "Seleccionar {{name}}",
+    "selected": "{{count}} seleccionados",
+    "newBySimulation": "Nuevo por simulacion",
+    "subtitle": "Vista operativa para crear, editar, importar, exportar y administrar productos.",
+    "table": {
+      "actions": "Acciones",
+      "brand": "Marca",
+      "category": "Categoria",
+      "price": "Precio",
+      "product": "Producto",
+      "profit": "Ganancia",
+      "selectAll": "Seleccionar todos",
+      "status": "Estado",
+      "stock": "Stock"
+    },
+    "title": "Inventario operativo",
+    "toast": {
+      "categoryUpdated": "Categoria actualizada",
+      "productsDuplicated": "Productos duplicados",
+      "statusUpdated": "Estado actualizado"
+    }
+  }
+}

@@ -1,0 +1,81 @@
+import { registerFormTemplate } from "../../engine/templateRegistry";
+export default registerFormTemplate({
+  key: "health.patient",
+  title: { create: "Registrar paciente", edit: "Editar paciente" },
+  defaults: { documentType: "DNI", sex: "unspecified", status: "active" },
+  toPayload: (v) => ({ ...v, birthDate: v.birthDate || null }),
+  sections: [
+    {
+      id: "personal",
+      title: "Información personal",
+      icon: "person",
+      fields: [
+        { name: "firstName", label: "Nombres", required: true },
+        { name: "lastName", label: "Apellidos", required: true },
+        {
+          name: "documentType",
+          label: "Tipo de documento",
+          type: "catalog",
+          catalog: "document-types",
+          required: true,
+        },
+        {
+          name: "document",
+          label: "Número de documento",
+          required: true,
+          minLength: 8,
+          maxLength: 8,
+          nonNumericMaxLength: 24,
+          pattern: "\\d{8}",
+          numericWhen: { field: "documentType", values: ["DNI", "dni"] },
+          help: "Para DNI ingresa exactamente 8 números.",
+        },
+        { name: "birthDate", label: "Fecha de nacimiento", type: "date" },
+        {
+          name: "sex",
+          label: "Sexo",
+          type: "select",
+          options: [
+            { value: "female", label: "Femenino" },
+            { value: "male", label: "Masculino" },
+            { value: "other", label: "Otro" },
+            { value: "unspecified", label: "No especificado" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "contact",
+      title: "Contacto",
+      icon: "contact_phone",
+      fields: [
+        { name: "phone", label: "Teléfono", type: "tel" },
+        { name: "email", label: "Correo", type: "email" },
+        { name: "address", label: "Dirección" },
+        { name: "emergencyContact", label: "Contacto de emergencia" },
+        {
+          name: "emergencyPhone",
+          label: "Teléfono de emergencia",
+          type: "tel",
+        },
+      ],
+    },
+    {
+      id: "medical",
+      title: "Información médica",
+      icon: "medical_information",
+      fields: [
+        { name: "bloodType", label: "Grupo sanguíneo" },
+        { name: "allergies", label: "Alergias", type: "textarea" },
+        {
+          name: "chronicConditions",
+          label: "Enfermedades crónicas",
+          type: "textarea",
+        },
+        { name: "insuranceProvider", label: "Seguro de salud" },
+        { name: "insuranceNumber", label: "Número de póliza" },
+        { name: "notes", label: "Observaciones", type: "textarea" },
+      ],
+    },
+  ],
+});

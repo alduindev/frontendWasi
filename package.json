@@ -1,0 +1,57 @@
+{
+  "name": "wasi",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "vite --mode dev",
+    "start:local": "vite --mode localhost",
+    "start:dev": "vite --mode dev",
+    "start:pre": "vite --mode pre",
+    "start:prod": "vite --mode prod",
+
+    "local": "vite --mode localhost",
+    "dev": "vite --mode dev",
+    "dev:local": "vite --mode localhost",
+    "dev:pre": "vite --mode pre",
+    "dev:prod": "vite --mode prod",
+
+    "build": "vite build --mode prod",
+    "build:local": "vite build --mode localhost",
+    "build:dev": "vite build --mode dev",
+    "build:pre": "vite build --mode pre",
+    "build:prod": "vite build --mode prod",
+    "build:vercel": "node scripts/build-vercel.mjs",
+
+    "preview": "vite preview",
+    "preview:local": "vite preview --mode localhost",
+    "preview:dev": "vite preview --mode dev",
+    "preview:pre": "vite preview --mode pre",
+    "preview:prod": "vite preview --mode prod",
+
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.2",
+    "framer-motion": "^12.42.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1",
+    "recharts": "^3.9.2",
+    "tailwindcss": "^4.3.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@eslint/js": "^10.0.1",
+    "@rolldown/plugin-babel": "^0.2.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "vite": "^8.1.1"
+  }
+}

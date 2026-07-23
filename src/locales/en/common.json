@@ -1,0 +1,9 @@
+{
+  "app": {"name": "Wasita", "tagline": "Local inventory"},
+  "actions": {"add": "Add", "back": "Back", "cancel": "Cancel", "change": "Change", "clear": "Clear", "close": "Close", "confirm": "Confirm", "delete": "Delete", "duplicate": "Duplicate", "edit": "Edit", "export": "Export", "finish": "Finish", "hide": "Hide", "import": "Import", "logout": "Logout", "next": "Next", "open": "Open", "openInventory": "Open inventory", "previous": "Previous", "reset": "Reset", "save": "Save", "saveChanges": "Save changes", "showMore": "Show more", "upload": "Upload"},
+  "common": {"active": "Active", "all": "All", "dark": "Dark", "date": "Date", "description": "Description", "detail": "Detail", "language": "Language", "light": "Light", "loading": "Loading", "noData": "No data", "none": "None", "search": "Search", "settings": "Settings", "system": "System", "theme": "Theme"},
+  "languages": {"en": "English", "es": "Spanish", "pt": "Portuguese"},
+  "roles": {"admin": "Administrator", "operator": "Operator"},
+  "plurals": {"alerts": {"one": "{{count}} alert", "other": "{{count}} alerts"}, "matches": {"one": "{{count}} match", "other": "{{count}} matches"}, "products": {"one": "{{count}} product", "other": "{{count}} products"}, "units": {"one": "{{count}} unit", "other": "{{count}} units"}},
+  "search": {"noMatches": "No matches"}
+}

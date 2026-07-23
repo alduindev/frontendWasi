@@ -1,0 +1,5 @@
+{
+  "tour": {
+    "step": "Paso {{current}} de {{total}}"
+  }
+}

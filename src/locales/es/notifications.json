@@ -1,0 +1,13 @@
+{
+  "notifications": {
+    "errorImport": "Error al importar",
+    "historyCleared": "Historial limpiado",
+    "imageInvalid": "Imagen invalida",
+    "importCompleted": "Importacion completada",
+    "productAdded": "Producto agregado",
+    "productDeleted": "Producto eliminado",
+    "productDuplicated": "Producto duplicado",
+    "productUpdated": "Producto actualizado",
+    "saved": "Guardado"
+  }
+}

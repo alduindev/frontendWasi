@@ -1,0 +1,15 @@
+{
+  "profile": {
+    "address": "Direccion",
+    "avatar": "Avatar",
+    "changePhoto": "Cambiar foto",
+    "company": "Empresa",
+    "defaultCompany": "Mi negocio",
+    "defaultUser": "Admin Local",
+    "email": "Correo",
+    "name": "Nombre",
+    "phone": "Telefono",
+    "subtitle": "Administra tus datos personales y preferencias.",
+    "title": "Tu perfil"
+  }
+}

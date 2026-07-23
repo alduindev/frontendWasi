@@ -1,0 +1,50 @@
+{
+  "inventory": {
+    "actions": {
+      "addProduct": "Adicionar produto",
+      "changeCategory": "Alterar categoria",
+      "changeStatus": "Alterar status"
+    },
+    "confirmDeleteDescription": "{{count}} produto(s) serao excluidos. Esta acao nao pode ser desfeita.",
+    "confirmDeleteTitle": "Excluir produtos",
+    "empty": "Nao ha produtos",
+    "emptyDescription": "Ajuste filtros ou adicione o primeiro produto para comecar.",
+    "filters": {
+      "advanced": "Filtros",
+      "category": "Categoria",
+      "direction": "Direcao",
+      "hasImage": "Imagem",
+      "hide": "Ocultar",
+      "maxPrice": "Preco max.",
+      "maxStock": "Estoque max.",
+      "minPrice": "Preco min.",
+      "minStock": "Estoque min.",
+      "sortBy": "Ordenar por",
+      "status": "Status",
+      "stock": "Estoque"
+    },
+    "removedCount": "{{count}} item(ns) removido(s).",
+    "searchPlaceholder": "Buscar por nome, SKU, marca, fornecedor, descricao, categoria ou codigo...",
+    "selectProduct": "Selecionar {{name}}",
+    "selected": "{{count}} selecionados",
+    "newBySimulation": "Novo por simulacao",
+    "subtitle": "Visao operacional para criar, editar, importar, exportar e gerenciar produtos.",
+    "table": {
+      "actions": "Acoes",
+      "brand": "Marca",
+      "category": "Categoria",
+      "price": "Preco",
+      "product": "Produto",
+      "profit": "Lucro",
+      "selectAll": "Selecionar todos",
+      "status": "Status",
+      "stock": "Estoque"
+    },
+    "title": "Inventario operacional",
+    "toast": {
+      "categoryUpdated": "Categoria atualizada",
+      "productsDuplicated": "Produtos duplicados",
+      "statusUpdated": "Status atualizado"
+    }
+  }
+}

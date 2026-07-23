@@ -1,0 +1,9 @@
+{
+  "app": {"name": "Wasita", "tagline": "Inventario local"},
+  "actions": {"add": "Adicionar", "back": "Voltar", "cancel": "Cancelar", "change": "Alterar", "clear": "Limpar", "close": "Fechar", "confirm": "Confirmar", "delete": "Excluir", "duplicate": "Duplicar", "edit": "Editar", "export": "Exportar", "finish": "Finalizar", "hide": "Ocultar", "import": "Importar", "logout": "Sair", "next": "Proximo", "open": "Abrir", "openInventory": "Abrir inventario", "previous": "Anterior", "reset": "Redefinir", "save": "Salvar", "saveChanges": "Salvar alteracoes", "showMore": "Ver mais", "upload": "Enviar"},
+  "common": {"active": "Ativo", "all": "Todos", "dark": "Escuro", "date": "Data", "description": "Descricao", "detail": "Detalhe", "language": "Idioma", "light": "Claro", "loading": "Carregando", "noData": "Sem dados", "none": "Nenhum", "search": "Buscar", "settings": "Configuracoes", "system": "Sistema", "theme": "Tema"},
+  "languages": {"en": "Ingles", "es": "Espanhol", "pt": "Portugues"},
+  "roles": {"admin": "Administrador", "operator": "Operador"},
+  "plurals": {"alerts": {"one": "{{count}} alerta", "other": "{{count}} alertas"}, "matches": {"one": "{{count}} coincidencia", "other": "{{count}} coincidencias"}, "products": {"one": "{{count}} produto", "other": "{{count}} produtos"}, "units": {"one": "{{count}} unidade", "other": "{{count}} unidades"}},
+  "search": {"noMatches": "Sem resultados"}
+}

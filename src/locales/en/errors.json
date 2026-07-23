@@ -1,0 +1,7 @@
+{
+  "errors": {
+    "invalidCredentials": "Incorrect phone or password.",
+    "restrictedAction": "Your role cannot perform this action.",
+    "restrictedTitle": "Restricted action"
+  }
+}

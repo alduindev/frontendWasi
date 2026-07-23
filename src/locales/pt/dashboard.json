@@ -1,0 +1,95 @@
+{
+  "alerts": {
+    "duplicateSku": "SKU duplicado",
+    "duplicateSkuMessage": "{{sku}} esta repetido no inventario.",
+    "emptyDescription": "Nao ha alertas com este filtro. Voce pode mudar a categoria ou revisar o inventario.",
+    "emptyTitle": "Tudo tranquilo",
+    "expiringSoon": "Perto do vencimento",
+    "expiringSoonMessage": "{{name}} vence em breve.",
+    "missingImage": "Sem imagem",
+    "missingImageMessage": "{{name}} ainda nao tem imagem.",
+    "outOfStock": "Produto esgotado",
+    "outOfStockMessage": "{{name}} nao tem unidades disponiveis.",
+    "stockLow": "Estoque baixo",
+    "stockLowMessage": "{{name}} esta abaixo do minimo.",
+    "filterHelp": "Use os filtros para revisar primeiro o urgente e abrir detalhes do produto.",
+    "filters": {
+      "all": "Todas",
+      "critical": "Criticas",
+      "info": "Informativas",
+      "warning": "Avisos"
+    },
+    "pageSubtitle": "Priorize estoque baixo, vencimentos, duplicados e produtos incompletos em uma vista clara.",
+    "pageTitle": "Centro de alertas"
+  },
+  "dashboard": {
+    "breadcrumbRoot": "Wasita",
+    "executiveSummary": "Resumo executivo",
+    "featuredActivity": "Produtos com maior atividade",
+    "charts": {
+      "inventoryValue": "Valor do inventario",
+      "productsByCategory": "Produtos por categoria",
+      "revenue": "Receita registrada",
+      "stockByCategory": "Estoque por categoria"
+    },
+    "metrics": {
+      "available": "Tudo disponivel",
+      "bestSeller": "Mais vendido",
+      "inventoryValue": "Valor do inventario",
+      "lowStock": "Estoque baixo",
+      "monthlyIndicator": "Indicador mensal",
+      "sales": "{{count}} vendas",
+      "monthlyProducts": "Comparacao com o mes anterior",
+      "monthlyValue": "Comparacao com o mes anterior",
+      "noComparison": "Sem comparacao disponivel",
+      "monthlyVariation": "Variacao mensal",
+      "mostExpensive": "Mais caro",
+      "needsAction": "Requer acao",
+      "noAlerts": "Sem alertas",
+      "outOfStock": "Esgotados",
+      "reviewRestock": "Revisar reposicao",
+      "topCategory": "Categoria lider",
+      "totalProducts": "Total de produtos"
+    },
+    "metricEmpty": "Nao ha produtos para este indicador. Voce pode voltar ou abrir o inventario para adicionar novos dados.",
+    "noAlerts": "Sem alertas por enquanto.",
+    "relatedProducts": "Produtos relacionados",
+    "searchPlaceholder": "Busque no inventario operacional...",
+    "subtitle": "Visao executiva com metricas, tendencias e produtos em destaque.",
+    "tabs": {
+      "alerts": "Alertas",
+      "charts": "Graficos",
+      "products": "Destaques"
+    },
+    "viewAll": "Ver todos",
+    "visualization": "Visualizacao",
+    "visualizationHelp": "Alterne entre graficos, alertas e produtos sem alongar a pagina."
+  },
+  "header": {
+    "alerts": "Alertas recentes",
+    "alertsSubtitle": "Eventos detectados no inventario",
+    "noAlerts": "Nao ha alertas ativas agora.",
+    "searchEmpty": "Busque por SKU, marca, fornecedor, categoria ou codigo de barras.",
+    "searchPlaceholder": "Buscar produtos...",
+    "searchResults": "Resultados",
+    "showMore": "Ver mais"
+  },
+  "nav": {
+    "alerts": "Alertas",
+    "history": "Historico",
+    "invoices": "Comprovantes",
+    "inventory": "Inventario",
+    "overview": "Resumo",
+    "profile": "Perfil",
+    "settings": "Configuracoes",
+    "team": "Equipe",
+    "subscription": "Assinatura"
+  },
+  "sidebar": {
+    "collapse": "Recolher barra lateral",
+    "close": "Fechar navegacao",
+    "expand": "Expandir barra lateral",
+    "navigation": "Navegacao",
+    "open": "Abrir navegacao"
+  }
+}
