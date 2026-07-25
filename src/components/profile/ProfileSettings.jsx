@@ -237,12 +237,12 @@ export default function ProfileSettings({
             <Input
               inputMode="numeric"
               label="Teléfono"
-              maxLength="15"
-              minLength="6"
+              maxLength="9"
+              minLength="9"
               onChange={(event) =>
                 updateProfile("phone", event.target.value.replace(/\D/g, ""))
               }
-              pattern="[0-9]{6,15}"
+              pattern="9[0-9]{8}"
               required
               value={profile.phone || ""}
             />

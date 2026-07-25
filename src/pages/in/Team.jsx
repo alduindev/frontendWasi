@@ -1126,15 +1126,15 @@ function UserForm({ access, onClose, onSaved, user }) {
               defaultValue={user?.phone || ""}
               inputMode="numeric"
               label="Teléfono"
-              maxLength="15"
-              minLength="6"
+              maxLength="9"
+              minLength="9"
               name="phone"
               onInput={(event) => {
                 event.currentTarget.value = event.currentTarget.value
                   .replace(/\D/g, "")
-                  .slice(0, 15);
+                  .slice(0, 9);
               }}
-              pattern="\d{6,15}"
+              pattern="9[0-9]{8}"
               required
               type="tel"
             />

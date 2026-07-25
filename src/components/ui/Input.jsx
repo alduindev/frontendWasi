@@ -1,6 +1,7 @@
 export default function Input({ className = '', inputClassName = '', label, suffix, ...props }) {
   const phoneField = /tel[eé]fono/i.test(String(label || ''))
-  const inputProps = phoneField ? { ...props, inputMode: props.inputMode || 'numeric', maxLength: props.maxLength || 15, minLength: props.minLength || 6, pattern: props.pattern || '\\d{6,15}', type: props.type || 'tel', onInput: event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 15); props.onInput?.(event) } } : props
+  const phoneMaxLength = Number(props.maxLength || 15)
+  const inputProps = phoneField ? { ...props, inputMode: props.inputMode || 'numeric', maxLength: phoneMaxLength, minLength: props.minLength || 6, pattern: props.pattern || '\\d{6,15}', type: props.type || 'tel', onInput: event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, phoneMaxLength); props.onInput?.(event) } } : props
   return (
     <label className={`grid min-w-0 gap-1.5 text-sm font-bold text-on-surface-variant ${className}`}>
       {label}

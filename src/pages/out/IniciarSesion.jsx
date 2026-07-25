@@ -12,17 +12,28 @@ export default function IniciarSesion() {
   const { login } = useAuth();
   const { t } = useI18n();
   const [error, setError] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [touched, setTouched] = useState({ phone: false, password: false });
   const [submitting, setSubmitting] = useState(false);
+  const phoneIsValid = /^9\d{8}$/.test(phone);
+  const passwordIsValid = password.length >= 8 && password.length <= 128;
+  const phoneError =
+    touched.phone && !phoneIsValid
+      ? "Ingresa un celular peruano válido de 9 dígitos."
+      : "";
+  const passwordError =
+    touched.password && !passwordIsValid
+      ? "La contraseña debe tener entre 8 y 128 caracteres."
+      : "";
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setTouched({ phone: true, password: true });
+    if (!phoneIsValid || !passwordIsValid) return;
     setSubmitting(true);
     setError("");
-    const formData = new FormData(event.currentTarget);
     try {
-      const user = await login({
-        password: formData.get("password"),
-        phone: formData.get("phone"),
-      });
+      const user = await login({ password, phone });
       navigate(
         user.role === "super_admin"
           ? "/platform"
@@ -57,15 +68,35 @@ export default function IniciarSesion() {
           {error}
         </div>
       ) : null}
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form
+        autoComplete="off"
+        className="space-y-5"
+        noValidate
+        onSubmit={handleSubmit}
+      >
         <AuthField
-          autoComplete="username"
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          error={phoneError}
+          helperText="Usa los 9 dígitos de tu número celular, sin espacios."
           id="phone"
+          inputMode="numeric"
           icon="person"
-          label="Correo o celular"
-          maxLength="254"
-          placeholder="nombre@empresa.com o 999 999 999"
+          label="Número de celular"
+          maxLength={9}
+          minLength={9}
+          numericOnly
+          onBlur={() => setTouched((current) => ({ ...current, phone: true }))}
+          onChange={(event) => {
+            setPhone(event.target.value);
+            setError("");
+          }}
+          pattern="9[0-9]{8}"
+          placeholder="999999999"
           required
+          type="tel"
+          value={phone}
         />
         <PasswordField
           action={
@@ -76,13 +107,24 @@ export default function IniciarSesion() {
               {t("auth.forgotPassword")}
             </Link>
           }
-          autoComplete="current-password"
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
           enforcePolicy={false}
+          error={passwordError}
           id="password"
           label={t("auth.password")}
           maxLength="128"
+          onBlur={() =>
+            setTouched((current) => ({ ...current, password: true }))
+          }
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setError("");
+          }}
           placeholder={t("forms.placeholder.password")}
           required
+          value={password}
           variant="auth"
         />
         <AuthButton disabled={submitting} type="submit">

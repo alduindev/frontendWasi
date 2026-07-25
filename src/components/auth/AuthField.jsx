@@ -5,10 +5,23 @@ export default function AuthField({
   action,
   prefix,
   suffix,
+  error = '',
+  helperText = '',
+  numericOnly = false,
   className = '',
   inputClassName = '',
   ...inputProps
 }) {
+  const messageId = `${id}-message`
+  const handleChange = (event) => {
+    if (numericOnly) {
+      const limit = Number(inputProps.maxLength) || undefined
+      const digits = event.currentTarget.value.replace(/\D/g, '')
+      event.currentTarget.value = limit ? digits.slice(0, limit) : digits
+    }
+    inputProps.onChange?.(event)
+  }
+
   return (
     <div className={`min-w-0 ${className}`}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -30,16 +43,39 @@ export default function AuthField({
             </span>
           ) : null}
           <input
-            className={`h-[52px] w-full rounded-2xl border border-outline-variant bg-surface-container-lowest py-3 pr-4 text-base text-on-surface outline-none transition focus:border-primary-container focus:ring-4 focus:ring-primary-container/15 ${
+            aria-describedby={error || helperText ? messageId : undefined}
+            aria-invalid={Boolean(error)}
+            className={`h-[52px] w-full rounded-2xl border bg-surface-container-lowest py-3 pr-4 text-base text-on-surface outline-none transition ${
+              error
+                ? 'border-error focus:border-error focus:ring-4 focus:ring-error/10'
+                : 'border-outline-variant focus:border-primary-container focus:ring-4 focus:ring-primary-container/15'
+            } ${
               icon ? 'pl-12' : 'pl-4'
             } ${suffix ? 'pr-12' : ''} ${inputClassName}`}
             id={id}
             name={id}
             {...inputProps}
+            onChange={handleChange}
           />
           {suffix}
         </div>
       </div>
+      {error || helperText ? (
+        <p
+          aria-live={error ? 'polite' : undefined}
+          className={`ml-1 mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${
+            error ? 'text-error' : 'text-on-surface-variant'
+          }`}
+          id={messageId}
+        >
+          {error ? (
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">
+              error
+            </span>
+          ) : null}
+          {error || helperText}
+        </p>
+      ) : null}
     </div>
   )
 }

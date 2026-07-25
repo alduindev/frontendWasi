@@ -181,9 +181,9 @@ export default function Registro() {
         <div className="h-64 animate-pulse rounded-2xl bg-surface-container" />
       ) : null}
       {!loading && step === 1 ? (
-        <form className="grid gap-3" onSubmit={next}>
+        <form autoComplete="off" className="grid gap-3" onSubmit={next}>
           <AuthField
-            autoComplete="name"
+            autoComplete="off"
             icon="person"
             id="name"
             label="Nombre completo"
@@ -193,7 +193,7 @@ export default function Registro() {
             value={values.name}
           />
           <AuthField
-            autoComplete="email"
+            autoComplete="off"
             icon="mail"
             id="email"
             label="Correo"
@@ -204,17 +204,24 @@ export default function Registro() {
             value={values.email}
           />
           <AuthField
-            autoComplete="tel"
+            autoComplete="off"
+            helperText="Usa los 9 dígitos de tu número celular, sin espacios."
             icon="call"
             id="phone"
+            inputMode="numeric"
             label="Teléfono"
+            maxLength={9}
+            minLength={9}
             name="phone"
+            numericOnly
             onChange={change}
+            pattern="9[0-9]{8}"
             required
             type="tel"
             value={values.phone}
           />
           <PasswordField
+            autoComplete="off"
             id="password"
             name="password"
             onChange={change}
@@ -224,6 +231,7 @@ export default function Registro() {
             variant="auth"
           />
           <PasswordField
+            autoComplete="off"
             compareTo={values.password}
             id="passwordConfirmation"
             label="Confirmar contraseña"

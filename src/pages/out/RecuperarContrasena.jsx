@@ -98,9 +98,9 @@ export default function RecuperarContrasena() {
         </div>
       ) : null}
       {step === "identify" ? (
-        <form className="space-y-5" onSubmit={requestCode}>
+        <form autoComplete="off" className="space-y-5" onSubmit={requestCode}>
           <AuthField
-            autoComplete="username"
+            autoComplete="off"
             icon="person"
             id="identifier"
             label="Correo o celular"
@@ -115,7 +115,7 @@ export default function RecuperarContrasena() {
         </form>
       ) : null}
       {step === "confirm" ? (
-        <form className="space-y-5" onSubmit={resetPassword}>
+        <form autoComplete="off" className="space-y-5" onSubmit={resetPassword}>
           <div className="rounded-2xl bg-primary-fixed p-4 text-sm text-on-primary-fixed-variant">
             <b>{message}</b>
             {developmentCode ? (
@@ -128,17 +128,19 @@ export default function RecuperarContrasena() {
             ) : null}
           </div>
           <AuthField
-            autoComplete="one-time-code"
+            autoComplete="off"
             icon="pin"
             id="code"
             inputMode="numeric"
             label="Código de verificación"
             maxLength="6"
+            numericOnly
             pattern="[0-9]{6}"
             placeholder="000000"
             required
           />
           <PasswordField
+            autoComplete="off"
             id="password"
             label="Nueva contraseña"
             onChange={(event) => setPassword(event.target.value)}
@@ -148,6 +150,7 @@ export default function RecuperarContrasena() {
             variant="auth"
           />
           <PasswordField
+            autoComplete="off"
             compareTo={password}
             id="passwordConfirmation"
             label="Confirmar contraseña"
