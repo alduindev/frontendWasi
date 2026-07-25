@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Badge from "../../components/atoms/Badge";
 import Card from "../../components/atoms/Card";
 import EmptyState from "../../components/molecules/EmptyState";
@@ -86,6 +86,7 @@ function Metric({ icon, label, note, value }) {
 }
 
 export default function HospitalityDashboard() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState(null),
     [rooms, setRooms] = useState([]),
     [reservations, setReservations] = useState([]),
@@ -425,12 +426,10 @@ export default function HospitalityDashboard() {
               pageStep
             >
               {actions.map((action, index) => (
-                <Link
+                <div
                   className="group min-w-full shrink-0 snap-start overflow-hidden rounded-3xl border border-outline-variant bg-white text-left shadow-sm transition hover:border-primary hover:shadow-xl"
                   data-drag-card
                   key={action.to}
-                  onClick={() => setQuickOpen(false)}
-                  to={action.to}
                 >
                   <article className="grid min-h-[22rem] sm:min-h-[19rem] sm:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]">
                     <div
@@ -465,15 +464,23 @@ export default function HospitalityDashboard() {
                         </span>
                         <span>{action.hint}</span>
                       </div>
-                      <span className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 font-bold text-white shadow-md transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
+                      <button
+                        className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25"
+                        data-no-drag
+                        onClick={() => {
+                          setQuickOpen(false);
+                          navigate(action.to);
+                        }}
+                        type="button"
+                      >
                         Abrir esta sección
                         <span className="material-symbols-outlined">
                           arrow_forward
                         </span>
-                      </span>
+                      </button>
                     </div>
                   </article>
-                </Link>
+                </div>
               ))}
             </HorizontalScroller>
           </div>
