@@ -1672,9 +1672,17 @@ export default function Team() {
             </HorizontalScroller>
           ) : (
             <EmptyState
-              description="Prueba otra búsqueda o función."
+              description={
+                teamUsers.length
+                  ? "Prueba otra búsqueda o función."
+                  : "Esta empresa todavía no tiene operarios. Agrega el primer colaborador para asignarle un cargo y sus accesos."
+              }
               icon="person_search"
-              title="No encontramos colaboradores"
+              title={
+                teamUsers.length
+                  ? "No encontramos colaboradores"
+                  : "Aún no hay colaboradores"
+              }
             />
           )}
         </section>
