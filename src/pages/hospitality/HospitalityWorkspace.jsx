@@ -18,6 +18,7 @@ import VisitDetailModal from "./VisitDetailModal";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import HospitalityStayNav from "./HospitalityStayNav";
 import EntityAttachments from "../../components/attachments/EntityAttachments";
+import { matchesEntitySearch } from "../../utils/entitySearch";
 
 const titles = {
   rooms: "Habitaciones",
@@ -322,14 +323,15 @@ export default function HospitalityWorkspace() {
   );
   const visibleGuests = useMemo(
     () =>
-      guests.filter(
-        (x) =>
-          !normalized ||
-          `${x.name} ${x.document} ${x.phone} ${x.email}`
-            .toLowerCase()
-            .includes(normalized),
+      guests.filter((x) =>
+        matchesEntitySearch(x, search, (item) => [
+          item.name,
+          item.document,
+          item.phone,
+          item.email,
+        ]),
       ),
-    [guests, normalized],
+    [guests, search],
   );
   const visibleReservations = useMemo(
     () =>
@@ -425,7 +427,7 @@ export default function HospitalityWorkspace() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder={
                 moduleKey === "guests"
-                  ? "Buscar por nombre, documento o contacto"
+                  ? "Buscar por nombre, DNI o celular"
                   : "Buscar por huésped, habitación o tipo"
               }
               value={search}
