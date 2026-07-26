@@ -8,6 +8,7 @@ import {
   updateReservation,
 } from "../../../services/hospitalityService";
 import GuestFormModal from "./GuestFormModal";
+import EntitySearchSelect from "../../../components/ui/EntitySearchSelect";
 
 const field =
   "min-h-11 rounded-xl border border-outline-variant bg-white px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -153,21 +154,28 @@ export default function ReservationWizard({
                 Nuevo huésped
               </Button>
             </div>
-            <label className="grid gap-1 text-sm font-bold">
-              Huésped
-              <select
-                className={field}
-                onChange={(event) => set("guestId", event.target.value)}
-                value={data.guestId}
-              >
-                <option value="">Seleccionar huésped</option>
-                {guests.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name} · {option.documentType} {option.document}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <EntitySearchSelect
+              getLabel={(option) => option.name}
+              getMeta={(option) =>
+                [
+                  `${option.documentType || "Documento"} ${option.document || ""}`,
+                  option.phone,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              }
+              getSearchValues={(option) => [
+                option.name,
+                option.document,
+                option.phone,
+                option.email,
+              ]}
+              items={guests}
+              label="Huésped"
+              onChange={(value) => set("guestId", value)}
+              placeholder="Buscar por nombre, DNI o celular"
+              value={data.guestId}
+            />
             {guest ? (
               <div className="rounded-2xl border border-primary/20 bg-primary-fixed p-4">
                 <div className="flex items-center gap-3">
