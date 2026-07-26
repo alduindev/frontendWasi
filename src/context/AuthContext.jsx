@@ -31,8 +31,8 @@ export function AuthProvider({ children }) {
       try {
         const sessionUser = await getSessionUser();
         if (active) setUser(sessionUser);
-      } catch {
-        if (active) logout();
+      } catch (error) {
+        if (active && [401, 403].includes(error?.status)) await logout();
       } finally {
         if (active) setIsLoading(false);
       }
