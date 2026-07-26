@@ -1,16 +1,30 @@
 import { apiRequest } from '../api/httpClient'
 import { clearAccessToken, setAccessToken } from '../api/authToken'
 
+async function confirmAuthenticatedSession(result) {
+  const accessToken = String(result?.accessToken || '').trim()
+  if (!accessToken) {
+    clearAccessToken()
+    throw new Error('El servidor no confirmó una sesión segura. Intenta nuevamente.')
+  }
+
+  setAccessToken(accessToken)
+  try {
+    return await apiRequest('/auth/me')
+  } catch (error) {
+    clearAccessToken()
+    throw error
+  }
+}
+
 export async function loginUser(credentials) {
   const result = await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify(credentials) })
-  setAccessToken(result.accessToken)
-  return result.user
+  return confirmAuthenticatedSession(result)
 }
 
 export async function registerUser(data) {
   const result = await apiRequest('/auth/register', { method: 'POST', body: JSON.stringify(data) })
-  setAccessToken(result.accessToken)
-  return result.user
+  return confirmAuthenticatedSession(result)
 }
 
 export const requestPasswordRecovery = (identifier) => apiRequest('/auth/password-recovery/request', { method: 'POST', body: JSON.stringify({ identifier }) })
