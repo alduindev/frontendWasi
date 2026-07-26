@@ -7,6 +7,7 @@ import DashboardShell from "../../components/organisms/DashboardShell";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import * as api from "../../services/healthService";
+import { OdontogramModal } from "./DentalWorkspace";
 
 const states = {
   waiting: ["En espera", "schedule", "amber"],
@@ -67,21 +68,45 @@ const quickActions = [
   },
 ];
 
-function Metric({ icon, label, value, note }) {
+function Metric({ icon, label, value, note, onClick }) {
   return (
-    <Card className="relative min-h-28 overflow-hidden p-3">
+    <button
+      aria-label={`Ver detalle de ${label}`}
+      className="group relative min-h-28 w-full overflow-hidden rounded-3xl border border-outline-variant bg-white p-3 text-left shadow-[0_12px_40px_rgba(31,24,39,0.06)] transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+      data-drag-card
+      onClick={onClick}
+      type="button"
+    >
       <div className="absolute -right-5 -top-5 h-16 w-16 rounded-full bg-primary-fixed opacity-60" />
       <span className="material-symbols-outlined relative text-xl text-primary">
         {icon}
+      </span>
+      <span className="material-symbols-outlined absolute right-3 top-3 text-lg text-primary opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+        arrow_outward
       </span>
       <p className="relative mt-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
         {label}
       </p>
       <p className="relative text-2xl font-extrabold">{value}</p>
-      <p className="relative truncate text-[11px] text-on-surface-variant">
-        {note}
-      </p>
-    </Card>
+      <div className="relative flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-[11px] text-on-surface-variant">
+          {note}
+        </p>
+        <span className="shrink-0 text-[10px] font-bold text-primary">
+          Ver detalle
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function PatientInitials({ patient }) {
+  const firstName = patient?.firstName || "";
+  const lastName = patient?.lastName || "";
+  return (
+    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-fixed font-bold text-primary">
+      {`${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase() || "?"}
+    </span>
   );
 }
 
@@ -98,6 +123,12 @@ export default function DentalDashboard() {
   const [view, setView] = useState("flow");
   const [activeStatus, setActiveStatus] = useState("waiting");
   const [quickOpen, setQuickOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState("");
+  const [recordPatient, setRecordPatient] = useState(null);
+  const [recordChart, setRecordChart] = useState([]);
+  const [recordLoading, setRecordLoading] = useState(false);
+  const [recordError, setRecordError] = useState("");
+  const [recordExporting, setRecordExporting] = useState(false);
   const load = useCallback(async () => {
     try {
       const [p, a, r, o] = await Promise.all([
@@ -143,6 +174,108 @@ export default function DentalDashboard() {
       return acc;
     }, {}),
   ).sort((a, b) => b[1] - a[1]);
+  const detailDefinitions = useMemo(
+    () => ({
+      patients: {
+        title: "Pacientes activos",
+        description:
+          "Selecciona un paciente para revisar su expediente clínico completo.",
+        icon: "groups",
+        rows: patients.map((patient) => ({
+          id: patient.id,
+          patient,
+          title: `${patient.firstName} ${patient.lastName}`,
+          detail: `${patient.documentType || "DNI"} ${patient.document || "Sin documento"}`,
+          meta: patient.phone || patient.email || "Sin datos de contacto",
+          badge: patient.status === "active" ? "Activo" : patient.status,
+        })),
+        empty: "Aún no hay pacientes registrados.",
+        route: "/dashboard/patients",
+        routeLabel: "Gestionar pacientes",
+      },
+      appointments: {
+        title: "Citas de hoy",
+        description:
+          "Agenda del día con paciente, motivo y odontólogo responsable.",
+        icon: "today",
+        rows: todayItems.map((appointment) => ({
+          id: appointment.id,
+          patient: appointment.patient,
+          title: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+          detail: `${time(appointment.startsAt)} · ${appointment.reason || "Consulta dental"}`,
+          meta: appointment.professionalName || "Odontólogo por asignar",
+          badge:
+            appointment.status === "confirmed" ? "Confirmada" : "Programada",
+        })),
+        empty: "No hay citas programadas para hoy.",
+        route: "/dashboard/appointments",
+        routeLabel: "Abrir agenda",
+      },
+      attending: {
+        title: "Pacientes en atención",
+        description:
+          "Consultas que se encuentran activas en este momento.",
+        icon: "dentistry",
+        rows: operations
+          .filter((item) => item.status === "in_attention")
+          .map((operation) => ({
+            id: operation.id,
+            patient: operation.patient,
+            title: `${operation.patient.firstName} ${operation.patient.lastName}`,
+            detail: operation.reason || "Atención clínica",
+            meta: `${operation.dentist?.name || "Odontólogo por asignar"} · Inicio ${time(operation.startedAt)}`,
+            badge: "Atendiendo",
+          })),
+        empty: "No hay pacientes en atención ahora.",
+        route: "/dashboard/appointments",
+        routeLabel: "Abrir agenda",
+      },
+      billing: {
+        title: "Atenciones por cobrar",
+        description:
+          "Pacientes derivados a recepción después de finalizar su consulta.",
+        icon: "payments",
+        rows: operations
+          .filter((item) => item.status === "ready_for_payment")
+          .map((operation) => ({
+            id: operation.id,
+            patient: operation.patient,
+            title: `${operation.patient.firstName} ${operation.patient.lastName}`,
+            detail: operation.reason || "Atención dental",
+            meta: `${operation.dentist?.name || "Odontólogo por asignar"} · Finalizó ${time(operation.finishedAt)}`,
+            badge: "Por cobrar",
+          })),
+        empty: "No existen atenciones pendientes de cobro.",
+        route: "/dashboard/dental-billing",
+        routeLabel: "Ir a finanzas",
+      },
+    }),
+    [operations, patients, todayItems],
+  );
+  const activeDetail = detailDefinitions[detailOpen];
+  const openPatientRecord = async (patientReference) => {
+    const patient =
+      patients.find((item) => item.id === patientReference?.id) ||
+      patientReference;
+    if (!patient?.id) return;
+    setDetailOpen("");
+    setRecordPatient(patient);
+    setRecordChart([]);
+    setRecordError("");
+    setRecordLoading(true);
+    try {
+      setRecordChart(await api.getDentalChart(patient.id));
+    } catch (requestError) {
+      setRecordError(
+        requestError.message || "No se pudo cargar el odontograma del paciente.",
+      );
+    } finally {
+      setRecordLoading(false);
+    }
+  };
+  const retryPatientRecord = () => {
+    if (recordPatient) openPatientRecord(recordPatient);
+  };
   const checkIn = async (appointment) => {
     try {
       await api.checkInDentalAttention({
@@ -171,28 +304,49 @@ export default function DentalDashboard() {
         label="Indicadores dentales"
       >
         {[
-          ["groups", "Pacientes", patients.length, "Expedientes activos"],
-          ["today", "Citas hoy", todayItems.length, "Atenciones programadas"],
-          [
-            "dentistry",
-            "Atendiendo",
-            operations.filter((x) => x.status === "in_attention").length,
-            "En consulta ahora",
-          ],
-          [
-            "payments",
-            "Por cobrar",
-            operations.filter((x) => x.status === "ready_for_payment").length,
-            owner
+          {
+            id: "patients",
+            icon: "groups",
+            label: "Pacientes",
+            value: patients.length,
+            note: "Expedientes activos",
+          },
+          {
+            id: "appointments",
+            icon: "today",
+            label: "Citas hoy",
+            value: todayItems.length,
+            note: "Atenciones programadas",
+          },
+          {
+            id: "attending",
+            icon: "dentistry",
+            label: "Atendiendo",
+            value: operations.filter((x) => x.status === "in_attention").length,
+            note: "En consulta ahora",
+          },
+          {
+            id: "billing",
+            icon: "payments",
+            label: "Por cobrar",
+            value: operations.filter((x) => x.status === "ready_for_payment")
+              .length,
+            note: owner
               ? `Cobrado S/ ${Number(report?.paidAmount || 0).toFixed(2)}`
               : "Derivados a recepción",
-          ],
-        ].map(([icon, label, value, note]) => (
+          },
+        ].map((metric) => (
           <div
             className="w-[70vw] max-w-72 shrink-0 snap-start sm:w-60 lg:w-64"
-            key={label}
+            key={metric.id}
           >
-            <Metric icon={icon} label={label} note={note} value={value} />
+            <Metric
+              icon={metric.icon}
+              label={metric.label}
+              note={metric.note}
+              onClick={() => setDetailOpen(metric.id)}
+              value={metric.value}
+            />
           </div>
         ))}
       </HorizontalScroller>
@@ -267,16 +421,26 @@ export default function DentalDashboard() {
               >
                 {activeRows.map((x) => (
                   <button
-                    className="w-60 shrink-0 snap-start rounded-xl border border-outline-variant p-3 text-left hover:border-primary"
+                    aria-label={`Abrir expediente de ${x.patient.firstName} ${x.patient.lastName}`}
+                    className="group w-60 shrink-0 snap-start rounded-xl border border-outline-variant p-3 text-left transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                     key={x.id}
+                    onClick={() => openPatientRecord(x.patient)}
                     type="button"
                   >
-                    <b className="block">
-                      {x.patient.firstName} {x.patient.lastName}
-                    </b>
-                    <p className="text-xs text-on-surface-variant">
-                      {x.dentist?.name || "Odontólogo por asignar"}
-                    </p>
+                    <div className="flex items-start gap-2.5">
+                      <PatientInitials patient={x.patient} />
+                      <div className="min-w-0 flex-1">
+                        <b className="block truncate">
+                          {x.patient.firstName} {x.patient.lastName}
+                        </b>
+                        <p className="truncate text-xs text-on-surface-variant">
+                          {x.dentist?.name || "Odontólogo por asignar"}
+                        </p>
+                      </div>
+                      <span className="material-symbols-outlined text-lg text-primary transition group-hover:translate-x-0.5">
+                        arrow_forward
+                      </span>
+                    </div>
                     <p className="mt-2 text-xs">
                       Ingreso {time(x.checkedInAt)} · Inicio {time(x.startedAt)}
                     </p>
@@ -314,7 +478,14 @@ export default function DentalDashboard() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant p-3"
                   key={x.id}
                 >
-                  <div>
+                  <button
+                    aria-label={`Abrir expediente de ${x.patient.firstName} ${x.patient.lastName}`}
+                    className="group flex min-w-0 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                    onClick={() => openPatientRecord(x.patient)}
+                    type="button"
+                  >
+                    <PatientInitials patient={x.patient} />
+                    <div className="min-w-0">
                     <b>
                       {x.patient.firstName} {x.patient.lastName}
                     </b>
@@ -324,7 +495,11 @@ export default function DentalDashboard() {
                     <p className="text-xs text-on-surface-variant">
                       {x.reason}
                     </p>
-                  </div>
+                    </div>
+                    <span className="material-symbols-outlined text-lg text-primary opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                      arrow_outward
+                    </span>
+                  </button>
                   {checked.has(x.id) ? (
                     <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
                       Llegada registrada
@@ -375,6 +550,166 @@ export default function DentalDashboard() {
             </div>
           </Card>
         </section>
+      ) : null}
+      {activeDetail ? (
+        <Modal
+          dialogClassName="sm:max-w-4xl"
+          onClose={() => setDetailOpen("")}
+          title={activeDetail.title}
+        >
+          <div className="p-3 sm:p-5">
+            <div className="mb-3 flex items-center gap-3 rounded-2xl bg-primary-fixed p-3">
+              <span className="material-symbols-outlined grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-2xl text-primary shadow-sm">
+                {activeDetail.icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold">{activeDetail.description}</p>
+                <p className="text-xs text-on-surface-variant">
+                  {activeDetail.rows.length} resultado(s) · Pulsa una tarjeta
+                  para abrir el expediente.
+                </p>
+              </div>
+            </div>
+            {activeDetail.rows.length ? (
+              <div className="grid max-h-[min(32rem,60svh)] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                {activeDetail.rows.map((row) => (
+                  <button
+                    aria-label={`Abrir expediente de ${row.title}`}
+                    className="group flex min-h-28 items-start gap-3 rounded-2xl border border-outline-variant bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                    key={row.id}
+                    onClick={() => openPatientRecord(row.patient)}
+                    type="button"
+                  >
+                    <PatientInitials patient={row.patient} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <b className="truncate">{row.title}</b>
+                        <span className="shrink-0 rounded-full bg-primary-fixed px-2 py-1 text-[10px] font-bold text-primary">
+                          {row.badge}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm">{row.detail}</p>
+                      <p className="mt-1 truncate text-xs text-on-surface-variant">
+                        {row.meta}
+                      </p>
+                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary">
+                        Ver expediente
+                        <span className="material-symbols-outlined text-base transition group-hover:translate-x-0.5">
+                          arrow_forward
+                        </span>
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed border-outline-variant bg-surface-container-low p-6 text-center">
+                <div>
+                  <span className="material-symbols-outlined text-4xl text-primary">
+                    {activeDetail.icon}
+                  </span>
+                  <p className="mt-2 font-bold">{activeDetail.empty}</p>
+                  <p className="text-sm text-on-surface-variant">
+                    Puedes continuar desde la sección correspondiente.
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2 border-t border-outline-variant pt-3">
+              <button
+                className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-bold"
+                onClick={() => setDetailOpen("")}
+                type="button"
+              >
+                Cerrar
+              </button>
+              <button
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-md"
+                onClick={() => {
+                  setDetailOpen("");
+                  navigate(activeDetail.route);
+                }}
+                type="button"
+              >
+                {activeDetail.routeLabel}
+                <span className="material-symbols-outlined text-lg">
+                  arrow_forward
+                </span>
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+      {recordPatient && recordLoading ? (
+        <Modal
+          dialogClassName="sm:max-w-lg"
+          onClose={() => setRecordPatient(null)}
+          title={`Expediente · ${recordPatient.firstName} ${recordPatient.lastName}`}
+        >
+          <div className="grid min-h-56 place-items-center p-6 text-center">
+            <div>
+              <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+                progress_activity
+              </span>
+              <p className="mt-3 font-bold">Cargando expediente clínico…</p>
+              <p className="text-sm text-on-surface-variant">
+                Consultando odontograma e historial conectado.
+              </p>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+      {recordPatient && !recordLoading && recordError ? (
+        <Modal
+          dialogClassName="sm:max-w-lg"
+          onClose={() => {
+            setRecordPatient(null);
+            setRecordError("");
+          }}
+          title="No se pudo abrir el expediente"
+        >
+          <div className="p-5">
+            <p className="rounded-2xl bg-error-container p-4 text-sm text-error">
+              {recordError}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-bold"
+                onClick={() => setRecordPatient(null)}
+                type="button"
+              >
+                Cerrar
+              </button>
+              <button
+                className="min-h-11 rounded-xl bg-primary px-4 text-sm font-bold text-white"
+                onClick={retryPatientRecord}
+                type="button"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+      {recordPatient && !recordLoading && !recordError ? (
+        <OdontogramModal
+          admin={owner}
+          chart={recordChart}
+          close={() => {
+            setRecordPatient(null);
+            setRecordChart([]);
+          }}
+          exporting={recordExporting}
+          onExport={async (format) => {
+            setRecordExporting(true);
+            try {
+              await api.exportDentalChart(recordPatient.id, format);
+            } finally {
+              setRecordExporting(false);
+            }
+          }}
+          patient={recordPatient}
+        />
       ) : null}
       {quickOpen ? (
         <Modal
