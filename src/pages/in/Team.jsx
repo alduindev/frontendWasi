@@ -525,6 +525,72 @@ function AttendanceHistoryModal({ onClose, users }) {
           </div>
         ) : null}
         <div className="max-h-[55vh] overflow-auto rounded-2xl border border-outline-variant">
+          <div className="grid gap-2 p-2 md:hidden">
+            {items.map((item) => (
+              <article
+                className="rounded-2xl border border-outline-variant bg-white p-3"
+                key={item.record.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold">{item.user.name}</p>
+                    <p className="text-xs text-on-surface-variant">
+                      {item.record.workDate}
+                    </p>
+                  </div>
+                  <button
+                    aria-label={`Corregir asistencia de ${item.user.name}`}
+                    className="material-symbols-outlined grid min-h-10 min-w-10 place-items-center rounded-full text-primary hover:bg-primary-fixed"
+                    onClick={() => begin(item)}
+                    type="button"
+                  >
+                    edit
+                  </button>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-xl bg-surface-container-low p-2">
+                    <dt className="font-bold uppercase text-on-surface-variant">
+                      Entrada
+                    </dt>
+                    <dd className="mt-1">
+                      {item.record.clockInAt
+                        ? new Date(item.record.clockInAt).toLocaleString("es-PE")
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="rounded-xl bg-surface-container-low p-2">
+                    <dt className="font-bold uppercase text-on-surface-variant">
+                      Salida
+                    </dt>
+                    <dd className="mt-1">
+                      {item.record.clockOutAt
+                        ? new Date(item.record.clockOutAt).toLocaleString("es-PE")
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="rounded-xl bg-surface-container-low p-2">
+                    <dt className="font-bold uppercase text-on-surface-variant">
+                      Horas
+                    </dt>
+                    <dd className="mt-1 font-bold">
+                      {item.record.workedMinutes == null
+                        ? "—"
+                        : `${Math.floor(item.record.workedMinutes / 60)}h ${item.record.workedMinutes % 60}m`}
+                    </dd>
+                  </div>
+                  <div className="rounded-xl bg-surface-container-low p-2">
+                    <dt className="font-bold uppercase text-on-surface-variant">
+                      Estado
+                    </dt>
+                    <dd className={`mt-1 font-bold ${item.record.late ? "text-error" : "text-primary"}`}>
+                      {item.record.late ? "Tardanza" : item.record.status}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+          <div className="hidden md:block">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="sticky top-0 bg-surface-container-low">
               <tr>
@@ -574,6 +640,7 @@ function AttendanceHistoryModal({ onClose, users }) {
               ))}
             </tbody>
           </table>
+          </div>
           {!items.length ? (
             <p className="p-8 text-center text-sm text-on-surface-variant">
               Sin registros en este rango.
@@ -1461,8 +1528,9 @@ export default function Team() {
         dental ? "Equipo dental" : veterinary ? "Equipo veterinario" : "Equipo"
       }
     >
-      <div className="mb-3 flex flex-wrap justify-end gap-2">
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
         <Button
+          className="min-w-0 px-2 text-xs sm:px-4 sm:text-sm"
           icon="storefront"
           onClick={() => setBusinessScheduleOpen(true)}
           type="button"
@@ -1471,6 +1539,7 @@ export default function Team() {
           Horario del negocio
         </Button>
         <Button
+          className="min-w-0 px-2 text-xs sm:px-4 sm:text-sm"
           icon="event_note"
           onClick={() => setAttendanceOpen(true)}
           type="button"
@@ -1527,7 +1596,7 @@ export default function Team() {
             >
               {visibleUsers.map((user) => (
                 <Card
-                  className="flex w-[min(84vw,22rem)] shrink-0 snap-start flex-col overflow-hidden p-0 sm:w-[calc((100%_-_0.75rem)/2)] xl:w-[calc((100%_-_1.5rem)/3)]"
+                  className="flex w-[min(88vw,22rem)] shrink-0 snap-start flex-col overflow-hidden p-0 sm:w-[calc((100%_-_0.75rem)/2)] xl:w-[calc((100%_-_1.5rem)/3)]"
                   key={user.id}
                 >
                   <div className="relative h-[clamp(11rem,22vh,14rem)] shrink-0 overflow-hidden bg-gradient-to-br from-primary to-primary-container">
@@ -1619,6 +1688,7 @@ export default function Team() {
                     <div className="mt-auto flex gap-2">
                       <Button
                         aria-label={`Horario de ${user.name}`}
+                        className="!w-11 !min-w-11 !shrink-0 !px-0"
                         icon="schedule"
                         onClick={() => setScheduleUser(user)}
                         type="button"
@@ -1627,6 +1697,7 @@ export default function Team() {
                       {dental ? (
                         <Button
                           aria-label={`Ver pacientes y actividad de ${user.name}`}
+                          className="!w-11 !min-w-11 !shrink-0 !px-0"
                           icon="clinical_notes"
                           onClick={() => setDetailUser(user)}
                           type="button"
@@ -1634,7 +1705,7 @@ export default function Team() {
                         />
                       ) : null}
                       <Button
-                        className="flex-1"
+                        className="!w-auto min-w-0 flex-1 whitespace-nowrap !px-2"
                         icon="manage_accounts"
                         onClick={() => setEditing(user)}
                         type="button"
@@ -1644,6 +1715,7 @@ export default function Team() {
                       </Button>
                       <Button
                         aria-label={`Eliminar a ${user.name}`}
+                        className="!w-11 !min-w-11 !shrink-0 !px-0"
                         icon="delete"
                         onClick={() => setDeleting(user)}
                         type="button"
