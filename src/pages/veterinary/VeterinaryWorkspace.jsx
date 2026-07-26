@@ -1,49 +1,1249 @@
-import { useCallback,useEffect,useMemo,useState } from 'react'
-import { Link,useParams } from 'react-router-dom'
-import Badge from '../../components/atoms/Badge'
-import Button from '../../components/atoms/Button'
-import Card from '../../components/atoms/Card'
-import HorizontalScroller from '../../components/atoms/HorizontalScroller'
-import EmptyState from '../../components/molecules/EmptyState'
-import Modal from '../../components/molecules/Modal'
-import DashboardShell from '../../components/organisms/DashboardShell'
-import EntityAttachments from '../../components/attachments/EntityAttachments'
-import * as api from '../../services/veterinaryService'
-import VeterinaryPaymentModal from './VeterinaryPaymentModal'
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import Badge from "../../components/atoms/Badge";
+import Button from "../../components/atoms/Button";
+import Card from "../../components/atoms/Card";
+import HorizontalScroller from "../../components/atoms/HorizontalScroller";
+import EmptyState from "../../components/molecules/EmptyState";
+import Modal from "../../components/molecules/Modal";
+import DashboardShell from "../../components/organisms/DashboardShell";
+import EntityAttachments from "../../components/attachments/EntityAttachments";
+import * as api from "../../services/veterinaryService";
+import VeterinaryPaymentModal from "./VeterinaryPaymentModal";
+import { matchesEntitySearch } from "../../utils/entitySearch";
+import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 
-const speciesIcon={dog:'pets',cat:'pets',bird:'flutter_dash',rabbit:'cruelty_free'}
-const statusLabel={scheduled:'Programada',confirmed:'Confirmada',in_attention:'En atención',completed:'Finalizada',cancelled:'Cancelada',no_show:'No asistió'}
-const money=value=>`S/ ${Number(value||0).toFixed(2)}`
-const field='min-h-11 w-full rounded-xl border border-outline-variant bg-white px-3 outline-none focus:border-primary'
-const local=value=>value?new Date(value).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'}):'—'
-function submitData(event){return Object.fromEntries(new FormData(event.currentTarget).entries())}
-const MAX_FILE_BYTES=2*1024*1024
-const readDataUrl=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error('No se pudo leer el archivo.'));reader.readAsDataURL(file)})
-function PetAvatar({pet,className='size-12'}){const photo=pet.photoUrl||pet.photo_url;return photo?<img alt={`Foto de ${pet.name}`} className={`${className} shrink-0 rounded-xl object-cover`} src={photo}/>:<span className={`material-symbols-outlined grid ${className} shrink-0 place-items-center rounded-xl bg-primary text-2xl text-white`}>{speciesIcon[pet.species]||'pets'}</span>}
-function Metric({icon,label,value,note}){return <Card className="relative min-h-32 overflow-hidden p-4"><span className="absolute -right-6 -top-6 size-20 rounded-full bg-primary-fixed"/><span className="material-symbols-outlined relative text-primary">{icon}</span><p className="relative mt-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">{label}</p><b className="relative mt-1 block text-2xl">{value}</b><small className="relative text-on-surface-variant">{note}</small></Card>}
-function PetForm({close,done}){const[photo,setPhoto]=useState(''),[fileError,setFileError]=useState('');const selectPhoto=async event=>{const file=event.target.files?.[0];setFileError('');if(!file){setPhoto('');return}if(!['image/jpeg','image/png'].includes(file.type)){setFileError('Selecciona una imagen JPG o PNG.');event.target.value='';return}if(file.size>MAX_FILE_BYTES){setFileError('La imagen debe pesar como máximo 2 MB.');event.target.value='';return}setPhoto(await readDataUrl(file))};const save=async event=>{event.preventDefault();const x=submitData(event);await api.createPet({name:x.name,species:x.species,breed:x.breed,sex:x.sex,birth_date:x.birth_date||null,color:x.color,weight_kg:Number(x.weight_kg||0),microchip:x.microchip,allergies:x.allergies,conditions:x.conditions,photo_url:photo||'',owner:{name:x.owner_name,document:x.owner_document,phone:x.owner_phone,email:x.owner_email,address:x.owner_address}});done()};return <Modal dialogClassName="sm:max-w-3xl" onClose={close} title="Registrar mascota"><form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}><div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-3">{photo?<img alt="Vista previa de la mascota" className="size-20 rounded-2xl object-cover" src={photo}/>:<span className="material-symbols-outlined grid size-20 place-items-center rounded-2xl bg-primary-fixed text-4xl text-primary">pets</span>}<label className="min-w-0 flex-1 font-bold">Foto opcional<input accept="image/jpeg,image/png" className="mt-1 block w-full text-sm font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-white" onChange={selectPhoto} type="file"/><small className="block text-on-surface-variant">JPG o PNG, máximo 2 MB.</small>{fileError?<small className="block text-error">{fileError}</small>:null}</label>{photo?<button className="rounded-lg px-3 py-2 text-sm font-bold text-error hover:bg-error-container" onClick={()=>setPhoto('')} type="button">Quitar</button>:null}</div><h3 className="sm:col-span-2 font-bold text-primary">Datos de la mascota</h3><label>Nombre<input className={field} name="name" required/></label><label>Especie<select className={field} name="species"><option value="dog">Perro</option><option value="cat">Gato</option><option value="bird">Ave</option><option value="rabbit">Conejo</option><option value="other">Otra</option></select></label><label>Raza<input className={field} name="breed"/></label><label>Sexo<select className={field} name="sex"><option value="unknown">Sin especificar</option><option value="female">Hembra</option><option value="male">Macho</option></select></label><label>Nacimiento<input className={field} name="birth_date" type="date"/></label><label>Peso (kg)<input className={field} min="0" name="weight_kg" step="0.01" type="number"/></label><label>Color<input className={field} name="color"/></label><label>Microchip<input className={field} name="microchip"/></label><label className="sm:col-span-2">Alergias<input className={field} name="allergies"/></label><label className="sm:col-span-2">Condiciones previas<input className={field} name="conditions"/></label><h3 className="sm:col-span-2 mt-2 font-bold text-primary">Propietario</h3><label>Nombre completo<input className={field} name="owner_name" required/></label><label>DNI / documento<input className={field} inputMode="numeric" maxLength="12" name="owner_document" pattern="[0-9]{8,12}" required/></label><label>Teléfono<input className={field} inputMode="numeric" maxLength="15" name="owner_phone"/></label><label>Correo<input className={field} name="owner_email" type="email"/></label><label className="sm:col-span-2">Dirección<input className={field} name="owner_address"/></label><div className="sm:col-span-2 flex flex-wrap justify-end gap-2"><Button onClick={close} type="button" variant="secondary">Cancelar</Button><Button disabled={Boolean(fileError)} type="submit">Guardar mascota</Button></div></form></Modal>}
-function AppointmentForm({pets,professionals,close,done}){const save=async event=>{event.preventDefault();const x=submitData(event);await api.createVeterinaryAppointment({pet_id:x.pet_id,professional_id:x.professional_id||null,starts_at:x.starts_at,ends_at:x.ends_at,reason:x.reason,notes:x.notes});done()};return <Modal onClose={close} title="Agendar cita veterinaria"><form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}><label>Mascota<select className={field} name="pet_id" required>{pets.map(x=><option key={x.id} value={x.id}>{x.name} · {x.owner.name}</option>)}</select></label><label>Veterinario<select className={field} name="professional_id"><option value="">Por asignar</option>{professionals.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Inicio<input className={field} name="starts_at" required type="datetime-local"/></label><label>Fin<input className={field} name="ends_at" required type="datetime-local"/></label><label className="sm:col-span-2">Motivo<input className={field} name="reason" required/></label><label className="sm:col-span-2">Indicaciones<textarea className={`${field} min-h-20 py-2`} name="notes"/></label><div className="sm:col-span-2 flex justify-end gap-2"><Button onClick={close} type="button" variant="secondary">Cancelar</Button><Button type="submit">Agendar</Button></div></form></Modal>}
-function AttentionForm({pet,appointments,professionals,close,done}){const save=async event=>{event.preventDefault();const x=submitData(event);await api.createVeterinaryRecord({pet_id:pet.id,appointment_id:x.appointment_id||null,professional_id:x.professional_id||null,record_type:x.record_type,diagnosis:x.diagnosis,treatment:x.treatment,notes:x.notes,temperature:x.temperature?Number(x.temperature):null,weight_kg:x.weight_kg?Number(x.weight_kg):null,amount:Number(x.amount||0)});done()};return <Modal onClose={close} title={`Atención · ${pet.name}`}><form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}><label>Tipo<select className={field} name="record_type"><option value="consultation">Consulta</option><option value="emergency">Emergencia</option><option value="surgery">Cirugía</option><option value="control">Control</option><option value="laboratory">Laboratorio</option><option value="grooming">Estética</option></select></label><label>Cita vinculada<select className={field} name="appointment_id"><option value="">Sin cita</option>{appointments.filter(x=>x.petId===pet.id&&['scheduled','confirmed','in_attention'].includes(x.status)).map(x=><option key={x.id} value={x.id}>{local(x.startsAt)} · {x.reason}</option>)}</select></label><label>Profesional<select className={field} name="professional_id"><option value="">Sin asignar</option>{professionals.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Importe<input className={field} min="0" name="amount" step="0.01" type="number"/></label><label>Temperatura °C<input className={field} max="45" min="30" name="temperature" step="0.1" type="number"/></label><label>Peso kg<input className={field} min="0" name="weight_kg" step="0.01" type="number"/></label><label className="sm:col-span-2">Diagnóstico<input className={field} name="diagnosis" required/></label><label className="sm:col-span-2">Tratamiento<textarea className={`${field} min-h-20 py-2`} name="treatment" required/></label><label className="sm:col-span-2">Notas<textarea className={`${field} min-h-20 py-2`} name="notes"/></label><div className="sm:col-span-2 flex justify-end gap-2"><Button onClick={close} type="button" variant="secondary">Cancelar</Button><Button type="submit">Finalizar atención</Button></div></form></Modal>}
-function VaccineForm({pet,close,done}){const save=async event=>{event.preventDefault();const x=submitData(event);await api.createVeterinaryVaccine({pet_id:pet.id,name:x.name,applied_at:x.applied_at,next_due_at:x.next_due_at||null,lot:x.lot,professional_name:x.professional_name,notes:x.notes});done()};return <Modal onClose={close} title={`Vacuna · ${pet.name}`}><form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}><label>Vacuna<input className={field} name="name" required/></label><label>Lote<input className={field} name="lot"/></label><label>Aplicada<input className={field} name="applied_at" required type="date"/></label><label>Próxima dosis<input className={field} name="next_due_at" type="date"/></label><label className="sm:col-span-2">Profesional<input className={field} name="professional_name"/></label><label className="sm:col-span-2">Notas<textarea className={`${field} min-h-20 py-2`} name="notes"/></label><div className="sm:col-span-2 flex justify-end gap-2"><Button onClick={close} type="button" variant="secondary">Cancelar</Button><Button type="submit">Registrar vacuna</Button></div></form></Modal>}
-function VeterinaryDocuments({petId}){
- const[legacyItems,setLegacyItems]=useState([])
- useEffect(()=>{let active=true;api.getVeterinaryDocuments(petId).then(items=>{if(active)setLegacyItems(items)}).catch(()=>{if(active)setLegacyItems([])});return()=>{active=false}},[petId])
- return <EntityAttachments entityId={petId} entityType="veterinary_pet" legacyItems={legacyItems} title="Archivos de la mascota"/>
+const speciesIcon = {
+  dog: "pets",
+  cat: "pets",
+  bird: "flutter_dash",
+  rabbit: "cruelty_free",
+};
+const statusLabel = {
+  scheduled: "Programada",
+  confirmed: "Confirmada",
+  in_attention: "En atención",
+  completed: "Finalizada",
+  cancelled: "Cancelada",
+  no_show: "No asistió",
+};
+const money = (value) => `S/ ${Number(value || 0).toFixed(2)}`;
+const field =
+  "min-h-11 w-full rounded-xl border border-outline-variant bg-white px-3 outline-none focus:border-primary";
+const local = (value) =>
+  value
+    ? new Date(value).toLocaleString("es-PE", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "—";
+function submitData(event) {
+  return Object.fromEntries(new FormData(event.currentTarget).entries());
 }
-function VeterinaryReports({pet}){
- const[previewUrl,setPreviewUrl]=useState(''),[kind,setKind]=useState('clinical'),[loading,setLoading]=useState(false),[error,setError]=useState('')
- useEffect(()=>()=>{if(previewUrl)URL.revokeObjectURL(previewUrl)},[previewUrl])
- const preview=async nextKind=>{setLoading(true);setError('');try{const blob=await api.previewVeterinaryReport(pet.id,nextKind);const nextUrl=URL.createObjectURL(blob);setPreviewUrl(current=>{if(current)URL.revokeObjectURL(current);return nextUrl});setKind(nextKind)}catch(requestError){setError(requestError.message)}finally{setLoading(false)}}
- const download=async nextKind=>{setError('');try{await api.downloadVeterinaryReport(pet.id,nextKind)}catch(requestError){setError(requestError.message)}}
- return <div className="grid min-w-0 gap-3 lg:grid-cols-[18rem_minmax(0,1fr)]"><div className="grid content-start gap-3"><Card className="p-3"><span className="material-symbols-outlined text-primary">clinical_notes</span><b className="mt-2 block">Expediente clínico</b><p className="mb-3 text-xs text-on-surface-variant">Datos, propietario, consultas, tratamientos, vacunas y profesionales.</p><div className="flex flex-wrap gap-2"><Button onClick={()=>preview('clinical')} variant="secondary">Vista previa</Button><Button onClick={()=>download('clinical')}>Descargar</Button></div></Card><Card className="p-3"><span className="material-symbols-outlined text-primary">vaccines</span><b className="mt-2 block">Carné de vacunación</b><p className="mb-3 text-xs text-on-surface-variant">Dosis aplicadas, lotes y próximas fechas.</p><div className="flex flex-wrap gap-2"><Button onClick={()=>preview('vaccination')} variant="secondary">Vista previa</Button><Button onClick={()=>download('vaccination')}>Descargar</Button></div></Card>{error?<p className="rounded-lg bg-error-container p-2 text-sm text-error">{error}</p>:null}</div><div className="min-h-72 min-w-0 overflow-hidden rounded-2xl border bg-surface-container-low">{loading?<div className="grid h-72 place-items-center"><span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span></div>:previewUrl?<iframe className="h-[min(52vh,36rem)] w-full border-0" src={previewUrl} title={kind==='clinical'?'Vista previa del expediente clínico':'Vista previa del carné de vacunación'}/>:<div className="grid h-72 place-items-center p-6 text-center"><div><span className="material-symbols-outlined text-4xl text-primary">preview</span><b className="mt-2 block">Vista previa del PDF</b><p className="text-sm text-on-surface-variant">Elige un reporte para revisarlo antes de descargar.</p></div></div>}</div></div>
+const MAX_FILE_BYTES = 2 * 1024 * 1024;
+const readDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.readAsDataURL(file);
+  });
+function PetAvatar({ pet, className = "size-12" }) {
+  const photo = pet.photoUrl || pet.photo_url;
+  return photo ? (
+    <img
+      alt={`Foto de ${pet.name}`}
+      className={`${className} shrink-0 rounded-xl object-cover`}
+      src={photo}
+    />
+  ) : (
+    <span
+      className={`material-symbols-outlined grid ${className} shrink-0 place-items-center rounded-xl bg-primary text-2xl text-white`}
+    >
+      {speciesIcon[pet.species] || "pets"}
+    </span>
+  );
 }
-function PetRecord({data,close,onAttention,onVaccine}){
- const[tab,setTab]=useState('summary');const p=data.pet
- const tabs=[['summary','person','Resumen'],['history','clinical_notes','Historia'],['vaccines','vaccines','Vacunas'],['appointments','calendar_month','Citas'],['documents','folder','Archivos'],['reports','picture_as_pdf','Reportes']]
- return <Modal contentClassName="min-h-0 overflow-hidden" dialogClassName="sm:max-w-6xl" fixedHeight onClose={close} title={`Expediente · ${p.name}`}><div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-3 sm:p-4"><div className="flex shrink-0 flex-wrap items-center gap-3 rounded-2xl bg-primary-fixed p-3"><PetAvatar className="size-14" pet={p}/><div className="min-w-0 flex-1"><b className="block truncate text-lg">{p.name} · {p.breed||p.species}</b><p className="truncate text-sm text-on-surface-variant">{p.code} · Propietario: {p.owner.name} · {p.owner.phone||'Sin teléfono'}</p></div><div className="flex flex-wrap gap-2"><Button icon="medical_services" onClick={onAttention}>Atención</Button><Button icon="vaccines" onClick={onVaccine} variant="secondary">Vacuna</Button></div></div><div className="my-3 shrink-0 overflow-x-auto rounded-xl border p-1"><nav className="flex min-w-max gap-1">{tabs.map(x=><button className={`flex min-h-10 items-center gap-1 rounded-lg px-3 text-sm font-bold ${tab===x[0]?'bg-primary text-white':'hover:bg-surface-container-low'}`} key={x[0]} onClick={()=>setTab(x[0])} type="button"><span className="material-symbols-outlined text-lg">{x[1]}</span>{x[2]}</button>)}</nav></div><div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">{tab==='summary'?<div className="grid gap-3 sm:grid-cols-3"><Card className="p-4"><small>Peso actual</small><b className="block text-2xl">{p.weightKg} kg</b></Card><Card className="p-4"><small>Alergias</small><b className="block">{p.allergies||'Sin alergias'}</b></Card><Card className="p-4"><small>Condiciones</small><b className="block">{p.conditions||'Sin condiciones'}</b></Card><Card className="p-4 sm:col-span-3"><b>Propietario</b><p>{p.owner.name} · DNI {p.owner.document}</p><p className="break-words text-sm text-on-surface-variant">{p.owner.phone||'Sin teléfono'} · {p.owner.email||'Sin correo'} · {p.owner.address||'Sin dirección'}</p></Card></div>:null}{tab==='history'?<div className="grid gap-2">{data.records.map(x=><Card className="p-3" key={x.id}><div className="flex flex-wrap justify-between gap-2"><div className="min-w-0 flex-1"><Badge>{x.recordType}</Badge><b className="ml-2">{x.diagnosis||'Atención clínica'}</b><p className="mt-1 break-words text-sm">{x.treatment}</p><small className="text-on-surface-variant">{local(x.createdAt)} · {x.professional?.name||'Equipo veterinario'}</small></div><div className="text-right"><b>{money(x.amount)}</b><p className="text-xs">{x.paymentStatus==='paid'?'Pagado':'Por cobrar'}</p></div></div></Card>)}{!data.records.length?<EmptyState icon="clinical_notes" title="Sin atenciones" description="La historia se completará desde cada consulta."/>:null}</div>:null}{tab==='vaccines'?<div className="grid gap-2 sm:grid-cols-2">{data.vaccines.map(x=><Card className="p-3" key={x.id}><b>{x.name}</b><p className="text-sm">Aplicada: {x.appliedAt}</p><p className="text-sm text-primary">Próxima: {x.nextDueAt||'No indicada'}</p></Card>)}{!data.vaccines.length?<EmptyState icon="vaccines" title="Sin vacunas" description="Registra la primera vacuna de la mascota."/>:null}</div>:null}{tab==='appointments'?<div className="grid gap-2">{data.appointments.map(x=><Card className="p-3" key={x.id}><div className="flex flex-wrap justify-between gap-2"><div><b>{x.reason}</b><p className="text-sm">{local(x.startsAt)} · {x.professional?.name||'Por asignar'}</p></div><Badge>{statusLabel[x.status]||x.status}</Badge></div></Card>)}</div>:null}{tab==='documents'?<VeterinaryDocuments petId={p.id}/>:null}{tab==='reports'?<VeterinaryReports pet={p}/>:null}</div></div></Modal>
+function Metric({ icon, label, value, note }) {
+  return (
+    <Card className="relative min-h-32 overflow-hidden p-4">
+      <span className="absolute -right-6 -top-6 size-20 rounded-full bg-primary-fixed" />
+      <span className="material-symbols-outlined relative text-primary">
+        {icon}
+      </span>
+      <p className="relative mt-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+        {label}
+      </p>
+      <b className="relative mt-1 block text-2xl">{value}</b>
+      <small className="relative text-on-surface-variant">{note}</small>
+    </Card>
+  );
+}
+function PetForm({ close, done }) {
+  const [photo, setPhoto] = useState(""),
+    [fileError, setFileError] = useState("");
+  const selectPhoto = async (event) => {
+    const file = event.target.files?.[0];
+    setFileError("");
+    if (!file) {
+      setPhoto("");
+      return;
+    }
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      setFileError("Selecciona una imagen JPG o PNG.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError("La imagen debe pesar como máximo 2 MB.");
+      event.target.value = "";
+      return;
+    }
+    setPhoto(await readDataUrl(file));
+  };
+  const save = async (event) => {
+    event.preventDefault();
+    const x = submitData(event);
+    await api.createPet({
+      name: x.name,
+      species: x.species,
+      breed: x.breed,
+      sex: x.sex,
+      birth_date: x.birth_date || null,
+      color: x.color,
+      weight_kg: Number(x.weight_kg || 0),
+      microchip: x.microchip,
+      allergies: x.allergies,
+      conditions: x.conditions,
+      photo_url: photo || "",
+      owner: {
+        name: x.owner_name,
+        document: x.owner_document,
+        phone: x.owner_phone,
+        email: x.owner_email,
+        address: x.owner_address,
+      },
+    });
+    done();
+  };
+  return (
+    <Modal
+      dialogClassName="sm:max-w-3xl"
+      onClose={close}
+      title="Registrar mascota"
+    >
+      <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
+        <div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-3">
+          {photo ? (
+            <img
+              alt="Vista previa de la mascota"
+              className="size-20 rounded-2xl object-cover"
+              src={photo}
+            />
+          ) : (
+            <span className="material-symbols-outlined grid size-20 place-items-center rounded-2xl bg-primary-fixed text-4xl text-primary">
+              pets
+            </span>
+          )}
+          <label className="min-w-0 flex-1 font-bold">
+            Foto opcional
+            <input
+              accept="image/jpeg,image/png"
+              className="mt-1 block w-full text-sm font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-white"
+              onChange={selectPhoto}
+              type="file"
+            />
+            <small className="block text-on-surface-variant">
+              JPG o PNG, máximo 2 MB.
+            </small>
+            {fileError ? (
+              <small className="block text-error">{fileError}</small>
+            ) : null}
+          </label>
+          {photo ? (
+            <button
+              className="rounded-lg px-3 py-2 text-sm font-bold text-error hover:bg-error-container"
+              onClick={() => setPhoto("")}
+              type="button"
+            >
+              Quitar
+            </button>
+          ) : null}
+        </div>
+        <h3 className="sm:col-span-2 font-bold text-primary">
+          Datos de la mascota
+        </h3>
+        <label>
+          Nombre
+          <input className={field} name="name" required />
+        </label>
+        <label>
+          Especie
+          <select className={field} name="species">
+            <option value="dog">Perro</option>
+            <option value="cat">Gato</option>
+            <option value="bird">Ave</option>
+            <option value="rabbit">Conejo</option>
+            <option value="other">Otra</option>
+          </select>
+        </label>
+        <label>
+          Raza
+          <input className={field} name="breed" />
+        </label>
+        <label>
+          Sexo
+          <select className={field} name="sex">
+            <option value="unknown">Sin especificar</option>
+            <option value="female">Hembra</option>
+            <option value="male">Macho</option>
+          </select>
+        </label>
+        <label>
+          Nacimiento
+          <input className={field} name="birth_date" type="date" />
+        </label>
+        <label>
+          Peso (kg)
+          <input
+            className={field}
+            min="0"
+            name="weight_kg"
+            step="0.01"
+            type="number"
+          />
+        </label>
+        <label>
+          Color
+          <input className={field} name="color" />
+        </label>
+        <label>
+          Microchip
+          <input className={field} name="microchip" />
+        </label>
+        <label className="sm:col-span-2">
+          Alergias
+          <input className={field} name="allergies" />
+        </label>
+        <label className="sm:col-span-2">
+          Condiciones previas
+          <input className={field} name="conditions" />
+        </label>
+        <h3 className="sm:col-span-2 mt-2 font-bold text-primary">
+          Propietario
+        </h3>
+        <label>
+          Nombre completo
+          <input className={field} name="owner_name" required />
+        </label>
+        <label>
+          DNI / documento
+          <input
+            className={field}
+            inputMode="numeric"
+            maxLength="12"
+            name="owner_document"
+            pattern="[0-9]{8,12}"
+            required
+          />
+        </label>
+        <label>
+          Teléfono
+          <input
+            className={field}
+            inputMode="numeric"
+            maxLength="15"
+            name="owner_phone"
+          />
+        </label>
+        <label>
+          Correo
+          <input className={field} name="owner_email" type="email" />
+        </label>
+        <label className="sm:col-span-2">
+          Dirección
+          <input className={field} name="owner_address" />
+        </label>
+        <div className="sm:col-span-2 flex flex-wrap justify-end gap-2">
+          <Button onClick={close} type="button" variant="secondary">
+            Cancelar
+          </Button>
+          <Button disabled={Boolean(fileError)} type="submit">
+            Guardar mascota
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+function AppointmentForm({ pets, professionals, close, done }) {
+  const [petId, setPetId] = useState("");
+  const save = async (event) => {
+    event.preventDefault();
+    const x = submitData(event);
+    await api.createVeterinaryAppointment({
+      pet_id: x.pet_id,
+      professional_id: x.professional_id || null,
+      starts_at: x.starts_at,
+      ends_at: x.ends_at,
+      reason: x.reason,
+      notes: x.notes,
+    });
+    done();
+  };
+  return (
+    <Modal onClose={close} title="Agendar cita veterinaria">
+      <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
+        <EntitySearchSelect
+          getLabel={(pet) => pet.name}
+          getMeta={(pet) =>
+            [pet.owner?.name, pet.owner?.document, pet.owner?.phone]
+              .filter(Boolean)
+              .join(" · ")
+          }
+          getSearchValues={(pet) => [
+            pet.name,
+            pet.code,
+            pet.owner?.name,
+            pet.owner?.document,
+            pet.owner?.phone,
+            pet.owner?.email,
+          ]}
+          items={pets}
+          label="Mascota o propietario"
+          name="pet_id"
+          onChange={setPetId}
+          placeholder="Buscar mascota, propietario, DNI o celular"
+          required
+          value={petId}
+        />
+        <label>
+          Veterinario
+          <select className={field} name="professional_id">
+            <option value="">Por asignar</option>
+            {professionals.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Inicio
+          <input
+            className={field}
+            name="starts_at"
+            required
+            type="datetime-local"
+          />
+        </label>
+        <label>
+          Fin
+          <input
+            className={field}
+            name="ends_at"
+            required
+            type="datetime-local"
+          />
+        </label>
+        <label className="sm:col-span-2">
+          Motivo
+          <input className={field} name="reason" required />
+        </label>
+        <label className="sm:col-span-2">
+          Indicaciones
+          <textarea className={`${field} min-h-20 py-2`} name="notes" />
+        </label>
+        <div className="sm:col-span-2 flex justify-end gap-2">
+          <Button onClick={close} type="button" variant="secondary">
+            Cancelar
+          </Button>
+          <Button type="submit">Agendar</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+function AttentionForm({ pet, appointments, professionals, close, done }) {
+  const save = async (event) => {
+    event.preventDefault();
+    const x = submitData(event);
+    await api.createVeterinaryRecord({
+      pet_id: pet.id,
+      appointment_id: x.appointment_id || null,
+      professional_id: x.professional_id || null,
+      record_type: x.record_type,
+      diagnosis: x.diagnosis,
+      treatment: x.treatment,
+      notes: x.notes,
+      temperature: x.temperature ? Number(x.temperature) : null,
+      weight_kg: x.weight_kg ? Number(x.weight_kg) : null,
+      amount: Number(x.amount || 0),
+    });
+    done();
+  };
+  return (
+    <Modal onClose={close} title={`Atención · ${pet.name}`}>
+      <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
+        <label>
+          Tipo
+          <select className={field} name="record_type">
+            <option value="consultation">Consulta</option>
+            <option value="emergency">Emergencia</option>
+            <option value="surgery">Cirugía</option>
+            <option value="control">Control</option>
+            <option value="laboratory">Laboratorio</option>
+            <option value="grooming">Estética</option>
+          </select>
+        </label>
+        <label>
+          Cita vinculada
+          <select className={field} name="appointment_id">
+            <option value="">Sin cita</option>
+            {appointments
+              .filter(
+                (x) =>
+                  x.petId === pet.id &&
+                  ["scheduled", "confirmed", "in_attention"].includes(x.status),
+              )
+              .map((x) => (
+                <option key={x.id} value={x.id}>
+                  {local(x.startsAt)} · {x.reason}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          Profesional
+          <select className={field} name="professional_id">
+            <option value="">Sin asignar</option>
+            {professionals.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Importe
+          <input
+            className={field}
+            min="0"
+            name="amount"
+            step="0.01"
+            type="number"
+          />
+        </label>
+        <label>
+          Temperatura °C
+          <input
+            className={field}
+            max="45"
+            min="30"
+            name="temperature"
+            step="0.1"
+            type="number"
+          />
+        </label>
+        <label>
+          Peso kg
+          <input
+            className={field}
+            min="0"
+            name="weight_kg"
+            step="0.01"
+            type="number"
+          />
+        </label>
+        <label className="sm:col-span-2">
+          Diagnóstico
+          <input className={field} name="diagnosis" required />
+        </label>
+        <label className="sm:col-span-2">
+          Tratamiento
+          <textarea
+            className={`${field} min-h-20 py-2`}
+            name="treatment"
+            required
+          />
+        </label>
+        <label className="sm:col-span-2">
+          Notas
+          <textarea className={`${field} min-h-20 py-2`} name="notes" />
+        </label>
+        <div className="sm:col-span-2 flex justify-end gap-2">
+          <Button onClick={close} type="button" variant="secondary">
+            Cancelar
+          </Button>
+          <Button type="submit">Finalizar atención</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+function VaccineForm({ pet, close, done }) {
+  const save = async (event) => {
+    event.preventDefault();
+    const x = submitData(event);
+    await api.createVeterinaryVaccine({
+      pet_id: pet.id,
+      name: x.name,
+      applied_at: x.applied_at,
+      next_due_at: x.next_due_at || null,
+      lot: x.lot,
+      professional_name: x.professional_name,
+      notes: x.notes,
+    });
+    done();
+  };
+  return (
+    <Modal onClose={close} title={`Vacuna · ${pet.name}`}>
+      <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
+        <label>
+          Vacuna
+          <input className={field} name="name" required />
+        </label>
+        <label>
+          Lote
+          <input className={field} name="lot" />
+        </label>
+        <label>
+          Aplicada
+          <input className={field} name="applied_at" required type="date" />
+        </label>
+        <label>
+          Próxima dosis
+          <input className={field} name="next_due_at" type="date" />
+        </label>
+        <label className="sm:col-span-2">
+          Profesional
+          <input className={field} name="professional_name" />
+        </label>
+        <label className="sm:col-span-2">
+          Notas
+          <textarea className={`${field} min-h-20 py-2`} name="notes" />
+        </label>
+        <div className="sm:col-span-2 flex justify-end gap-2">
+          <Button onClick={close} type="button" variant="secondary">
+            Cancelar
+          </Button>
+          <Button type="submit">Registrar vacuna</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+function VeterinaryDocuments({ petId }) {
+  const [legacyItems, setLegacyItems] = useState([]);
+  useEffect(() => {
+    let active = true;
+    api
+      .getVeterinaryDocuments(petId)
+      .then((items) => {
+        if (active) setLegacyItems(items);
+      })
+      .catch(() => {
+        if (active) setLegacyItems([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [petId]);
+  return (
+    <EntityAttachments
+      entityId={petId}
+      entityType="veterinary_pet"
+      legacyItems={legacyItems}
+      title="Archivos de la mascota"
+    />
+  );
+}
+function VeterinaryReports({ pet }) {
+  const [previewUrl, setPreviewUrl] = useState(""),
+    [kind, setKind] = useState("clinical"),
+    [loading, setLoading] = useState(false),
+    [error, setError] = useState("");
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
+  const preview = async (nextKind) => {
+    setLoading(true);
+    setError("");
+    try {
+      const blob = await api.previewVeterinaryReport(pet.id, nextKind);
+      const nextUrl = URL.createObjectURL(blob);
+      setPreviewUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return nextUrl;
+      });
+      setKind(nextKind);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const download = async (nextKind) => {
+    setError("");
+    try {
+      await api.downloadVeterinaryReport(pet.id, nextKind);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  };
+  return (
+    <div className="grid min-w-0 gap-3 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="grid content-start gap-3">
+        <Card className="p-3">
+          <span className="material-symbols-outlined text-primary">
+            clinical_notes
+          </span>
+          <b className="mt-2 block">Expediente clínico</b>
+          <p className="mb-3 text-xs text-on-surface-variant">
+            Datos, propietario, consultas, tratamientos, vacunas y
+            profesionales.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => preview("clinical")} variant="secondary">
+              Vista previa
+            </Button>
+            <Button onClick={() => download("clinical")}>Descargar</Button>
+          </div>
+        </Card>
+        <Card className="p-3">
+          <span className="material-symbols-outlined text-primary">
+            vaccines
+          </span>
+          <b className="mt-2 block">Carné de vacunación</b>
+          <p className="mb-3 text-xs text-on-surface-variant">
+            Dosis aplicadas, lotes y próximas fechas.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => preview("vaccination")} variant="secondary">
+              Vista previa
+            </Button>
+            <Button onClick={() => download("vaccination")}>Descargar</Button>
+          </div>
+        </Card>
+        {error ? (
+          <p className="rounded-lg bg-error-container p-2 text-sm text-error">
+            {error}
+          </p>
+        ) : null}
+      </div>
+      <div className="min-h-72 min-w-0 overflow-hidden rounded-2xl border bg-surface-container-low">
+        {loading ? (
+          <div className="grid h-72 place-items-center">
+            <span className="material-symbols-outlined animate-spin text-3xl text-primary">
+              progress_activity
+            </span>
+          </div>
+        ) : previewUrl ? (
+          <iframe
+            className="h-[min(52vh,36rem)] w-full border-0"
+            src={previewUrl}
+            title={
+              kind === "clinical"
+                ? "Vista previa del expediente clínico"
+                : "Vista previa del carné de vacunación"
+            }
+          />
+        ) : (
+          <div className="grid h-72 place-items-center p-6 text-center">
+            <div>
+              <span className="material-symbols-outlined text-4xl text-primary">
+                preview
+              </span>
+              <b className="mt-2 block">Vista previa del PDF</b>
+              <p className="text-sm text-on-surface-variant">
+                Elige un reporte para revisarlo antes de descargar.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function PetRecord({ data, close, onAttention, onVaccine }) {
+  const [tab, setTab] = useState("summary");
+  const p = data.pet;
+  const tabs = [
+    ["summary", "person", "Resumen"],
+    ["history", "clinical_notes", "Historia"],
+    ["vaccines", "vaccines", "Vacunas"],
+    ["appointments", "calendar_month", "Citas"],
+    ["documents", "folder", "Archivos"],
+    ["reports", "picture_as_pdf", "Reportes"],
+  ];
+  return (
+    <Modal
+      contentClassName="min-h-0 overflow-hidden"
+      dialogClassName="sm:max-w-6xl"
+      fixedHeight
+      onClose={close}
+      title={`Expediente · ${p.name}`}
+    >
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-3 sm:p-4">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-2xl bg-primary-fixed p-3">
+          <PetAvatar className="size-14" pet={p} />
+          <div className="min-w-0 flex-1">
+            <b className="block truncate text-lg">
+              {p.name} · {p.breed || p.species}
+            </b>
+            <p className="truncate text-sm text-on-surface-variant">
+              {p.code} · Propietario: {p.owner.name} ·{" "}
+              {p.owner.phone || "Sin teléfono"}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button icon="medical_services" onClick={onAttention}>
+              Atención
+            </Button>
+            <Button icon="vaccines" onClick={onVaccine} variant="secondary">
+              Vacuna
+            </Button>
+          </div>
+        </div>
+        <div className="my-3 shrink-0 overflow-x-auto rounded-xl border p-1">
+          <nav className="flex min-w-max gap-1">
+            {tabs.map((x) => (
+              <button
+                className={`flex min-h-10 items-center gap-1 rounded-lg px-3 text-sm font-bold ${tab === x[0] ? "bg-primary text-white" : "hover:bg-surface-container-low"}`}
+                key={x[0]}
+                onClick={() => setTab(x[0])}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {x[1]}
+                </span>
+                {x[2]}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
+          {tab === "summary" ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Card className="p-4">
+                <small>Peso actual</small>
+                <b className="block text-2xl">{p.weightKg} kg</b>
+              </Card>
+              <Card className="p-4">
+                <small>Alergias</small>
+                <b className="block">{p.allergies || "Sin alergias"}</b>
+              </Card>
+              <Card className="p-4">
+                <small>Condiciones</small>
+                <b className="block">{p.conditions || "Sin condiciones"}</b>
+              </Card>
+              <Card className="p-4 sm:col-span-3">
+                <b>Propietario</b>
+                <p>
+                  {p.owner.name} · DNI {p.owner.document}
+                </p>
+                <p className="break-words text-sm text-on-surface-variant">
+                  {p.owner.phone || "Sin teléfono"} ·{" "}
+                  {p.owner.email || "Sin correo"} ·{" "}
+                  {p.owner.address || "Sin dirección"}
+                </p>
+              </Card>
+            </div>
+          ) : null}
+          {tab === "history" ? (
+            <div className="grid gap-2">
+              {data.records.map((x) => (
+                <Card className="p-3" key={x.id}>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Badge>{x.recordType}</Badge>
+                      <b className="ml-2">
+                        {x.diagnosis || "Atención clínica"}
+                      </b>
+                      <p className="mt-1 break-words text-sm">{x.treatment}</p>
+                      <small className="text-on-surface-variant">
+                        {local(x.createdAt)} ·{" "}
+                        {x.professional?.name || "Equipo veterinario"}
+                      </small>
+                    </div>
+                    <div className="text-right">
+                      <b>{money(x.amount)}</b>
+                      <p className="text-xs">
+                        {x.paymentStatus === "paid" ? "Pagado" : "Por cobrar"}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              {!data.records.length ? (
+                <EmptyState
+                  icon="clinical_notes"
+                  title="Sin atenciones"
+                  description="La historia se completará desde cada consulta."
+                />
+              ) : null}
+            </div>
+          ) : null}
+          {tab === "vaccines" ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {data.vaccines.map((x) => (
+                <Card className="p-3" key={x.id}>
+                  <b>{x.name}</b>
+                  <p className="text-sm">Aplicada: {x.appliedAt}</p>
+                  <p className="text-sm text-primary">
+                    Próxima: {x.nextDueAt || "No indicada"}
+                  </p>
+                </Card>
+              ))}
+              {!data.vaccines.length ? (
+                <EmptyState
+                  icon="vaccines"
+                  title="Sin vacunas"
+                  description="Registra la primera vacuna de la mascota."
+                />
+              ) : null}
+            </div>
+          ) : null}
+          {tab === "appointments" ? (
+            <div className="grid gap-2">
+              {data.appointments.map((x) => (
+                <Card className="p-3" key={x.id}>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <div>
+                      <b>{x.reason}</b>
+                      <p className="text-sm">
+                        {local(x.startsAt)} ·{" "}
+                        {x.professional?.name || "Por asignar"}
+                      </p>
+                    </div>
+                    <Badge>{statusLabel[x.status] || x.status}</Badge>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : null}
+          {tab === "documents" ? <VeterinaryDocuments petId={p.id} /> : null}
+          {tab === "reports" ? <VeterinaryReports pet={p} /> : null}
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
-export default function VeterinaryWorkspace({dashboard=false}){const{moduleKey}=useParams();const mode=dashboard?'dashboard':moduleKey==='appointments'?'appointments':moduleKey==='invoices'?'billing':'pets';const[summary,setSummary]=useState({}),[pets,setPets]=useState([]),[appointments,setAppointments]=useState([]),[billing,setBilling]=useState([]),[professionals,setProfessionals]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[modal,setModal]=useState(''),[selected,setSelected]=useState(null),[record,setRecord]=useState(null),[query,setQuery]=useState(''),[paymentRecord,setPaymentRecord]=useState(null)
- const load=useCallback(async()=>{setLoading(true);setError('');try{const[s,p,a,b,pro]=await Promise.all([api.getVeterinarySummary(),api.getPets(),api.getVeterinaryAppointments(),api.getVeterinaryBilling('all'),api.getVeterinaryProfessionals()]);setSummary(s);setPets(p);setAppointments(a);setBilling(b);setProfessionals(pro)}catch(e){setError(e.message)}finally{setLoading(false)}},[]);useEffect(()=>{queueMicrotask(load)},[load]);const done=()=>{setModal('');load()};const openRecord=async pet=>{setSelected(pet);setModal('record');try{setRecord(await api.getPetRecord(pet.id))}catch(e){setError(e.message)}};const filtered=useMemo(()=>{const q=query.toLowerCase();return pets.filter(x=>!q||`${x.name} ${x.code} ${x.owner.name} ${x.owner.document}`.toLowerCase().includes(q))},[pets,query]);const today=new Date().toLocaleDateString('en-CA');const todayAppointments=appointments.filter(x=>x.startsAt?.slice(0,10)===today)
- const action=<div className="flex gap-2"><Button icon="pets" onClick={()=>setModal('pet')}>Registrar mascota</Button><Button icon="event_available" onClick={()=>setModal('appointment')} variant="secondary">Agendar cita</Button></div>
- return <DashboardShell action={action} subtitle="Mascotas, propietarios, agenda, historia clínica, vacunas y cobros conectados." title={dashboard?'Panel veterinario':mode==='appointments'?'Agenda veterinaria':mode==='billing'?'Cobros veterinarios':'Mascotas'}>{error?<EmptyState icon="cloud_off" title="No se pudo cargar" description={error}/>:null}{loading?<Card className="h-40 animate-pulse"/>:null}{!loading&&dashboard?<><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric icon="pets" label="Mascotas" value={summary.pets||0} note="Expedientes activos"/><Metric icon="calendar_month" label="Citas de hoy" value={summary.appointmentsToday||0} note="Atenciones programadas"/><Metric icon="vaccines" label="Vacunas próximas" value={summary.vaccinesDue||0} note="Durante los próximos 30 días"/><Metric icon="payments" label="Por cobrar" value={money(summary.pendingAmount)} note="Atenciones pendientes"/></div><div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_.6fr]"><Card className="p-4"><div className="flex justify-between"><div><h2 className="text-lg font-bold">Agenda de hoy</h2><p className="text-xs text-on-surface-variant">Llegadas y veterinarios asignados.</p></div><Link className="font-bold text-primary" to="/dashboard/appointments">Ver agenda</Link></div><div className="mt-3 grid gap-2">{todayAppointments.map(x=><button className="rounded-xl bg-surface-container-low p-3 text-left" key={x.id} onClick={()=>openRecord(x.pet)} type="button"><b>{new Date(x.startsAt).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})} · {x.pet.name}</b><p className="text-sm">{x.reason} · {x.professional?.name||'Por asignar'}</p></button>)}{!todayAppointments.length?<p className="rounded-xl border border-dashed p-5 text-center">Sin citas para hoy.</p>:null}</div></Card><Card className="p-4"><h2 className="text-lg font-bold">Acciones clínicas</h2><div className="mt-3 grid gap-2"><Button icon="pets" onClick={()=>setModal('pet')}>Nueva mascota</Button><Button icon="calendar_month" onClick={()=>setModal('appointment')} variant="secondary">Nueva cita</Button><Link className="rounded-xl border px-4 py-3 text-center font-bold" to="/dashboard/inventory">Inventario veterinario</Link><Link className="rounded-xl border px-4 py-3 text-center font-bold" to="/dashboard/team">Equipo y asistencia</Link></div></Card></div><Card className="mt-4 p-4"><h2 className="mb-3 text-lg font-bold">Mascotas recientes</h2><HorizontalScroller label="Mascotas recientes">{pets.slice(0,10).map(x=><button className="w-56 shrink-0 text-left" key={x.id} onClick={()=>openRecord(x)} type="button"><div className="rounded-2xl border p-3 hover:border-primary"><PetAvatar className="size-14" pet={x}/><b className="mt-2 block">{x.name}</b><p className="truncate text-xs">{x.breed||x.species} · {x.owner.name}</p></div></button>)}</HorizontalScroller></Card></>:null}{!loading&&mode==='pets'&&!dashboard?<><Card className="mb-3 flex gap-2 p-3"><input className={field} onChange={e=>setQuery(e.target.value)} placeholder="Buscar mascota, código o propietario" value={query}/><Badge>{filtered.length} mascotas</Badge></Card><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filtered.map(x=><button className="text-left" key={x.id} onClick={()=>openRecord(x)} type="button"><Card className="h-44 p-4 transition hover:-translate-y-1 hover:border-primary"><div className="flex justify-between gap-3"><PetAvatar className="size-12" pet={x}/><Badge>{x.status==='active'?'Activo':x.status}</Badge></div><b className="mt-3 block truncate text-lg">{x.name} · {x.breed||x.species}</b><p className="truncate text-sm text-on-surface-variant">{x.code} · {x.owner.name}</p>{x.allergies?<p className="mt-2 truncate rounded-lg bg-error-container px-2 py-1 text-xs">Alergias: {x.allergies}</p>:null}</Card></button>)}</div></>:null}{!loading&&mode==='appointments'&&!dashboard?<div className="grid gap-3">{appointments.map(x=><Card className="p-4" key={x.id}><div className="flex flex-wrap items-center justify-between gap-3"><button className="text-left" onClick={()=>openRecord(x.pet)} type="button"><b className="text-lg">{x.pet.name} · {x.pet.owner.name}</b><p className="text-sm">{local(x.startsAt)} · {x.reason}</p><p className="text-xs text-on-surface-variant">{x.professional?.name||'Profesional por asignar'}</p></button><div className="flex items-center gap-2"><Badge>{statusLabel[x.status]||x.status}</Badge>{['scheduled','confirmed'].includes(x.status)?<Button onClick={async()=>{await api.updateVeterinaryAppointment(x.id,'confirmed');load()}} variant="secondary">Confirmar</Button>:null}<Button onClick={()=>{setSelected(x.pet);setModal('attention')}}>Atender</Button></div></div></Card>)}</div>:null}{!loading&&mode==='billing'&&!dashboard?<div className="grid gap-3">{billing.map(x=><Card className="p-4" key={x.id}><div className="flex items-center justify-between gap-3"><button className="text-left" onClick={()=>openRecord(x.pet)} type="button"><b>{x.pet.name} · {x.pet.owner.name}</b><p className="text-sm">{x.diagnosis||x.recordType} · {local(x.createdAt)}</p></button><div className="text-right"><b className="text-xl">{money(x.amount)}</b><p className="text-xs">{x.paymentStatus==='paid'?'Pagado':'Pendiente'}</p>{x.paymentStatus==='pending'?<Button onClick={()=>setPaymentRecord(x)}>Cobrar y emitir</Button>:null}</div></div></Card>)}{!billing.length?<EmptyState icon="payments" title="Sin cobros" description="Las atenciones con importe aparecerán aquí."/>:null}</div>:null}{modal==='pet'?<PetForm close={()=>setModal('')} done={done}/>:null}{modal==='appointment'?<AppointmentForm close={()=>setModal('')} done={done} pets={pets} professionals={professionals}/>:null}{modal==='record'&&record?<PetRecord close={()=>{setModal('');setRecord(null)}} data={record} onAttention={()=>setModal('attention')} onVaccine={()=>setModal('vaccine')}/>:null}{modal==='attention'&&selected?<AttentionForm appointments={appointments} close={()=>setModal('record')} done={done} pet={selected} professionals={professionals}/>:null}{modal==='vaccine'&&selected?<VaccineForm close={()=>setModal('record')} done={done} pet={selected}/>:null}{paymentRecord?<VeterinaryPaymentModal onClose={()=>setPaymentRecord(null)} onPaid={load} record={paymentRecord}/>:null}</DashboardShell>}
+export default function VeterinaryWorkspace({ dashboard = false }) {
+  const { moduleKey } = useParams();
+  const mode = dashboard
+    ? "dashboard"
+    : moduleKey === "appointments"
+      ? "appointments"
+      : moduleKey === "invoices"
+        ? "billing"
+        : "pets";
+  const [summary, setSummary] = useState({}),
+    [pets, setPets] = useState([]),
+    [appointments, setAppointments] = useState([]),
+    [billing, setBilling] = useState([]),
+    [professionals, setProfessionals] = useState([]),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [modal, setModal] = useState(""),
+    [selected, setSelected] = useState(null),
+    [record, setRecord] = useState(null),
+    [query, setQuery] = useState(""),
+    [paymentRecord, setPaymentRecord] = useState(null);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [s, p, a, b, pro] = await Promise.all([
+        api.getVeterinarySummary(),
+        api.getPets(),
+        api.getVeterinaryAppointments(),
+        api.getVeterinaryBilling("all"),
+        api.getVeterinaryProfessionals(),
+      ]);
+      setSummary(s);
+      setPets(p);
+      setAppointments(a);
+      setBilling(b);
+      setProfessionals(pro);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    queueMicrotask(load);
+  }, [load]);
+  const done = () => {
+    setModal("");
+    load();
+  };
+  const openRecord = async (pet) => {
+    setSelected(pet);
+    setModal("record");
+    try {
+      setRecord(await api.getPetRecord(pet.id));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const filtered = useMemo(
+    () =>
+      pets.filter((x) =>
+        matchesEntitySearch(x, query, (item) => [
+          item.name,
+          item.code,
+          item.owner?.name,
+          item.owner?.document,
+          item.owner?.phone,
+          item.owner?.email,
+        ]),
+      ),
+    [pets, query],
+  );
+  const today = new Date().toLocaleDateString("en-CA");
+  const todayAppointments = appointments.filter(
+    (x) => x.startsAt?.slice(0, 10) === today,
+  );
+  const action = (
+    <div className="flex gap-2">
+      <Button icon="pets" onClick={() => setModal("pet")}>
+        Registrar mascota
+      </Button>
+      <Button
+        icon="event_available"
+        onClick={() => setModal("appointment")}
+        variant="secondary"
+      >
+        Agendar cita
+      </Button>
+    </div>
+  );
+  return (
+    <DashboardShell
+      action={action}
+      subtitle="Mascotas, propietarios, agenda, historia clínica, vacunas y cobros conectados."
+      title={
+        dashboard
+          ? "Panel veterinario"
+          : mode === "appointments"
+            ? "Agenda veterinaria"
+            : mode === "billing"
+              ? "Cobros veterinarios"
+              : "Mascotas"
+      }
+    >
+      {error ? (
+        <EmptyState
+          icon="cloud_off"
+          title="No se pudo cargar"
+          description={error}
+        />
+      ) : null}
+      {loading ? <Card className="h-40 animate-pulse" /> : null}
+      {!loading && dashboard ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric
+              icon="pets"
+              label="Mascotas"
+              value={summary.pets || 0}
+              note="Expedientes activos"
+            />
+            <Metric
+              icon="calendar_month"
+              label="Citas de hoy"
+              value={summary.appointmentsToday || 0}
+              note="Atenciones programadas"
+            />
+            <Metric
+              icon="vaccines"
+              label="Vacunas próximas"
+              value={summary.vaccinesDue || 0}
+              note="Durante los próximos 30 días"
+            />
+            <Metric
+              icon="payments"
+              label="Por cobrar"
+              value={money(summary.pendingAmount)}
+              note="Atenciones pendientes"
+            />
+          </div>
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_.6fr]">
+            <Card className="p-4">
+              <div className="flex justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Agenda de hoy</h2>
+                  <p className="text-xs text-on-surface-variant">
+                    Llegadas y veterinarios asignados.
+                  </p>
+                </div>
+                <Link
+                  className="font-bold text-primary"
+                  to="/dashboard/appointments"
+                >
+                  Ver agenda
+                </Link>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {todayAppointments.map((x) => (
+                  <button
+                    className="rounded-xl bg-surface-container-low p-3 text-left"
+                    key={x.id}
+                    onClick={() => openRecord(x.pet)}
+                    type="button"
+                  >
+                    <b>
+                      {new Date(x.startsAt).toLocaleTimeString("es-PE", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      · {x.pet.name}
+                    </b>
+                    <p className="text-sm">
+                      {x.reason} · {x.professional?.name || "Por asignar"}
+                    </p>
+                  </button>
+                ))}
+                {!todayAppointments.length ? (
+                  <p className="rounded-xl border border-dashed p-5 text-center">
+                    Sin citas para hoy.
+                  </p>
+                ) : null}
+              </div>
+            </Card>
+            <Card className="p-4">
+              <h2 className="text-lg font-bold">Acciones clínicas</h2>
+              <div className="mt-3 grid gap-2">
+                <Button icon="pets" onClick={() => setModal("pet")}>
+                  Nueva mascota
+                </Button>
+                <Button
+                  icon="calendar_month"
+                  onClick={() => setModal("appointment")}
+                  variant="secondary"
+                >
+                  Nueva cita
+                </Button>
+                <Link
+                  className="rounded-xl border px-4 py-3 text-center font-bold"
+                  to="/dashboard/inventory"
+                >
+                  Inventario veterinario
+                </Link>
+                <Link
+                  className="rounded-xl border px-4 py-3 text-center font-bold"
+                  to="/dashboard/team"
+                >
+                  Equipo y asistencia
+                </Link>
+              </div>
+            </Card>
+          </div>
+          <Card className="mt-4 p-4">
+            <h2 className="mb-3 text-lg font-bold">Mascotas recientes</h2>
+            <HorizontalScroller label="Mascotas recientes">
+              {pets.slice(0, 10).map((x) => (
+                <button
+                  className="w-56 shrink-0 text-left"
+                  key={x.id}
+                  onClick={() => openRecord(x)}
+                  type="button"
+                >
+                  <div className="rounded-2xl border p-3 hover:border-primary">
+                    <PetAvatar className="size-14" pet={x} />
+                    <b className="mt-2 block">{x.name}</b>
+                    <p className="truncate text-xs">
+                      {x.breed || x.species} · {x.owner.name}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </HorizontalScroller>
+          </Card>
+        </>
+      ) : null}
+      {!loading && mode === "pets" && !dashboard ? (
+        <>
+          <Card className="mb-3 flex gap-2 p-3">
+            <input
+              className={field}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar mascota, propietario, DNI o celular"
+              value={query}
+            />
+            <Badge>{filtered.length} mascotas</Badge>
+          </Card>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((x) => (
+              <button
+                className="text-left"
+                key={x.id}
+                onClick={() => openRecord(x)}
+                type="button"
+              >
+                <Card className="h-44 p-4 transition hover:-translate-y-1 hover:border-primary">
+                  <div className="flex justify-between gap-3">
+                    <PetAvatar className="size-12" pet={x} />
+                    <Badge>{x.status === "active" ? "Activo" : x.status}</Badge>
+                  </div>
+                  <b className="mt-3 block truncate text-lg">
+                    {x.name} · {x.breed || x.species}
+                  </b>
+                  <p className="truncate text-sm text-on-surface-variant">
+                    {x.code} · {x.owner.name}
+                  </p>
+                  {x.allergies ? (
+                    <p className="mt-2 truncate rounded-lg bg-error-container px-2 py-1 text-xs">
+                      Alergias: {x.allergies}
+                    </p>
+                  ) : null}
+                </Card>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+      {!loading && mode === "appointments" && !dashboard ? (
+        <div className="grid gap-3">
+          {appointments.map((x) => (
+            <Card className="p-4" key={x.id}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <button
+                  className="text-left"
+                  onClick={() => openRecord(x.pet)}
+                  type="button"
+                >
+                  <b className="text-lg">
+                    {x.pet.name} · {x.pet.owner.name}
+                  </b>
+                  <p className="text-sm">
+                    {local(x.startsAt)} · {x.reason}
+                  </p>
+                  <p className="text-xs text-on-surface-variant">
+                    {x.professional?.name || "Profesional por asignar"}
+                  </p>
+                </button>
+                <div className="flex items-center gap-2">
+                  <Badge>{statusLabel[x.status] || x.status}</Badge>
+                  {["scheduled", "confirmed"].includes(x.status) ? (
+                    <Button
+                      onClick={async () => {
+                        await api.updateVeterinaryAppointment(
+                          x.id,
+                          "confirmed",
+                        );
+                        load();
+                      }}
+                      variant="secondary"
+                    >
+                      Confirmar
+                    </Button>
+                  ) : null}
+                  <Button
+                    onClick={() => {
+                      setSelected(x.pet);
+                      setModal("attention");
+                    }}
+                  >
+                    Atender
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+      {!loading && mode === "billing" && !dashboard ? (
+        <div className="grid gap-3">
+          {billing.map((x) => (
+            <Card className="p-4" key={x.id}>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  className="text-left"
+                  onClick={() => openRecord(x.pet)}
+                  type="button"
+                >
+                  <b>
+                    {x.pet.name} · {x.pet.owner.name}
+                  </b>
+                  <p className="text-sm">
+                    {x.diagnosis || x.recordType} · {local(x.createdAt)}
+                  </p>
+                </button>
+                <div className="text-right">
+                  <b className="text-xl">{money(x.amount)}</b>
+                  <p className="text-xs">
+                    {x.paymentStatus === "paid" ? "Pagado" : "Pendiente"}
+                  </p>
+                  {x.paymentStatus === "pending" ? (
+                    <Button onClick={() => setPaymentRecord(x)}>
+                      Cobrar y emitir
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </Card>
+          ))}
+          {!billing.length ? (
+            <EmptyState
+              icon="payments"
+              title="Sin cobros"
+              description="Las atenciones con importe aparecerán aquí."
+            />
+          ) : null}
+        </div>
+      ) : null}
+      {modal === "pet" ? (
+        <PetForm close={() => setModal("")} done={done} />
+      ) : null}
+      {modal === "appointment" ? (
+        <AppointmentForm
+          close={() => setModal("")}
+          done={done}
+          pets={pets}
+          professionals={professionals}
+        />
+      ) : null}
+      {modal === "record" && record ? (
+        <PetRecord
+          close={() => {
+            setModal("");
+            setRecord(null);
+          }}
+          data={record}
+          onAttention={() => setModal("attention")}
+          onVaccine={() => setModal("vaccine")}
+        />
+      ) : null}
+      {modal === "attention" && selected ? (
+        <AttentionForm
+          appointments={appointments}
+          close={() => setModal("record")}
+          done={done}
+          pet={selected}
+          professionals={professionals}
+        />
+      ) : null}
+      {modal === "vaccine" && selected ? (
+        <VaccineForm
+          close={() => setModal("record")}
+          done={done}
+          pet={selected}
+        />
+      ) : null}
+      {paymentRecord ? (
+        <VeterinaryPaymentModal
+          onClose={() => setPaymentRecord(null)}
+          onPaid={load}
+          record={paymentRecord}
+        />
+      ) : null}
+    </DashboardShell>
+  );
+}
