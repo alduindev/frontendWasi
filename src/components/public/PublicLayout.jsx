@@ -44,6 +44,7 @@ export default function PublicLayout({ children }) {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [footerSection, setFooterSection] = useState("");
   const menuButtonRef = useRef(null);
   const drawerRef = useRef(null);
   const drawerCloseButtonRef = useRef(null);
@@ -76,7 +77,7 @@ export default function PublicLayout({ children }) {
     }
 
     const previousOverflow = document.body.style.overflow;
-    const desktopViewport = window.matchMedia("(min-width: 1024px)");
+    const desktopViewport = window.matchMedia("(min-width: 1280px)");
     const focusFrame = window.requestAnimationFrame(() => {
       drawerCloseButtonRef.current?.focus();
     });
@@ -162,7 +163,7 @@ export default function PublicLayout({ children }) {
 
             <nav
               aria-label="Navegación principal"
-              className="hidden items-center gap-1 rounded-2xl border border-white/70 bg-surface-container-low/75 p-1.5 shadow-inner lg:flex"
+              className="hidden items-center gap-1 rounded-2xl border border-white/70 bg-surface-container-low/75 p-1.5 shadow-inner xl:flex"
             >
               {links.map(([to, label]) => (
                 <NavLink
@@ -183,7 +184,7 @@ export default function PublicLayout({ children }) {
               ))}
             </nav>
 
-            <div className="hidden items-center gap-2 lg:flex">
+            <div className="hidden items-center gap-2 xl:flex">
               {isAuthenticated ? (
                 <>
                   <Link
@@ -238,7 +239,7 @@ export default function PublicLayout({ children }) {
               )}
             </div>
 
-            <div className="lg:hidden">
+            <div className="xl:hidden">
               <button
                 aria-controls="public-mobile-menu"
                 aria-expanded={open}
@@ -256,7 +257,7 @@ export default function PublicLayout({ children }) {
       </header>
 
       {open ? (
-        <div className="fixed inset-0 z-[70] lg:hidden">
+        <div className="fixed inset-0 z-[70] xl:hidden">
           <button
             aria-label="Cerrar menú"
             className="absolute inset-0 cursor-default bg-black/45 backdrop-blur-sm"
@@ -406,21 +407,135 @@ export default function PublicLayout({ children }) {
 
       <div className="flex-1">{children}</div>
 
-      <footer className="relative mt-16 overflow-hidden px-3 pb-3 sm:px-4 sm:pb-4">
+      <footer
+        className="relative mt-10 overflow-hidden px-3 sm:px-4 xl:mt-16"
+        style={{
+          paddingBottom:
+            "max(0.75rem, env(safe-area-inset-bottom, 0px))",
+        }}
+      >
         <div className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-primary-fixed-dim/25 blur-3xl" />
 
         <div className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-secondary-container/60 blur-3xl" />
 
         <div className="clay-card relative mx-auto max-w-7xl overflow-hidden">
-          <div className="grid gap-10 px-6 py-12 sm:px-8 lg:grid-cols-[1.35fr_repeat(3,1fr)] lg:px-12 lg:py-14">
+          <div className="px-4 py-5 sm:px-6 sm:py-6 xl:hidden">
+            <Link
+              aria-label="Ir al inicio de Wasita"
+              className="inline-flex min-h-11 items-center gap-3 rounded-2xl"
+              to="/"
+            >
+              <WasitaMark className="h-10 w-10 shrink-0" />
+
+              <span>
+                <span className="block font-heading text-xl font-extrabold tracking-tight text-primary">
+                  WASITA
+                </span>
+
+                <span className="block text-[0.625rem] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                  Gestión inteligente
+                </span>
+              </span>
+            </Link>
+
+            <p className="mt-3 max-w-xl text-sm leading-6 text-on-surface-variant">
+              Inventario, ventas y operaciones conectadas para gestionar tu
+              negocio desde cualquier lugar.
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="clay-badge min-h-9 px-3 py-1.5 text-xs font-bold">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-base text-primary"
+                >
+                  verified
+                </span>
+                Gestión segura
+              </span>
+
+              <span className="clay-badge min-h-9 px-3 py-1.5 text-xs font-bold">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-base text-primary"
+                >
+                  cloud_done
+                </span>
+                Disponible en línea
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-2">
+              {footerGroups.map(([title, items]) => {
+                const expanded = footerSection === title;
+                const sectionId = `public-footer-${title.toLowerCase()}`;
+
+                return (
+                  <section
+                    className="group overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container-low/70"
+                    key={title}
+                  >
+                    <h2>
+                      <button
+                        aria-controls={sectionId}
+                        aria-expanded={expanded}
+                        className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-left font-heading text-sm font-extrabold text-on-surface outline-none transition hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                        onClick={() =>
+                          setFooterSection((current) =>
+                            current === title ? "" : title,
+                          )
+                        }
+                        type="button"
+                      >
+                        {title}
+
+                        <span
+                          aria-hidden="true"
+                          className={`material-symbols-outlined text-xl text-primary transition-transform duration-200 ${
+                            expanded ? "rotate-180" : ""
+                          }`}
+                        >
+                          expand_more
+                        </span>
+                      </button>
+                    </h2>
+
+                    {expanded ? (
+                      <div
+                        className="grid border-t border-outline-variant/50 px-2 py-1"
+                        id={sectionId}
+                      >
+                        {items.map(([to, label]) => (
+                          <Link
+                            className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-medium text-on-surface-variant transition hover:bg-white/75 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            key={to}
+                            to={to}
+                          >
+                            {label}
+
+                            <span
+                              aria-hidden="true"
+                              className="material-symbols-outlined text-lg"
+                            >
+                              chevron_right
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hidden gap-10 px-12 py-14 xl:grid xl:grid-cols-[1.35fr_repeat(3,1fr)]">
             <div className="max-w-sm">
               <Link
                 className="inline-flex items-center gap-3 rounded-2xl"
                 to="/"
               >
-                <span className="clay-icon material-symbols-outlined h-12 w-12 text-[1.55rem]">
-                  storefront
-                </span>
+                <WasitaMark className="h-12 w-12 shrink-0" />
 
                 <span className="font-heading text-2xl font-extrabold tracking-tight text-primary">
                   WASITA
@@ -465,7 +580,7 @@ export default function PublicLayout({ children }) {
                 <div className="mt-4 grid gap-2">
                   {items.map(([to, label]) => (
                     <Link
-                      className="group flex w-fit items-center gap-2 rounded-lg py-1.5 text-sm font-medium text-on-surface-variant transition hover:translate-x-1 hover:text-primary"
+                      className="group flex min-h-11 w-fit items-center gap-2 rounded-lg py-2.5 text-sm font-medium text-on-surface-variant transition hover:translate-x-1 hover:text-primary"
                       key={to}
                       to={to}
                     >
@@ -482,8 +597,8 @@ export default function PublicLayout({ children }) {
             ))}
           </div>
 
-          <div className="border-t border-outline-variant/60 px-6 py-5 sm:px-8 lg:px-12">
-            <div className="flex flex-col gap-3 text-center text-xs font-medium text-on-surface-variant sm:flex-row sm:items-center sm:justify-between sm:text-left">
+          <div className="border-t border-outline-variant/60 py-3 pl-4 pr-16 sm:pl-6 sm:pr-32 xl:py-5 xl:pl-12 xl:pr-36">
+            <div className="flex flex-col gap-1.5 text-center text-xs font-medium leading-5 text-on-surface-variant sm:flex-row sm:items-center sm:justify-between sm:text-left xl:gap-3">
               <p>
                 © {new Date().getFullYear()} Wasita. Todos los derechos
                 reservados.
