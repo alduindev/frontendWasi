@@ -6,6 +6,7 @@ import { ToastProvider } from "../context/ToastContext";
 import { OnboardingProvider } from "../context/OnboardingContext";
 import { AppConfigProvider } from "../context/AppConfigContext";
 import { useAuth } from "../context/authStore";
+import WasitaLoadingScreen from "../components/ui/WasitaLoadingScreen";
 import RouterOut from "./out/RouterOut";
 
 const AdminRoutes = lazy(() => import("./in/RouterIn"));
@@ -20,25 +21,13 @@ const PlatformModules = lazy(() => import("../pages/platform/PlatformModules"));
 const PlatformBilling = lazy(() => import("../pages/platform/PlatformBilling"));
 
 function RouteLoading() {
-  return (
-    <div
-      aria-live="polite"
-      className="grid min-h-svh place-items-center bg-background text-primary"
-    >
-      Cargando espacio de trabajo...
-    </div>
-  );
+  return <WasitaLoadingScreen />;
 }
 
 function ProtectedRoute({ children, area }) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
-  if (isLoading)
-    return (
-      <div className="grid min-h-svh place-items-center bg-background text-primary">
-        Cargando sesion...
-      </div>
-    );
+  if (isLoading) return <WasitaLoadingScreen />;
 
   if (!isAuthenticated) return <Navigate to="/" replace />;
   const operatorArea = user.role === "operator";
