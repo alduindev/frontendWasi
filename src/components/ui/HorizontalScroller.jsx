@@ -36,6 +36,46 @@ export default function HorizontalScroller({ children, className = '', label = '
     for (const child of rail.children) observer.observe(child)
     return () => { rail.removeEventListener('scroll', update); observer.disconnect();clearTimeout(snapTimerRef.current) }
   }, [children])
-  const control = 'flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-outline-variant bg-white text-primary shadow-sm transition hover:bg-primary-fixed disabled:cursor-default disabled:opacity-25'
-  return <div className="grid min-w-0 grid-cols-[36px_minmax(0,1fr)_36px] items-stretch gap-1"><button aria-label="Ver anteriores" className={`${control} ${edges.overflow?'':'invisible'}`} disabled={edges.start} onClick={() => move(-1)} type="button"><span className="material-symbols-outlined">chevron_left</span></button><div aria-label={label} className={`flex min-w-0 select-none cursor-grab gap-3 overflow-x-auto overscroll-x-contain px-1 pt-1 active:cursor-grabbing ${pageStep?'wasi-page-scroller pb-1 [&>*]:box-border [&>*]:w-full [&>*]:min-w-full [&>*]:max-w-full [&>*]:basis-full':'pb-3'} ${dragging?'snap-none':'snap-x snap-proximity'} ${className}`} onClickCapture={clickCapture} onDragStart={event=>event.preventDefault()} onPointerCancel={pointerUp} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onWheel={wheel} ref={railRef} tabIndex="0">{children}</div><button aria-label="Ver siguientes" className={`${control} ${edges.overflow?'':'invisible'}`} disabled={edges.end} onClick={() => move(1)} type="button"><span className="material-symbols-outlined">chevron_right</span></button></div>
+  const control = 'absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-outline-variant bg-white/95 text-primary shadow-md backdrop-blur transition hover:bg-primary-fixed disabled:cursor-default disabled:opacity-25'
+  return (
+    <div className="relative min-w-0">
+      <button
+        aria-label="Ver anteriores"
+        className={`${control} left-1 ${edges.overflow ? '' : 'invisible'}`}
+        disabled={edges.start}
+        onClick={() => move(-1)}
+        type="button"
+      >
+        <span className="material-symbols-outlined">chevron_left</span>
+      </button>
+      <div
+        aria-label={label}
+        className={`flex min-w-0 cursor-grab select-none gap-3 overflow-x-auto overscroll-x-contain px-1 pt-1 active:cursor-grabbing ${
+          pageStep
+            ? 'wasi-page-scroller pb-1 [&>*]:box-border [&>*]:w-full [&>*]:min-w-full [&>*]:max-w-full [&>*]:basis-full'
+            : 'pb-3'
+        } ${dragging ? 'snap-none' : 'snap-x snap-proximity'} ${className}`}
+        onClickCapture={clickCapture}
+        onDragStart={(event) => event.preventDefault()}
+        onPointerCancel={pointerUp}
+        onPointerDown={pointerDown}
+        onPointerMove={pointerMove}
+        onPointerUp={pointerUp}
+        onWheel={wheel}
+        ref={railRef}
+        tabIndex="0"
+      >
+        {children}
+      </div>
+      <button
+        aria-label="Ver siguientes"
+        className={`${control} right-1 ${edges.overflow ? '' : 'invisible'}`}
+        disabled={edges.end}
+        onClick={() => move(1)}
+        type="button"
+      >
+        <span className="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+  )
 }
