@@ -25,62 +25,84 @@ function requestHeaders(options = {}, accessToken = getAccessToken()) {
   return headers
 }
 
+function networkActivity(phase, path, method = 'GET') {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(`wasi:request-${phase}`, {
+    detail: { method: String(method).toUpperCase(), path },
+  }))
+}
+
 export async function apiRequest(path, options = {}) {
   const requestAccessToken = getAccessToken()
   const headers = requestHeaders(options, requestAccessToken)
-  let response
-  try {
-    response = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers })
-  } catch (error) {
-    throw new ApiError('No se pudo leer la respuesta del backend. Verifica que el API esté activo y que CORS permita este origen.', 0, error)
-  }
-  const payload = response.status === 204 ? null : await response.json().catch(() => null)
-  if (!response.ok) {
-    const isCurrentAuthenticatedRequest = (
-      Boolean(requestAccessToken)
-      && getAccessToken() === requestAccessToken
-    )
-    if (
-      response.status === 401
-      && path !== '/auth/login'
-      && path !== '/auth/logout'
-      && isCurrentAuthenticatedRequest
-    ) {
-      clearAccessToken()
-      window.dispatchEvent(new CustomEvent('wasi:session-expired'))
-    }
-    throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload, response.headers.get('X-Request-ID') || '')
-  }
   const method = String(options.method || 'GET').toUpperCase()
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    window.dispatchEvent(new CustomEvent('wasi:data-changed', { detail: { method, path, payload } }))
+  networkActivity('start', path, method)
+  try {
+    let response
+    try {
+      response = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers })
+    } catch (error) {
+      throw new ApiError('No se pudo leer la respuesta del backend. Verifica que el API esté activo y que CORS permita este origen.', 0, error)
+    }
+    const payload = response.status === 204 ? null : await response.json().catch(() => null)
+    if (!response.ok) {
+      const isCurrentAuthenticatedRequest = (
+        Boolean(requestAccessToken)
+        && getAccessToken() === requestAccessToken
+      )
+      if (
+        response.status === 401
+        && path !== '/auth/login'
+        && path !== '/auth/logout'
+        && isCurrentAuthenticatedRequest
+      ) {
+        clearAccessToken()
+        window.dispatchEvent(new CustomEvent('wasi:session-expired'))
+      }
+      throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload, response.headers.get('X-Request-ID') || '')
+    }
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      window.dispatchEvent(new CustomEvent('wasi:data-changed', { detail: { method, path, payload } }))
+    }
+    return payload
+  } finally {
+    networkActivity('end', path, method)
   }
-  return payload
 }
 
 export async function apiDownload(path) {
-  const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
+  networkActivity('start', path, 'GET')
+  try {
+    const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null)
+      throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
+    }
+    const blob = await response.blob()
+    const disposition = response.headers.get('Content-Disposition') || ''
+    const encodedFilename = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+    let filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'exportacion'
+    if (encodedFilename) {
+      try { filename = decodeURIComponent(encodedFilename) } catch { filename = encodedFilename }
+    }
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.style.display = 'none'; document.body.append(anchor); anchor.click(); anchor.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } finally {
+    networkActivity('end', path, 'GET')
   }
-  const blob = await response.blob()
-  const disposition = response.headers.get('Content-Disposition') || ''
-  const encodedFilename = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
-  let filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'exportacion'
-  if (encodedFilename) {
-    try { filename = decodeURIComponent(encodedFilename) } catch { filename = encodedFilename }
-  }
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.style.display = 'none'; document.body.append(anchor); anchor.click(); anchor.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export async function apiBlob(path) {
-  const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
+  networkActivity('start', path, 'GET')
+  try {
+    const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null)
+      throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
+    }
+    return response.blob()
+  } finally {
+    networkActivity('end', path, 'GET')
   }
-  return response.blob()
 }
