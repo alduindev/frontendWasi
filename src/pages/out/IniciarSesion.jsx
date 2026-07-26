@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthButton from "../../components/molecules/AuthButton";
 import AuthField from "../../components/molecules/AuthField";
@@ -16,6 +16,7 @@ export default function IniciarSesion() {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ phone: false, password: false });
   const [submitting, setSubmitting] = useState(false);
+  const submissionRef = useRef(false);
   const phoneIsValid = /^9\d{8}$/.test(phone);
   const passwordIsValid = password.length >= 8 && password.length <= 128;
   const phoneError =
@@ -30,6 +31,8 @@ export default function IniciarSesion() {
     event.preventDefault();
     setTouched({ phone: true, password: true });
     if (!phoneIsValid || !passwordIsValid) return;
+    if (submissionRef.current) return;
+    submissionRef.current = true;
     setSubmitting(true);
     setError("");
     try {
@@ -44,6 +47,7 @@ export default function IniciarSesion() {
     } catch (requestError) {
       setError(requestError.message);
     } finally {
+      submissionRef.current = false;
       setSubmitting(false);
     }
   };
@@ -62,14 +66,16 @@ export default function IniciarSesion() {
       </div>
       {error ? (
         <div
-          aria-live="polite"
+          aria-live="assertive"
           className="mb-5 rounded-2xl border border-error-container bg-error-container/60 p-4 text-sm font-semibold text-on-error-container"
+          role="alert"
         >
           {error}
         </div>
       ) : null}
       <form
         autoComplete="off"
+        aria-busy={submitting}
         className="space-y-5"
         noValidate
         onSubmit={handleSubmit}
@@ -78,6 +84,7 @@ export default function IniciarSesion() {
           autoComplete="off"
           data-1p-ignore="true"
           data-lpignore="true"
+          disabled={submitting}
           error={phoneError}
           helperText="Usa los 9 dígitos de tu número celular, sin espacios."
           id="phone"
@@ -110,6 +117,7 @@ export default function IniciarSesion() {
           autoComplete="off"
           data-1p-ignore="true"
           data-lpignore="true"
+          disabled={submitting}
           enforcePolicy={false}
           error={passwordError}
           id="password"
@@ -127,8 +135,12 @@ export default function IniciarSesion() {
           value={password}
           variant="auth"
         />
-        <AuthButton disabled={submitting} type="submit">
-          {submitting ? "Ingresando..." : t("auth.login.submit")}
+        <AuthButton
+          loading={submitting}
+          loadingLabel="Verificando acceso..."
+          type="submit"
+        >
+          {t("auth.login.submit")}
         </AuthButton>
       </form>
       <div className="my-5 flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-outline">
