@@ -529,6 +529,82 @@ export default function HospitalityWorkspace() {
           {moduleKey === "guests" ? (
             <Card className="overflow-hidden">
               <div className="max-h-[64vh] overflow-auto">
+                <div className="grid gap-2 p-2 md:hidden">
+                  {visibleGuests.map((guest) => {
+                    const stays = reservations.filter(
+                      (reservation) => reservation.guestId === guest.id,
+                    );
+                    const latest = stays[0];
+                    return (
+                      <article
+                        className="rounded-2xl border border-outline-variant bg-white p-3"
+                        key={guest.id}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate font-bold">{guest.name}</h3>
+                            <p className="truncate text-xs text-on-surface-variant">
+                              {guest.documentType} {guest.document} · {guest.nationality}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-primary-fixed px-2.5 py-1 text-xs font-bold text-primary">
+                            {stays.length} estancia{stays.length === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                          <div className="rounded-xl bg-surface-container-low p-2">
+                            <dt className="font-bold uppercase text-on-surface-variant">Contacto</dt>
+                            <dd className="mt-1 break-words">
+                              {guest.phone || "Sin teléfono"}
+                              <span className="block text-on-surface-variant">
+                                {guest.email || "Sin correo"}
+                              </span>
+                            </dd>
+                          </div>
+                          <div className="rounded-xl bg-surface-container-low p-2">
+                            <dt className="font-bold uppercase text-on-surface-variant">Última estancia</dt>
+                            <dd className="mt-1">
+                              {latest ? (
+                                <>
+                                  <b>Hab. {latest.room.number}</b>
+                                  <span className="block text-on-surface-variant">
+                                    {latest.checkInDate} · {statusLabels[latest.status]}
+                                  </span>
+                                </>
+                              ) : (
+                                "Sin estancias"
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+                        {guest.notes ? (
+                          <p className="mt-2 rounded-xl bg-surface-container-low p-2 text-xs text-on-surface-variant">
+                            {guest.notes}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={() =>
+                              setModal({ type: "guestDetail", item: guest })
+                            }
+                            variant="secondary"
+                          >
+                            Ver expediente
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              setModal({ type: "guest", item: guest })
+                            }
+                            variant="ghost"
+                          >
+                            Editar
+                          </Button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="hidden md:block">
                 <table className="w-full min-w-[900px] border-collapse text-left text-sm">
                   <thead className="sticky top-0 z-10 bg-surface-container-low text-xs uppercase tracking-wide text-on-surface-variant">
                     <tr>
@@ -612,6 +688,7 @@ export default function HospitalityWorkspace() {
                     })}
                   </tbody>
                 </table>
+                </div>
                 {!visibleGuests.length ? (
                   <div className="p-4">
                     <EmptyState
