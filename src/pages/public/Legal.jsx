@@ -36,7 +36,7 @@ const legal = {
       ],
       [
         "Seguridad",
-        "Contraseñas hasheadas, cookies HTTP-only, permisos y separación por empresa.",
+        "Contraseñas hasheadas, sesiones con expiración, permisos y separación por empresa.",
       ],
       [
         "Derechos",
