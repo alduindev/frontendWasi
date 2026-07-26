@@ -1,12 +1,15 @@
 import { apiRequest } from '../api/httpClient'
+import { clearAccessToken, setAccessToken } from '../api/authToken'
 
 export async function loginUser(credentials) {
   const result = await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify(credentials) })
+  setAccessToken(result.accessToken)
   return result.user
 }
 
 export async function registerUser(data) {
   const result = await apiRequest('/auth/register', { method: 'POST', body: JSON.stringify(data) })
+  setAccessToken(result.accessToken)
   return result.user
 }
 
@@ -28,4 +31,10 @@ export function changeSessionPassword(data) {
   })
 }
 
-export const clearSession = () => apiRequest('/auth/logout', { method: 'POST' })
+export async function clearSession() {
+  try {
+    return await apiRequest('/auth/logout', { method: 'POST' })
+  } finally {
+    clearAccessToken()
+  }
+}
