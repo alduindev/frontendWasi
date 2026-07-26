@@ -73,7 +73,7 @@ function Metric({ icon, label, value, note, onClick }) {
     <button
       aria-label={`Ver detalle de ${label}`}
       className="group relative min-h-28 w-full overflow-hidden rounded-3xl border border-outline-variant bg-white p-3 text-left shadow-[0_12px_40px_rgba(31,24,39,0.06)] transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-      data-drag-card
+      data-no-drag
       onClick={onClick}
       type="button"
     >
