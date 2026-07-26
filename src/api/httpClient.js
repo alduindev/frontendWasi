@@ -17,9 +17,8 @@ function errorMessage(payload, fallback) {
   return fallback
 }
 
-function requestHeaders(options = {}) {
+function requestHeaders(options = {}, accessToken = getAccessToken()) {
   const headers = new Headers(options.headers)
-  const accessToken = getAccessToken()
   if (accessToken && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${accessToken}`)
   if (!headers.has('X-Request-ID')) headers.set('X-Request-ID', globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`)
   if (options.body !== undefined && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
@@ -27,7 +26,8 @@ function requestHeaders(options = {}) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const headers = requestHeaders(options)
+  const requestAccessToken = getAccessToken()
+  const headers = requestHeaders(options, requestAccessToken)
   let response
   try {
     response = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers })
@@ -36,7 +36,16 @@ export async function apiRequest(path, options = {}) {
   }
   const payload = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
-    if (response.status === 401 && path !== '/auth/login' && path !== '/auth/logout') {
+    const isCurrentAuthenticatedRequest = (
+      Boolean(requestAccessToken)
+      && getAccessToken() === requestAccessToken
+    )
+    if (
+      response.status === 401
+      && path !== '/auth/login'
+      && path !== '/auth/logout'
+      && isCurrentAuthenticatedRequest
+    ) {
       clearAccessToken()
       window.dispatchEvent(new CustomEvent('wasi:session-expired'))
     }
