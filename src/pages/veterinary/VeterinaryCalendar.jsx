@@ -20,6 +20,7 @@ import { useAppConfig } from "../../context/appConfigStore";
 import { useAuth } from "../../context/authStore";
 import * as api from "../../services/veterinaryService";
 import VeterinaryPaymentModal from "./VeterinaryPaymentModal";
+import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 import {
   dateKeyInLima,
   dateTimeInLima,
@@ -55,6 +56,7 @@ function AppointmentForm({
 }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [petId, setPetId] = useState("");
   const save = async (event) => {
     event.preventDefault();
     setError("");
@@ -91,17 +93,29 @@ function AppointmentForm({
           </p>
           <b className="capitalize">{dayLabel(date)}</b>
         </div>
-        <label className="grid gap-1">
-          Mascota
-          <select className={field} name="pet_id" required>
-            <option value="">Selecciona una mascota</option>
-            {pets.map((pet) => (
-              <option key={pet.id} value={pet.id}>
-                {pet.name} · {pet.owner.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <EntitySearchSelect
+          getLabel={(pet) => pet.name}
+          getMeta={(pet) =>
+            [pet.owner?.name, pet.owner?.document, pet.owner?.phone]
+              .filter(Boolean)
+              .join(" · ")
+          }
+          getSearchValues={(pet) => [
+            pet.name,
+            pet.code,
+            pet.owner?.name,
+            pet.owner?.document,
+            pet.owner?.phone,
+            pet.owner?.email,
+          ]}
+          items={pets}
+          label="Mascota o propietario"
+          name="pet_id"
+          onChange={setPetId}
+          placeholder="Buscar mascota, propietario, DNI o celular"
+          required
+          value={petId}
+        />
         <label className="grid gap-1">
           Profesional
           <select className={field} name="professional_id">
