@@ -250,7 +250,7 @@ const features = [
     description:
       "La plataforma utiliza mecanismos modernos de autenticación y protección para resguardar la información de cada negocio.",
     characteristics: [
-      "JWT almacenado en cookie HTTP-only.",
+      "Sesión protegida con expiración y compatibilidad móvil.",
       "Contraseñas correctamente hasheadas.",
       "Auditoría de acciones relevantes.",
       "Cierre de sesión idempotente.",
