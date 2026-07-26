@@ -212,6 +212,164 @@ textarea {
   background: var(--color-primary-fixed-dim);
 }
 
+.wasita-loading-screen {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  padding: 1.5rem;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgba(201, 203, 255, 0.62) 0,
+      rgba(201, 203, 255, 0.18) 24%,
+      rgba(238, 240, 248, 0) 52%
+    ),
+    var(--color-background);
+}
+
+.wasita-loading-screen::before,
+.wasita-loading-screen::after {
+  position: absolute;
+  width: min(28rem, 62vw);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  content: "";
+  filter: blur(3rem);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.wasita-loading-screen::before {
+  top: -18%;
+  left: -10%;
+  background: var(--color-primary-fixed-dim);
+}
+
+.wasita-loading-screen::after {
+  right: -12%;
+  bottom: -24%;
+  background: var(--color-secondary-container);
+}
+
+.wasita-loading-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 1.5rem;
+}
+
+.wasita-loading-mark {
+  position: relative;
+  display: grid;
+  width: clamp(4.5rem, 10vw, 6rem);
+  aspect-ratio: 1;
+  place-items: center;
+}
+
+.wasita-loading-glow {
+  position: absolute;
+  inset: 12%;
+  border-radius: 1.25rem;
+  background: rgba(91, 95, 239, 0.32);
+  filter: blur(1.2rem);
+  animation: wasita-loader-glow 1.8s ease-in-out infinite;
+}
+
+.wasita-loading-logo {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0.75rem 1.2rem rgba(91, 95, 239, 0.24));
+  animation: wasita-loader-float 2.2s ease-in-out infinite;
+}
+
+.wasita-loading-orbit {
+  fill: none;
+  stroke: rgba(91, 95, 239, 0.28);
+  stroke-dasharray: 46 136;
+  stroke-linecap: round;
+  stroke-width: 2;
+  transform-origin: center;
+  animation: wasita-loader-orbit 1.35s linear infinite;
+}
+
+.wasita-loading-welcome {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  color: var(--color-on-surface);
+  font-family: var(--font-heading);
+  font-size: clamp(0.82rem, 2vw, 1rem);
+  font-weight: 800;
+  letter-spacing: clamp(0.11em, 0.6vw, 0.24em);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.wasita-loading-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.65rem);
+  filter: blur(0.25rem);
+  animation: wasita-loader-letter 520ms cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+  animation-delay: calc(var(--wasita-letter-index) * 42ms + 120ms);
+}
+
+@keyframes wasita-loader-letter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes wasita-loader-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-0.35rem) scale(1.025);
+  }
+}
+
+@keyframes wasita-loader-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes wasita-loader-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wasita-loading-glow,
+  .wasita-loading-logo,
+  .wasita-loading-orbit,
+  .wasita-loading-letter {
+    animation: none;
+  }
+
+  .wasita-loading-letter {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
 :focus-visible {
   outline: 3px solid rgba(91, 95, 239, 0.35);
   outline-offset: 3px;
