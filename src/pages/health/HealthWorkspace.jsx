@@ -14,8 +14,11 @@ import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import * as api from "../../services/healthService";
+import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
+import { matchesEntitySearch } from "../../utils/entitySearch";
 
 function AppointmentForm({ patients, close, done }) {
+  const [patientId, setPatientId] = useState("");
   const submit = async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -34,16 +37,29 @@ function AppointmentForm({ patients, close, done }) {
   return (
     <Modal onClose={close} title="Nueva cita">
       <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={submit}>
-        <label>
-          Paciente
-          <select className={field} name="patientId" required>
-            {patients.map((patient) => (
-              <option key={patient.id} value={patient.id}>
-                {patient.lastName}, {patient.firstName}
-              </option>
-            ))}
-          </select>
-        </label>
+        <EntitySearchSelect
+          getLabel={(patient) =>
+            `${patient.lastName}, ${patient.firstName}`
+          }
+          getMeta={(patient) =>
+            [patient.document, patient.phone].filter(Boolean).join(" · ")
+          }
+          getSearchValues={(patient) => [
+            patient.firstName,
+            patient.lastName,
+            `${patient.firstName} ${patient.lastName}`,
+            patient.document,
+            patient.phone,
+            patient.email,
+          ]}
+          items={patients}
+          label="Paciente"
+          name="patientId"
+          onChange={setPatientId}
+          placeholder="Buscar por nombre, DNI o celular"
+          required
+          value={patientId}
+        />
         <label>
           Profesional
           <input className={field} name="professionalName" required />
@@ -145,16 +161,20 @@ export default function HealthWorkspace({ operator = false }) {
     admin || config?.capabilities?.includes("dental.records.edit");
   const canEditOdontogram =
     admin || config?.capabilities?.includes("dental.odontogram.edit");
-  const filteredPatients = useMemo(() => {
-    const value = query.trim().toLocaleLowerCase("es");
-    return value
-      ? patients.filter((patient) =>
-          `${patient.firstName} ${patient.lastName} ${patient.document} ${patient.phone} ${patient.email}`
-            .toLocaleLowerCase("es")
-            .includes(value),
-        )
-      : patients;
-  }, [patients, query]);
+  const filteredPatients = useMemo(
+    () =>
+      patients.filter((patient) =>
+        matchesEntitySearch(patient, query, (item) => [
+          item.firstName,
+          item.lastName,
+          `${item.firstName} ${item.lastName}`,
+          item.document,
+          item.phone,
+          item.email,
+        ]),
+      ),
+    [patients, query],
+  );
   const patientPages = Math.max(
     1,
     Math.ceil(filteredPatients.length / pageSize),
