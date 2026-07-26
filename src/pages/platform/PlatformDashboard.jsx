@@ -65,69 +65,182 @@ function BusinessTypeChanger({ business, onChanged }) {
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState("");
   useEffect(() => {
     getPlatformBusinessTypes()
       .then(setTypes)
-      .catch(() => {});
+      .catch((requestError) =>
+        setError(requestError?.message || "No se pudieron cargar los rubros."),
+      );
   }, []);
   const visible = types.filter((x) =>
-    `${x.name} ${x.slug}`.toLowerCase().includes(query.trim().toLowerCase()),
+    `${x.name} ${x.slug} ${x.description || ""}`
+      .toLowerCase()
+      .includes(query.trim().toLowerCase()),
   );
+  const currentType = types.find(
+    (type) => type.id === business.businessTypeId,
+  );
+  const selectedType = types.find((type) => type.id === value);
   const save = async () => {
     if (!value) return;
     setSaving(true);
+    setError("");
     try {
       await changeBusinessType(business.id, value);
       await onChanged();
+      setExpanded(false);
+      setValue("");
+      setQuery("");
+    } catch (requestError) {
+      setError(requestError?.message || "No se pudo cambiar el rubro.");
     } finally {
       setSaving(false);
     }
   };
   return (
-    <section className="fixed bottom-4 right-4 z-[260] w-[min(calc(100vw-2rem),38rem)] rounded-2xl border border-primary/30 bg-white p-4 shadow-2xl">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold uppercase text-primary">
-          Tipo de negocio
-        </p>
-        <span className="rounded-full bg-primary-fixed px-2 py-1 text-xs font-bold text-primary">
+    <section className="mt-4 overflow-hidden rounded-2xl border border-outline-variant bg-white">
+      <button
+        aria-controls={`business-type-changer-${business.id}`}
+        aria-expanded={expanded}
+        className="flex min-h-16 w-full items-center gap-3 p-3 text-left transition hover:bg-surface-container-low sm:p-4"
+        onClick={() => setExpanded((current) => !current)}
+        type="button"
+      >
+        <span className="material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary">
+          category
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-bold uppercase tracking-wider text-primary">
+            Tipo de negocio
+          </span>
+          <span className="block truncate text-sm font-bold text-on-surface">
+            {currentType?.name ||
+              business.businessType ||
+              "Sin rubro identificado"}
+          </span>
+          <span className="block truncate text-xs text-on-surface-variant">
+            Pulsa para cambiar la plantilla de {business.name}
+          </span>
+        </span>
+        <span className="hidden rounded-full bg-primary-fixed px-2.5 py-1 text-xs font-bold text-primary sm:inline">
           {types.length} rubros
         </span>
-      </div>
-      <p className="mb-3 text-sm text-on-surface-variant">
-        Busca y selecciona la nueva plantilla de {business.name}. Los datos
-        existentes se conservan.
-      </p>
-      <input
-        className="mb-2 min-h-11 w-full rounded-xl border border-outline-variant px-3 outline-none focus:border-primary"
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar: dental, hotel, farmacia..."
-        value={query}
-      />
-      <select
-        className="h-36 w-full rounded-xl border border-outline-variant bg-white p-2"
-        onChange={(e) => setValue(e.target.value)}
-        size="6"
-        value={value}
-      >
-        {visible.map((x) => (
-          <option className="rounded-lg px-2 py-1" key={x.id} value={x.id}>
-            {x.name}
-          </option>
-        ))}
-      </select>
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <span className="text-xs text-on-surface-variant">
-          Mostrando {visible.length} de {types.length}
-        </span>
-        <button
-          className="min-h-11 rounded-xl bg-primary px-5 font-bold text-white disabled:opacity-50"
-          disabled={!value || saving}
-          onClick={save}
-          type="button"
+        <span
+          className={`material-symbols-outlined text-on-surface-variant transition-transform ${expanded ? "rotate-180" : ""}`}
         >
-          {saving ? "Cambiando..." : "Cambiar rubro"}
-        </button>
-      </div>
+          expand_more
+        </span>
+      </button>
+
+      {expanded ? (
+        <div
+          className="border-t border-outline-variant p-3 sm:p-4"
+          id={`business-type-changer-${business.id}`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="max-w-md text-sm text-on-surface-variant">
+              Selecciona la nueva plantilla. Los datos existentes se conservan
+              y los accesos se recalculan para el nuevo rubro.
+            </p>
+            <button
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary-fixed"
+              onClick={() => setExpanded(false)}
+              type="button"
+            >
+              Minimizar
+            </button>
+          </div>
+          <div className="relative mt-3">
+            <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
+              search
+            </span>
+            <input
+              aria-label="Buscar tipo de negocio"
+              className="min-h-11 w-full rounded-xl border border-outline-variant pl-10 pr-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar dental, hotel, farmacia..."
+              value={query}
+            />
+          </div>
+          <div
+            aria-label="Tipos de negocio disponibles"
+            className="mt-2 grid max-h-48 gap-1 overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-low p-1.5 sm:grid-cols-2"
+            role="listbox"
+          >
+            {visible.length ? (
+              visible.map((type) => (
+                <button
+                  aria-selected={value === type.id}
+                  className={`flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                    value === type.id
+                      ? "bg-primary text-white shadow-sm"
+                      : type.id === business.businessTypeId
+                        ? "cursor-default bg-surface-container-high text-on-surface-variant"
+                      : "bg-white hover:bg-primary-fixed"
+                  }`}
+                  disabled={type.id === business.businessTypeId}
+                  key={type.id}
+                  onClick={() => setValue(type.id)}
+                  role="option"
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {type.icon || "store"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold">{type.name}</span>
+                    <span
+                      className={`block truncate text-xs ${
+                        value === type.id
+                          ? "text-white/80"
+                          : "text-on-surface-variant"
+                      }`}
+                    >
+                      {type.slug}
+                      {type.id === business.businessTypeId ? " · Actual" : ""}
+                    </span>
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="col-span-full p-4 text-center text-sm text-on-surface-variant">
+                No hay rubros que coincidan con la búsqueda.
+              </p>
+            )}
+          </div>
+          {error ? (
+            <p className="mt-2 rounded-xl bg-error-container p-2.5 text-sm text-on-error-container">
+              {error}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="truncate text-xs text-on-surface-variant">
+              {selectedType
+                ? `Seleccionado: ${selectedType.name}`
+                : `${visible.length} de ${types.length} rubros`}
+            </span>
+            <div className="flex gap-2">
+              <button
+                className="min-h-11 flex-1 rounded-xl border border-outline-variant px-4 font-bold sm:flex-none"
+                onClick={() => setExpanded(false)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="min-h-11 flex-1 rounded-xl bg-primary px-5 font-bold text-white disabled:opacity-50 sm:flex-none"
+                disabled={!value || saving}
+                onClick={save}
+                type="button"
+              >
+                {saving ? "Cambiando..." : "Confirmar cambio"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -441,15 +554,6 @@ export default function PlatformDashboard() {
         ) : null}
       </main>
       {detail ? (
-        <BusinessTypeChanger
-          business={detail.business}
-          onChanged={async () => {
-            await load();
-            await open(detail.business.id);
-          }}
-        />
-      ) : null}
-      {detail ? (
         <div
           className="fixed inset-0 z-[200] bg-black/50"
           onPointerDown={(e) => {
@@ -482,6 +586,14 @@ export default function PlatformDashboard() {
                 close
               </button>
             </div>
+            <BusinessTypeChanger
+              business={detail.business}
+              key={detail.business.id}
+              onChanged={async () => {
+                await load();
+                await open(detail.business.id);
+              }}
+            />
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Metric label="Usuarios" value={detail.usage.users} />
               <Metric label="Productos" value={detail.usage.products} />
