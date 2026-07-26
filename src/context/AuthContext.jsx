@@ -12,13 +12,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const logoutRequestRef = useRef(null);
+  const sessionVersionRef = useRef(0);
 
   const logout = useCallback(async () => {
     if (!logoutRequestRef.current) {
+      const logoutVersion = ++sessionVersionRef.current;
       logoutRequestRef.current = clearSession()
         .catch(() => null)
         .finally(() => {
-          setUser(null);
+          if (logoutVersion === sessionVersionRef.current) {
+            setUser(null);
+            setIsLoading(false);
+          }
           logoutRequestRef.current = null;
         });
     }
@@ -27,14 +32,25 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let active = true;
+    const restoreVersion = sessionVersionRef.current;
     const restore = async () => {
       try {
         const sessionUser = await getSessionUser();
-        if (active) setUser(sessionUser);
+        if (active && restoreVersion === sessionVersionRef.current) {
+          setUser(sessionUser);
+        }
       } catch (error) {
-        if (active && [401, 403].includes(error?.status)) await logout();
+        if (
+          active
+          && restoreVersion === sessionVersionRef.current
+          && [401, 403].includes(error?.status)
+        ) {
+          await logout();
+        }
       } finally {
-        if (active) setIsLoading(false);
+        if (active && restoreVersion === sessionVersionRef.current) {
+          setIsLoading(false);
+        }
       }
     };
     restore();
@@ -46,15 +62,33 @@ export function AuthProvider({ children }) {
   }, [logout]);
 
   const login = useCallback(async (credentials) => {
-    const nextUser = await loginUser(credentials);
-    setUser(nextUser);
-    return nextUser;
+    const loginVersion = ++sessionVersionRef.current;
+    try {
+      const nextUser = await loginUser(credentials);
+      if (loginVersion === sessionVersionRef.current) {
+        setUser(nextUser);
+        setIsLoading(false);
+      }
+      return nextUser;
+    } catch (error) {
+      if (loginVersion === sessionVersionRef.current) setIsLoading(false);
+      throw error;
+    }
   }, []);
 
   const register = useCallback(async (data) => {
-    const nextUser = await registerUser(data);
-    setUser(nextUser);
-    return nextUser;
+    const registerVersion = ++sessionVersionRef.current;
+    try {
+      const nextUser = await registerUser(data);
+      if (registerVersion === sessionVersionRef.current) {
+        setUser(nextUser);
+        setIsLoading(false);
+      }
+      return nextUser;
+    } catch (error) {
+      if (registerVersion === sessionVersionRef.current) setIsLoading(false);
+      throw error;
+    }
   }, []);
 
   const updateUser = useCallback(async (data) => {
