@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthButton from "../../components/molecules/AuthButton";
 import AuthField from "../../components/molecules/AuthField";
@@ -29,6 +29,7 @@ export default function Registro() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const submissionRef = useRef(false);
   const [values, setValues] = useState({
     name: "",
     email: "",
@@ -99,6 +100,8 @@ export default function Registro() {
       setError("Debes aceptar los términos y la política de privacidad");
       return;
     }
+    if (submissionRef.current) return;
+    submissionRef.current = true;
     setSubmitting(true);
     setError("");
     try {
@@ -125,6 +128,7 @@ export default function Registro() {
     } catch (e) {
       setError(e.message);
     } finally {
+      submissionRef.current = false;
       setSubmitting(false);
     }
   };
@@ -147,7 +151,7 @@ export default function Registro() {
             <button
               aria-label={`Ir a ${title}`}
               className={`h-1.5 flex-1 rounded-full ${step >= index + 1 ? "bg-primary" : "bg-outline-variant"}`}
-              disabled={index + 1 > step}
+              disabled={submitting || index + 1 > step}
               key={title}
               onClick={() => setStep(index + 1)}
               type="button"
@@ -171,8 +175,9 @@ export default function Registro() {
       </div>
       {error ? (
         <p
-          aria-live="polite"
+          aria-live="assertive"
           className="mb-4 rounded-xl bg-error-container p-3 text-sm font-bold text-on-error-container"
+          role="alert"
         >
           {error}
         </p>
@@ -426,7 +431,7 @@ export default function Registro() {
         </div>
       ) : null}
       {!loading && step === 5 ? (
-        <div className="grid gap-4">
+        <div aria-busy={submitting} className="grid gap-4">
           <div className="rounded-2xl border border-outline-variant bg-white p-4 text-sm">
             <h2 className="font-bold">Resumen</h2>
             <dl className="mt-3 grid gap-2">
@@ -471,10 +476,13 @@ export default function Registro() {
               .
             </span>
           </label>
-          <AuthButton disabled={submitting} onClick={submit} type="button">
-            {submitting
-              ? "Creando empresa..."
-              : "Crear empresa e iniciar prueba"}
+          <AuthButton
+            loading={submitting}
+            loadingLabel="Creando y verificando tu espacio..."
+            onClick={submit}
+            type="button"
+          >
+            Crear empresa e iniciar prueba
           </AuthButton>
         </div>
       ) : null}
