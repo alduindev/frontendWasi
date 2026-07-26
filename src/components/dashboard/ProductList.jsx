@@ -140,9 +140,9 @@ export default function ProductList({
         </table>
       </div>
 
-      <div className="grid gap-3 p-3 xl:hidden">
+      <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:hidden">
         {canSelect ? (
-          <label className="flex items-center gap-3 rounded-xl bg-surface-container-low p-3 text-sm font-bold text-on-surface-variant">
+          <label className="flex items-center gap-3 rounded-xl bg-surface-container-low p-3 text-sm font-bold text-on-surface-variant sm:col-span-2 lg:col-span-3">
             <input checked={allSelected} className="h-4 w-4 accent-primary" onChange={onSelectAll} type="checkbox" />
             {t('inventory.table.selectAll')}
           </label>
@@ -151,23 +151,55 @@ export default function ProductList({
           const highlighted = product.id === highlightedProductId
 
           return (
-          <article className={`min-w-0 rounded-2xl border bg-white p-3 sm:p-4 ${highlighted ? 'border-primary shadow-lg shadow-primary/15 ring-2 ring-primary/20' : 'border-outline-variant'}`} key={product.id}>
-            {highlighted ? <Badge tone="success">{t('inventory.newBySimulation')}</Badge> : null}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 gap-3">
-                {canSelect ? <input checked={selectedIds.includes(product.id)} className="mt-4 h-4 w-4 accent-primary" onChange={() => onToggleSelected(product.id)} type="checkbox" /> : null}
+          <article className={`flex min-w-0 flex-col rounded-2xl border bg-white p-3 ${highlighted ? 'border-primary shadow-lg shadow-primary/15 ring-2 ring-primary/20' : 'border-outline-variant'}`} key={product.id}>
+            <div className="flex min-w-0 items-start gap-2">
+              {canSelect ? (
+                <input
+                  aria-label={t('inventory.selectProduct', { name: product.name })}
+                  checked={selectedIds.includes(product.id)}
+                  className="mt-3 h-5 w-5 shrink-0 accent-primary"
+                  onChange={() => onToggleSelected(product.id)}
+                  type="checkbox"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
                 <ProductIdentity product={product} />
               </div>
-              <div className="flex gap-1">
-                <Link aria-label={t('common.detail')} className="material-symbols-outlined flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-on-surface-variant hover:bg-surface-container hover:text-primary" to={`/dashboard/product/${product.id}`}>open_in_new</Link>
-                {canEdit ? <button className="material-symbols-outlined min-h-11 min-w-11 rounded-lg p-2 text-primary hover:bg-surface-container" onClick={() => onEdit(product)} type="button">edit</button> : null}
-                {canDelete ? <button className="material-symbols-outlined min-h-11 min-w-11 rounded-lg p-2 text-error hover:bg-error-container" onClick={() => onDelete(product.id)} type="button">delete</button> : null}
+              <Badge tone={statusTone(product.status)}>{product.status}</Badge>
+            </div>
+
+            <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+              <Badge>{product.category}</Badge>
+              {highlighted ? <Badge tone="success">{t('inventory.newBySimulation')}</Badge> : null}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{t('inventory.table.brand')}</p>
+                <p className="mt-0.5 truncate text-xs font-bold text-on-surface">{product.brand || t('products.noBrand')}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{t('inventory.table.price')}</p>
+                <p className="mt-0.5 text-xs text-on-surface-variant">
+                  {formatCurrency(product.cost)}
+                  <span className="ml-2 font-bold text-on-surface">{formatCurrency(product.price)}</span>
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{t('inventory.table.stock')}</p>
+                <StockBar product={product} />
               </div>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div><p className="text-xs font-bold uppercase text-on-surface-variant">{t('inventory.table.brand')}</p><p className="mt-1 text-sm font-bold text-on-surface">{product.brand || t('products.noBrand')}</p></div>
-              <div><p className="text-xs font-bold uppercase text-on-surface-variant">{t('inventory.table.price')}</p><p className="mt-1 text-sm font-bold text-on-surface">{formatCurrency(product.price)}</p></div>
-              <div><p className="mb-2 text-xs font-bold uppercase text-on-surface-variant">{t('inventory.table.stock')}</p><StockBar product={product} /></div>
+
+            <div className="mt-auto flex items-center justify-between gap-2 border-t border-outline-variant pt-2">
+              <p className="min-w-0 truncate text-xs font-bold text-emerald-700">
+                {t('inventory.table.profit')}: {formatCurrency(getProductProfit(product))}
+              </p>
+              <div className="flex shrink-0 gap-1">
+                <Link aria-label={t('common.detail')} className="material-symbols-outlined flex min-h-11 min-w-11 items-center justify-center rounded-xl text-xl text-on-surface-variant hover:bg-surface-container hover:text-primary" to={`/dashboard/product/${product.id}`}>open_in_new</Link>
+                {canEdit ? <button aria-label={t('actions.edit')} className="material-symbols-outlined min-h-11 min-w-11 rounded-xl text-xl text-primary hover:bg-surface-container" onClick={() => onEdit(product)} type="button">edit</button> : null}
+                {canDelete ? <button aria-label={t('actions.delete')} className="material-symbols-outlined min-h-11 min-w-11 rounded-xl text-xl text-error hover:bg-error-container" onClick={() => onDelete(product.id)} type="button">delete</button> : null}
+              </div>
             </div>
           </article>
         )})}
