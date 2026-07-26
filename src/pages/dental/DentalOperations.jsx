@@ -6,6 +6,7 @@ import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import * as api from "../../services/healthService";
 import OperatorShell from "../../components/operator/OperatorShell";
+import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 const cls = "min-h-11 rounded-xl border border-outline-variant bg-surface px-3";
 const titles = {
   "dental-records": "Historia clínica dental",
@@ -117,17 +118,23 @@ export default function DentalOperations({ operator = false }) {
     >
       {!["dental-catalog", "dental-reports"].includes(moduleKey) ? (
         <Card className="mb-4 p-4">
-          <select
-            className={cls}
+          <EntitySearchSelect
+            getLabel={(x) => `${x.lastName}, ${x.firstName}`}
+            getMeta={(x) => [x.document, x.phone].filter(Boolean).join(" · ")}
+            getSearchValues={(x) => [
+              x.firstName,
+              x.lastName,
+              `${x.firstName} ${x.lastName}`,
+              x.document,
+              x.phone,
+              x.email,
+            ]}
+            items={patients}
+            label="Paciente"
+            onChange={setPatientId}
+            placeholder="Buscar por nombre, DNI o celular"
             value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
-          >
-            {patients.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.lastName}, {x.firstName}
-              </option>
-            ))}
-          </select>
+          />
         </Card>
       ) : null}
       {moduleKey === "dental-records" ? (
