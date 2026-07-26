@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authStore";
+import WasitaMark from "../ui/WasitaMark";
 
 const links = [
   ["/", "Inicio"],
@@ -43,6 +44,9 @@ export default function PublicLayout({ children }) {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef(null);
+  const drawerRef = useRef(null);
+  const drawerCloseButtonRef = useRef(null);
 
   const destination =
     user?.role === "super_admin"
@@ -55,11 +59,82 @@ export default function PublicLayout({ children }) {
     setOpen(false);
   };
 
+  const closeMenuAndRestoreFocus = () => {
+    setOpen(false);
+    window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+  };
+
   const exit = async () => {
     setOpen(false);
     await logout();
     navigate("/");
   };
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const desktopViewport = window.matchMedia("(min-width: 1024px)");
+    const focusFrame = window.requestAnimationFrame(() => {
+      drawerCloseButtonRef.current?.focus();
+    });
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        drawerRef.current?.querySelectorAll(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        drawerRef.current?.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    const handleViewportChange = (event) => {
+      if (event.matches) {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    desktopViewport.addEventListener("change", handleViewportChange);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", handleKeyDown);
+      desktopViewport.removeEventListener("change", handleViewportChange);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-on-surface">
@@ -72,9 +147,7 @@ export default function PublicLayout({ children }) {
               onClick={closeMenu}
               to="/"
             >
-              <span className="clay-icon material-symbols-outlined h-11 w-11 shrink-0 text-[1.45rem]">
-                storefront
-              </span>
+              <WasitaMark className="h-11 w-11 shrink-0" />
 
               <span className="min-w-0">
                 <span className="block truncate font-heading text-xl font-extrabold tracking-tight text-primary sm:text-2xl">
@@ -92,25 +165,25 @@ export default function PublicLayout({ children }) {
               className="hidden items-center gap-1 rounded-2xl border border-white/70 bg-surface-container-low/75 p-1.5 shadow-inner lg:flex"
             >
               {links.map(([to, label]) => (
-  <NavLink
-    className={({ isActive }) =>
-      [
-        "rounded-xl px-3.5 py-2.5 text-sm font-bold transition-all duration-200",
-        isActive
-          ? "bg-primary text-white shadow-md shadow-primary/25"
-          : "text-on-surface-variant hover:bg-white/80 hover:text-primary",
-      ].join(" ")
-    }
-    end={to === "/"}
-    key={to}
-    to={to}
-  >
-    {label}
-  </NavLink>
-))}
+                <NavLink
+                  className={({ isActive }) =>
+                    [
+                      "rounded-xl px-3.5 py-2.5 text-sm font-bold transition-all duration-200",
+                      isActive
+                        ? "bg-primary text-white shadow-md shadow-primary/25"
+                        : "text-on-surface-variant hover:bg-white/80 hover:text-primary",
+                    ].join(" ")
+                  }
+                  end={to === "/"}
+                  key={to}
+                  to={to}
+                >
+                  {label}
+                </NavLink>
+              ))}
             </nav>
 
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="hidden items-center gap-2 lg:flex">
               {isAuthenticated ? (
                 <>
                   <Link
@@ -123,7 +196,6 @@ export default function PublicLayout({ children }) {
                     >
                       dashboard
                     </span>
-
                     Ir al panel
                   </Link>
 
@@ -138,7 +210,6 @@ export default function PublicLayout({ children }) {
                     >
                       logout
                     </span>
-
                     Salir
                   </button>
                 </>
@@ -161,60 +232,111 @@ export default function PublicLayout({ children }) {
                     >
                       rocket_launch
                     </span>
-
                     Comenzar gratis
                   </Link>
                 </>
               )}
             </div>
 
-            <button
-              aria-controls="public-mobile-menu"
-              aria-expanded={open}
-              aria-label={open ? "Cerrar menú" : "Abrir menú"}
-              className="clay-button-secondary material-symbols-outlined min-h-11 min-w-11 p-2.5 text-xl lg:hidden"
-              onClick={() => setOpen((value) => !value)}
-              type="button"
-            >
-              {open ? "close" : "menu"}
-            </button>
+            <div className="lg:hidden">
+              <button
+                aria-controls="public-mobile-menu"
+                aria-expanded={open}
+                aria-label={open ? "Cerrar menú" : "Abrir menú"}
+                className="clay-button-secondary material-symbols-outlined min-h-11 min-w-11 p-2.5 text-xl"
+                onClick={() => setOpen((value) => !value)}
+                ref={menuButtonRef}
+                type="button"
+              >
+                {open ? "close" : "menu"}
+              </button>
+            </div>
           </div>
+        </div>
+      </header>
 
-          {open ? (
+      {open ? (
+        <div className="fixed inset-0 z-[70] lg:hidden">
+          <button
+            aria-label="Cerrar menú"
+            className="absolute inset-0 cursor-default bg-black/45 backdrop-blur-sm"
+            onClick={closeMenuAndRestoreFocus}
+            type="button"
+          />
+
+          <aside
+            aria-label="Menú principal"
+            aria-modal="true"
+            className="clay-card absolute inset-y-2 right-2 flex h-[calc(100dvh-1rem)] w-[min(24rem,calc(100vw-1rem))] max-w-full flex-col overflow-hidden rounded-[1.75rem]"
+            ref={drawerRef}
+            role="dialog"
+            tabIndex={-1}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-outline-variant/60 px-4 py-3">
+              <Link
+                aria-label="Ir al inicio de Wasita"
+                className="flex min-w-0 items-center gap-3 rounded-2xl px-1 py-1"
+                onClick={closeMenu}
+                to="/"
+              >
+                <WasitaMark className="h-11 w-11 shrink-0" />
+
+                <span className="min-w-0">
+                  <span className="block truncate font-heading text-xl font-extrabold tracking-tight text-primary">
+                    WASITA
+                  </span>
+
+                  <span className="block truncate text-[0.625rem] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                    Gestión inteligente
+                  </span>
+                </span>
+              </Link>
+
+              <button
+                aria-label="Cerrar menú"
+                className="clay-button-secondary material-symbols-outlined min-h-11 min-w-11 shrink-0 p-2.5 text-xl"
+                onClick={closeMenuAndRestoreFocus}
+                ref={drawerCloseButtonRef}
+                type="button"
+              >
+                close
+              </button>
+            </div>
+
             <nav
               aria-label="Navegación móvil"
-              className="border-t border-outline-variant/60 pb-4 pt-3 lg:hidden"
+              className="flex-1 overflow-y-auto overscroll-contain px-4 py-4"
               id="public-mobile-menu"
             >
               <div className="clay-inset grid gap-1.5 p-2">
                 {links.map(([to, label]) => (
-  <NavLink
-    className={({ isActive }) =>
-      [
-        "flex min-h-12 items-center justify-between rounded-xl px-4 py-3 font-bold transition",
-        isActive
-          ? "bg-primary text-white shadow-md shadow-primary/25"
-          : "text-on-surface-variant hover:bg-white/75 hover:text-primary",
-      ].join(" ")
-    }
-    end={to === "/"}
-    key={to}
-    onClick={closeMenu}
-    to={to}
-  >
-    {label}
+                  <NavLink
+                    className={({ isActive }) =>
+                      [
+                        "flex min-h-12 items-center justify-between rounded-xl px-4 py-3 font-bold transition",
+                        isActive
+                          ? "bg-primary text-white shadow-md shadow-primary/25"
+                          : "text-on-surface-variant hover:bg-white/75 hover:text-primary",
+                      ].join(" ")
+                    }
+                    end={to === "/"}
+                    key={to}
+                    onClick={closeMenu}
+                    to={to}
+                  >
+                    {label}
 
-    <span
-      aria-hidden="true"
-      className="material-symbols-outlined text-lg"
-    >
-      chevron_right
-    </span>
-  </NavLink>
-))}
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-outlined text-lg"
+                    >
+                      chevron_right
+                    </span>
+                  </NavLink>
+                ))}
               </div>
 
-              <div className="mt-3 grid gap-2 sm:hidden">
+              <div className="mt-3 grid gap-2">
                 {isAuthenticated ? (
                   <>
                     <Link
@@ -228,7 +350,6 @@ export default function PublicLayout({ children }) {
                       >
                         dashboard
                       </span>
-
                       Ir al panel
                     </Link>
 
@@ -243,7 +364,6 @@ export default function PublicLayout({ children }) {
                       >
                         logout
                       </span>
-
                       Cerrar sesión
                     </button>
                   </>
@@ -260,7 +380,6 @@ export default function PublicLayout({ children }) {
                       >
                         login
                       </span>
-
                       Iniciar sesión
                     </Link>
 
@@ -275,16 +394,15 @@ export default function PublicLayout({ children }) {
                       >
                         rocket_launch
                       </span>
-
                       Comenzar gratis
                     </Link>
                   </>
                 )}
               </div>
             </nav>
-          ) : null}
+          </aside>
         </div>
-      </header>
+      ) : null}
 
       <div className="flex-1">{children}</div>
 
@@ -311,8 +429,8 @@ export default function PublicLayout({ children }) {
 
               <p className="mt-5 text-sm leading-7 text-on-surface-variant">
                 Inventario, ventas y operaciones para negocios que quieren
-                crecer con procesos claros, información centralizada y un
-                equipo mejor organizado.
+                crecer con procesos claros, información centralizada y un equipo
+                mejor organizado.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
@@ -323,7 +441,6 @@ export default function PublicLayout({ children }) {
                   >
                     verified
                   </span>
-
                   Gestión segura
                 </span>
 
@@ -334,7 +451,6 @@ export default function PublicLayout({ children }) {
                   >
                     cloud_done
                   </span>
-
                   Disponible en línea
                 </span>
               </div>
@@ -375,7 +491,6 @@ export default function PublicLayout({ children }) {
 
               <p className="flex items-center justify-center gap-1.5 sm:justify-end">
                 Hecho para negocios que quieren crecer
-
                 <span
                   aria-hidden="true"
                   className="material-symbols-outlined text-base text-primary"
