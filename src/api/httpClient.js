@@ -1,4 +1,5 @@
 import { API_URL } from '../config/environment'
+import { clearAccessToken, getAccessToken } from './authToken'
 
 export class ApiError extends Error {
   constructor(message, status = 0, details = null, requestId = '') {
@@ -16,10 +17,17 @@ function errorMessage(payload, fallback) {
   return fallback
 }
 
-export async function apiRequest(path, options = {}) {
+function requestHeaders(options = {}) {
   const headers = new Headers(options.headers)
+  const accessToken = getAccessToken()
+  if (accessToken && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${accessToken}`)
   if (!headers.has('X-Request-ID')) headers.set('X-Request-ID', globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`)
   if (options.body !== undefined && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  return headers
+}
+
+export async function apiRequest(path, options = {}) {
+  const headers = requestHeaders(options)
   let response
   try {
     response = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers })
@@ -29,6 +37,7 @@ export async function apiRequest(path, options = {}) {
   const payload = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
     if (response.status === 401 && path !== '/auth/login' && path !== '/auth/logout') {
+      clearAccessToken()
       window.dispatchEvent(new CustomEvent('wasi:session-expired'))
     }
     throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload, response.headers.get('X-Request-ID') || '')
@@ -41,7 +50,7 @@ export async function apiRequest(path, options = {}) {
 }
 
 export async function apiDownload(path) {
-  const response = await fetch(`${API_URL}${path}`, { credentials: 'include' })
+  const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
   if (!response.ok) {
     const payload = await response.json().catch(() => null)
     throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
@@ -59,7 +68,7 @@ export async function apiDownload(path) {
 }
 
 export async function apiBlob(path) {
-  const response = await fetch(`${API_URL}${path}`, { credentials: 'include' })
+  const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
   if (!response.ok) {
     const payload = await response.json().catch(() => null)
     throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
