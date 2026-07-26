@@ -11,6 +11,8 @@ import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import * as api from "../../services/healthService";
 import DentalAttentionForm from "./DentalAttentionForm";
+import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
+import { matchesEntitySearch } from "../../utils/entitySearch";
 
 // Cuadrantes en orden de lectura clínica: superior derecha → superior izquierda
 // luego inferior izquierda → inferior derecha (cruz odontológica estándar)
@@ -565,9 +567,14 @@ function PatientTable({ loading, onOpen, patients }) {
   const rows = useMemo(
     () =>
       patients.filter((x) =>
-        `${x.firstName} ${x.lastName} ${x.document}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
+        matchesEntitySearch(x, query, (item) => [
+          item.firstName,
+          item.lastName,
+          `${item.firstName} ${item.lastName}`,
+          item.document,
+          item.phone,
+          item.email,
+        ]),
       ),
     [patients, query],
   );
@@ -587,7 +594,7 @@ function PatientTable({ loading, onOpen, patients }) {
           <input
             className={`${fieldClass} pl-10`}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar paciente o DNI"
+            placeholder="Buscar por nombre, DNI o celular"
             value={query}
           />
         </label>
@@ -1013,21 +1020,23 @@ export default function DentalWorkspace({ operator = false }) {
     >
       <Toast message={toast} />
       <Card className="mb-5 p-4">
-        <label className="grid gap-1 text-sm font-medium">
-          Paciente
-          <select
-            className={`${fieldClass} mt-1`}
-            value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
-          >
-            <option value="">Selecciona un paciente</option>
-            {patients.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.lastName}, {x.firstName} · {x.document}
-              </option>
-            ))}
-          </select>
-        </label>
+        <EntitySearchSelect
+          getLabel={(x) => `${x.lastName}, ${x.firstName}`}
+          getMeta={(x) => [x.document, x.phone].filter(Boolean).join(" · ")}
+          getSearchValues={(x) => [
+            x.firstName,
+            x.lastName,
+            `${x.firstName} ${x.lastName}`,
+            x.document,
+            x.phone,
+            x.email,
+          ]}
+          items={patients}
+          label="Paciente"
+          onChange={setPatientId}
+          placeholder="Buscar por nombre, DNI o celular"
+          value={patientId}
+        />
       </Card>
 
       {!patientId ? (
