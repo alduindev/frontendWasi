@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../atoms/Button";
 import Card from "../atoms/Card";
 import Input from "../atoms/Input";
@@ -42,6 +42,7 @@ export default function ProfileSettings({
   const [profile, setProfile] = useState(user);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const passwordSubmissionRef = useRef(false);
 
   useEffect(() => {
     queueMicrotask(() => setProfile(user));
@@ -119,6 +120,8 @@ export default function ProfileSettings({
       });
       return;
     }
+    if (passwordSubmissionRef.current) return;
+    passwordSubmissionRef.current = true;
     setSavingPassword(true);
     try {
       const response = await changeSessionPassword({
@@ -138,6 +141,7 @@ export default function ProfileSettings({
         tone: "error",
       });
     } finally {
+      passwordSubmissionRef.current = false;
       setSavingPassword(false);
     }
   };
@@ -152,6 +156,7 @@ export default function ProfileSettings({
         <button
           aria-selected={activeTab === "profile"}
           className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors ${activeTab === "profile" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-white"}`}
+          disabled={savingPassword || savingProfile}
           onClick={() => setActiveTab("profile")}
           role="tab"
           type="button"
@@ -162,6 +167,7 @@ export default function ProfileSettings({
         <button
           aria-selected={activeTab === "password"}
           className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors ${activeTab === "password" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-white"}`}
+          disabled={savingPassword || savingProfile}
           onClick={() => setActiveTab("password")}
           role="tab"
           type="button"
@@ -261,7 +267,12 @@ export default function ProfileSettings({
           </div>
         </form>
       ) : (
-        <form className="p-4 sm:p-5" onSubmit={submitPassword} role="tabpanel">
+        <form
+          aria-busy={savingPassword}
+          className="p-4 sm:p-5"
+          onSubmit={submitPassword}
+          role="tabpanel"
+        >
           <div className="mb-5 flex items-start gap-3 rounded-2xl bg-primary-fixed p-4 text-on-primary-fixed-variant">
             <span className="material-symbols-outlined mt-0.5 text-primary">
               shield_lock
@@ -278,6 +289,7 @@ export default function ProfileSettings({
             <PasswordField
               autoComplete="current-password"
               className="sm:col-span-2"
+              disabled={savingPassword}
               enforcePolicy={false}
               id="currentPassword"
               label="Contraseña actual"
@@ -291,6 +303,7 @@ export default function ProfileSettings({
               value={passwords.currentPassword}
             />
             <PasswordField
+              disabled={savingPassword}
               id="newPassword"
               label="Nueva contraseña"
               onChange={(event) =>
@@ -305,6 +318,7 @@ export default function ProfileSettings({
             />
             <PasswordField
               compareTo={passwords.newPassword}
+              disabled={savingPassword}
               id="passwordConfirmation"
               label="Confirmar nueva contraseña"
               onChange={(event) =>
@@ -325,8 +339,13 @@ export default function ProfileSettings({
             </p>
           ) : null}
           <div className="mt-5 flex justify-end">
-            <Button disabled={!passwordReady || savingPassword} type="submit">
-              {savingPassword ? "Actualizando..." : "Cambiar contraseña"}
+            <Button
+              disabled={!passwordReady}
+              loading={savingPassword}
+              loadingLabel="Actualizando contraseña..."
+              type="submit"
+            >
+              Cambiar contraseña
             </Button>
           </div>
         </form>
