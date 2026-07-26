@@ -6,6 +6,7 @@ import { ToastProvider } from "../context/ToastContext";
 import { OnboardingProvider } from "../context/OnboardingContext";
 import { AppConfigProvider } from "../context/AppConfigContext";
 import { useAuth } from "../context/authStore";
+import NetworkActivity from "../components/ui/NetworkActivity";
 import WasitaLoadingScreen from "../components/ui/WasitaLoadingScreen";
 import RouterOut from "./out/RouterOut";
 
@@ -120,6 +121,7 @@ export default function RouterMain() {
       <AuthProvider>
         <AppConfigProvider>
           <ToastProvider>
+            <NetworkActivity />
             <BrowserRouter>
               <OnboardingProvider>
                 <AppRoutes />
