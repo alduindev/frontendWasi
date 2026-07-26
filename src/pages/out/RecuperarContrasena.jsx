@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthButton from "../../components/molecules/AuthButton";
 import AuthField from "../../components/molecules/AuthField";
@@ -19,9 +19,12 @@ export default function RecuperarContrasena() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const submissionRef = useRef(false);
 
   const requestCode = async (event) => {
     event.preventDefault();
+    if (submissionRef.current) return;
+    submissionRef.current = true;
     setSubmitting(true);
     setError("");
     try {
@@ -33,6 +36,7 @@ export default function RecuperarContrasena() {
     } catch (requestError) {
       setError(requestError.message);
     } finally {
+      submissionRef.current = false;
       setSubmitting(false);
     }
   };
@@ -51,6 +55,8 @@ export default function RecuperarContrasena() {
       );
       return;
     }
+    if (submissionRef.current) return;
+    submissionRef.current = true;
     setSubmitting(true);
     try {
       await confirmPasswordRecovery({
@@ -62,6 +68,7 @@ export default function RecuperarContrasena() {
     } catch (requestError) {
       setError(requestError.message);
     } finally {
+      submissionRef.current = false;
       setSubmitting(false);
     }
   };
@@ -91,16 +98,23 @@ export default function RecuperarContrasena() {
       </div>
       {error ? (
         <div
-          aria-live="polite"
+          aria-live="assertive"
           className="mb-5 rounded-2xl bg-error-container p-4 text-sm font-semibold text-on-error-container"
+          role="alert"
         >
           {error}
         </div>
       ) : null}
       {step === "identify" ? (
-        <form autoComplete="off" className="space-y-5" onSubmit={requestCode}>
+        <form
+          aria-busy={submitting}
+          autoComplete="off"
+          className="space-y-5"
+          onSubmit={requestCode}
+        >
           <AuthField
             autoComplete="off"
+            disabled={submitting}
             icon="person"
             id="identifier"
             label="Correo o celular"
@@ -109,13 +123,21 @@ export default function RecuperarContrasena() {
             required
             value={identifier}
           />
-          <AuthButton disabled={submitting}>
-            {submitting ? "Enviando..." : "Enviar código"}
+          <AuthButton
+            loading={submitting}
+            loadingLabel="Solicitando código..."
+          >
+            Enviar código
           </AuthButton>
         </form>
       ) : null}
       {step === "confirm" ? (
-        <form autoComplete="off" className="space-y-5" onSubmit={resetPassword}>
+        <form
+          aria-busy={submitting}
+          autoComplete="off"
+          className="space-y-5"
+          onSubmit={resetPassword}
+        >
           <div className="rounded-2xl bg-primary-fixed p-4 text-sm text-on-primary-fixed-variant">
             <b>{message}</b>
             {developmentCode ? (
@@ -129,6 +151,7 @@ export default function RecuperarContrasena() {
           </div>
           <AuthField
             autoComplete="off"
+            disabled={submitting}
             icon="pin"
             id="code"
             inputMode="numeric"
@@ -141,6 +164,7 @@ export default function RecuperarContrasena() {
           />
           <PasswordField
             autoComplete="off"
+            disabled={submitting}
             id="password"
             label="Nueva contraseña"
             onChange={(event) => setPassword(event.target.value)}
@@ -152,16 +176,21 @@ export default function RecuperarContrasena() {
           <PasswordField
             autoComplete="off"
             compareTo={password}
+            disabled={submitting}
             id="passwordConfirmation"
             label="Confirmar contraseña"
             required
             variant="auth"
           />
-          <AuthButton disabled={submitting}>
-            {submitting ? "Actualizando..." : "Guardar nueva contraseña"}
+          <AuthButton
+            loading={submitting}
+            loadingLabel="Actualizando contraseña..."
+          >
+            Guardar nueva contraseña
           </AuthButton>
           <button
             className="w-full text-sm font-bold text-primary hover:underline"
+            disabled={submitting}
             onClick={() => {
               setStep("identify");
               setError("");
