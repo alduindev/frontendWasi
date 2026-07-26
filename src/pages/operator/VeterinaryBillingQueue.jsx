@@ -4,6 +4,7 @@ import EmptyState from "../../components/molecules/EmptyState";
 import OperatorShell from "../../components/operator/OperatorShell";
 import VeterinaryPaymentModal from "../veterinary/VeterinaryPaymentModal";
 import * as api from "../../services/veterinaryService";
+import { matchesEntitySearch } from "../../utils/entitySearch";
 
 const money = (value) => `S/ ${Number(value || 0).toFixed(2)}`;
 
@@ -30,15 +31,22 @@ export default function VeterinaryBillingQueue() {
     queueMicrotask(load);
   }, [load]);
 
-  const visible = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return records;
-    return records.filter((record) =>
-      `${record.pet.name} ${record.pet.owner.name} ${record.pet.owner.document} ${record.diagnosis} ${record.recordType}`
-        .toLowerCase()
-        .includes(normalized),
-    );
-  }, [query, records]);
+  const visible = useMemo(
+    () =>
+      records.filter((record) =>
+        matchesEntitySearch(record, query, (item) => [
+          item.pet?.name,
+          item.pet?.code,
+          item.pet?.owner?.name,
+          item.pet?.owner?.document,
+          item.pet?.owner?.phone,
+          item.pet?.owner?.email,
+          item.diagnosis,
+          item.recordType,
+        ]),
+      ),
+    [query, records],
+  );
   const total = visible.reduce(
     (sum, record) => sum + Number(record.amount || 0),
     0,
@@ -69,7 +77,7 @@ export default function VeterinaryBillingQueue() {
           <input
             className="min-h-11 w-full rounded-xl border border-outline-variant bg-white pl-11 pr-3 outline-none focus:border-primary"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar mascota, propietario, DNI o atención"
+            placeholder="Buscar mascota, propietario, DNI, celular o atención"
             value={query}
           />
         </label>
