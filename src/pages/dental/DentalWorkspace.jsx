@@ -485,6 +485,57 @@ export function OdontogramModal({
         </div><ConditionLegend /></>:null}
 
         {odontogramView==="findings"?<div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-outline-variant">
+          <div className="grid gap-2 p-2 sm:hidden">
+            {chart
+              .slice()
+              .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+              .map((x) => (
+                <button
+                  className={`rounded-2xl border border-outline-variant p-3 text-left ${onTooth ? "hover:border-primary hover:bg-primary-fixed/30" : ""}`}
+                  disabled={!onTooth}
+                  key={x.id}
+                  onClick={() => onTooth?.(x.toothNumber)}
+                  type="button"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="flex items-center gap-2 font-bold">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ background: conditionColors[x.condition] }}
+                      />
+                      Pieza {x.toothNumber}
+                    </span>
+                    <span className="rounded-full bg-surface-container-low px-2 py-1 text-xs font-bold">
+                      {conditionLabels[x.condition]}
+                    </span>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    <div>
+                      <dt className="font-bold uppercase text-on-surface-variant">Superficie</dt>
+                      <dd className="mt-0.5">{x.surface}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-bold uppercase text-on-surface-variant">Actualizado</dt>
+                      <dd className="mt-0.5">{new Date(x.updatedAt).toLocaleDateString("es-PE")}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="font-bold uppercase text-on-surface-variant">Odontólogo</dt>
+                      <dd className="mt-0.5">{x.recordedBy || "—"}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="font-bold uppercase text-on-surface-variant">Observaciones</dt>
+                      <dd className="mt-0.5 break-words">{x.notes || "—"}</dd>
+                    </div>
+                  </dl>
+                </button>
+              ))}
+            {!chart.length ? (
+              <p className="p-5 text-center text-sm text-on-surface-variant">
+                Sin hallazgos. Pulsa una pieza del odontograma para registrar el primer estado.
+              </p>
+            ) : null}
+          </div>
+          <div className="hidden sm:block">
           <table className="w-full min-w-[680px] border-collapse text-left text-sm">
             <thead className="bg-surface-container-low">
               <tr>
@@ -543,6 +594,7 @@ export function OdontogramModal({
               ) : null}
             </tbody>
           </table>
+          </div>
         </div>:null}
         </div>
       </div>
