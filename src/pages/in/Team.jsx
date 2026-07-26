@@ -11,6 +11,7 @@ import HorizontalScroller from "../../components/atoms/HorizontalScroller";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useToast } from "../../hooks/useToast";
+import { matchesEntitySearch } from "../../utils/entitySearch";
 import * as userService from "../../services/userService";
 import { getHospitalityStaffDashboard } from "../../services/hospitalityService";
 import {
@@ -1424,25 +1425,19 @@ export default function Team() {
       });
     }
   };
-  const normalizedQuery = query.trim().toLocaleLowerCase("es");
   const teamUsers = users.filter((user) => user.role === "operator");
   const visibleUsers = teamUsers.filter(
     (user) =>
       (functionFilter === "all" ||
         user.functions?.some((fn) => fn.id === functionFilter)) &&
-      (!normalizedQuery ||
-        [
-          user.name,
-          user.document,
-          user.email,
-          user.phone,
-          user.site,
-          ...(user.functions?.map((fn) => fn.name) || []),
-        ].some((value) =>
-          String(value || "")
-            .toLocaleLowerCase("es")
-            .includes(normalizedQuery),
-        )),
+      matchesEntitySearch(user, query, (item) => [
+        item.name,
+        item.document,
+        item.email,
+        item.phone,
+        item.site,
+        ...(item.functions?.map((fn) => fn.name) || []),
+      ]),
   );
   return (
     <DashboardShell
@@ -1504,7 +1499,7 @@ export default function Team() {
                 aria-label="Buscar colaborador"
                 className="min-h-11 w-full rounded-xl border border-outline-variant pl-11 pr-3"
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar por nombre, correo o función"
+                placeholder="Buscar por nombre, DNI, celular, correo o función"
                 value={query}
               />
             </label>
