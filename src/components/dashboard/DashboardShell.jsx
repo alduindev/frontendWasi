@@ -266,7 +266,7 @@ function GlobalSearch({ displayedSearch, onChange, onSelectProduct, placeholder,
         aria-autocomplete="list"
         aria-controls="global-search-results"
         aria-expanded={isOpen}
-        className="min-h-11 w-full rounded-full border border-outline-variant bg-surface-container-low py-2 pl-10 pr-11 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+        className="min-h-10 w-full rounded-full border border-outline-variant bg-surface-container-low py-2 pl-9 pr-9 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:min-h-11 sm:pl-10 sm:pr-11 sm:text-sm"
         onChange={(event) => handleChange(event.target.value)}
         onFocus={() => setIsOpen(displayedSearch.trim().length >= 2)}
         onKeyDown={handleKeyDown}
@@ -287,7 +287,7 @@ function GlobalSearch({ displayedSearch, onChange, onSelectProduct, placeholder,
       ) : null}
       {isOpen ? (
         <div
-          className="absolute left-0 right-0 top-12 z-[80] max-h-[min(28rem,calc(100svh-8rem))] overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-2xl shadow-primary/15"
+          className="fixed left-2 right-2 top-[4.25rem] z-[80] max-h-[min(28rem,calc(100svh-5rem))] overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-2xl shadow-primary/15 sm:absolute sm:left-0 sm:right-0 sm:top-12 sm:max-h-[min(28rem,calc(100svh-8rem))]"
           id="global-search-results"
           role="listbox"
         >
@@ -357,7 +357,7 @@ function NotificationsMenu({ alerts, isOpen, onClose, onRead, onToggle, t }) {
       <button
         aria-expanded={isOpen}
         aria-label={t('header.alerts')}
-        className="relative min-h-11 min-w-11 rounded-full p-2 text-on-surface-variant transition hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        className="relative min-h-10 min-w-10 rounded-full p-2 text-on-surface-variant transition hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:min-h-11 sm:min-w-11"
         onClick={onToggle}
         title={t('header.alerts')}
         type="button"
@@ -373,7 +373,7 @@ function NotificationsMenu({ alerts, isOpen, onClose, onRead, onToggle, t }) {
       </button>
 
       {isOpen ? (
-        <div className="absolute left-0 top-12 z-[75] w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-2xl shadow-primary/15 lg:left-auto lg:right-0">
+        <div className="fixed left-2 right-2 top-[4.25rem] z-[75] overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-2xl shadow-primary/15 sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-[min(360px,calc(100vw-1rem))]">
           <div className="flex items-center justify-between border-b border-outline-variant bg-surface-container-low px-4 py-3">
             <div>
               <p className="text-sm font-bold text-on-surface">{t('header.alerts')}</p>
@@ -426,7 +426,7 @@ function AccountMenu({ isOpen, items, onClose, onLogout, onToggle, role, t, user
   useClickOutside(containerRef, onClose, isOpen)
   useEscapeKey(onClose, isOpen)
   const icons = { profile: 'person', settings: 'settings', subscription: 'workspace_premium' }
-  return <div className="relative" ref={containerRef}><button aria-expanded={isOpen} aria-haspopup="menu" className="flex min-h-11 items-center gap-2 rounded-full border border-outline-variant bg-white py-1 pl-2 pr-3 text-left transition hover:border-primary hover:shadow-md" onClick={onToggle} type="button"><Avatar name={user?.name || t('profile.defaultUser')} /><span className="hidden max-w-44 sm:block"><span className="block truncate text-sm font-bold">{user?.name || t('profile.defaultUser')}</span><span className="block truncate text-xs text-on-surface-variant">{t(`roles.${role}`) || getRoleLabel(role)}</span></span><span className="material-symbols-outlined text-lg text-on-surface-variant">{isOpen ? 'expand_less' : 'expand_more'}</span></button>{isOpen ? <div className="absolute right-0 top-13 z-[80] w-72 overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-2xl shadow-primary/15" role="menu"><div className="border-b border-outline-variant bg-surface-container-low p-4"><p className="font-bold">{user?.name}</p><p className="mt-1 text-xs text-on-surface-variant">{user?.site || t('profile.defaultCompany')}</p></div><div className="grid gap-1 p-2">{items.map(item => <Link className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-primary-fixed hover:text-primary" key={item.routeKey} onClick={onClose} role="menuitem" to={item.to}><span className="material-symbols-outlined text-xl">{icons[item.routeKey] || item.icon}</span>{item.label || t(item.labelKey)}</Link>)}<button className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-error hover:bg-error-container" onClick={onLogout} role="menuitem" type="button"><span className="material-symbols-outlined text-xl">logout</span>{t('actions.logout')}</button></div></div> : null}</div>
+  return <div className="relative" ref={containerRef}><button aria-expanded={isOpen} aria-haspopup="menu" className="flex min-h-10 items-center gap-1 rounded-full border border-outline-variant bg-white py-0.5 pl-1 pr-1.5 text-left transition hover:border-primary hover:shadow-md sm:gap-2 sm:pl-2 sm:pr-2 xl:pr-3" onClick={onToggle} type="button"><Avatar name={user?.name || t('profile.defaultUser')} /><span className="hidden max-w-44 xl:block"><span className="block truncate text-sm font-bold">{user?.name || t('profile.defaultUser')}</span><span className="block truncate text-xs text-on-surface-variant">{t(`roles.${role}`) || getRoleLabel(role)}</span></span><span className="material-symbols-outlined text-base text-on-surface-variant sm:text-lg">{isOpen ? 'expand_less' : 'expand_more'}</span></button>{isOpen ? <div className="fixed left-2 right-2 top-[4.25rem] z-[80] overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-2xl shadow-primary/15 sm:absolute sm:left-auto sm:right-0 sm:top-13 sm:w-[min(18rem,calc(100vw-1rem))]" role="menu"><div className="border-b border-outline-variant bg-surface-container-low p-4"><p className="font-bold">{user?.name}</p><p className="mt-1 text-xs text-on-surface-variant">{user?.site || t('profile.defaultCompany')}</p></div><div className="grid gap-1 p-2">{items.map(item => <Link className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-primary-fixed hover:text-primary" key={item.routeKey} onClick={onClose} role="menuitem" to={item.to}><span className="material-symbols-outlined text-xl">{icons[item.routeKey] || item.icon}</span>{item.label || t(item.labelKey)}</Link>)}<button className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-error hover:bg-error-container" onClick={onLogout} role="menuitem" type="button"><span className="material-symbols-outlined text-xl">logout</span>{t('actions.logout')}</button></div></div> : null}</div>
 }
 
 export default function DashboardShell({
@@ -519,23 +519,13 @@ export default function DashboardShell({
       />
 
       <header
-        className={`sticky top-0 z-40 border-b border-outline-variant bg-surface/95 px-4 py-4 backdrop-blur transition-[left] duration-200 ease-out lg:fixed lg:right-0 lg:h-16 lg:px-6 lg:py-0 ${
+        className={`sticky top-0 z-40 h-16 border-b border-outline-variant bg-surface/95 px-2 py-2 backdrop-blur transition-[left] duration-200 ease-out sm:px-4 lg:fixed lg:right-0 lg:px-6 lg:py-0 ${
           collapsed ? 'lg:left-[84px]' : 'lg:left-[248px]'
         }`}
       >
-        <div className="flex h-full min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center justify-between gap-4 lg:hidden">
-            <BrandLogo compact />
-            <button
-              aria-label={t('sidebar.open')}
-              className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-              aria-expanded={mobileOpen}
-              aria-controls="admin-mobile-navigation"
-              onClick={openMobile}
-              type="button"
-            >
-              menu
-            </button>
+        <div className="grid h-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 sm:gap-3 lg:grid-cols-[minmax(12rem,36rem)_auto] lg:justify-between">
+          <div className="shrink-0 px-1 lg:hidden">
+            <BrandLogo markOnly />
           </div>
 
           <GlobalSearch
@@ -547,7 +537,7 @@ export default function DashboardShell({
             t={t}
           />
 
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-3 lg:justify-end">
+          <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-2">
             <NotificationsMenu
               alerts={alerts}
               isOpen={alertsOpen}
@@ -560,6 +550,17 @@ export default function DashboardShell({
             <PreferenceControls compact />
 
             <AccountMenu accountItems={accountItems} isOpen={accountOpen} items={accountItems} onClose={() => setAccountOpen(false)} onLogout={() => { setAccountOpen(false); setConfirmLogout(true) }} onToggle={() => setAccountOpen(current => !current)} role={role} t={t} user={user} />
+
+            <button
+              aria-controls="admin-mobile-navigation"
+              aria-expanded={mobileOpen}
+              aria-label={t('sidebar.open')}
+              className="material-symbols-outlined grid min-h-10 min-w-10 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary lg:hidden"
+              onClick={openMobile}
+              type="button"
+            >
+              menu
+            </button>
           </div>
         </div>
       </header>
