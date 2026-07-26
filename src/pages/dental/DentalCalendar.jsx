@@ -13,6 +13,7 @@ import { useAuth } from "../../context/authStore";
 import * as api from "../../services/healthService";
 import DentalAttentionForm from "./DentalAttentionForm";
 import { ChartForm, OdontogramModal } from "./DentalWorkspace";
+import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 
 const weekdays = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 const filters = [
@@ -87,6 +88,7 @@ function AppointmentForm({
 }) {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [patientId, setPatientId] = useState("");
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
@@ -120,16 +122,28 @@ function AppointmentForm({
   return (
     <Modal onClose={onClose} title="Agendar cita dental">
       <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={submit}>
-        <label className="grid gap-1">
-          Paciente
-          <select className={cls} name="patientId" required>
-            <option value="">Selecciona un paciente</option>
-            {patients.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.lastName}, {item.firstName}
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-1">
+          <EntitySearchSelect
+            getLabel={(item) => `${item.lastName}, ${item.firstName}`}
+            getMeta={(item) =>
+              [item.document, item.phone].filter(Boolean).join(" · ")
+            }
+            getSearchValues={(item) => [
+              item.firstName,
+              item.lastName,
+              `${item.firstName} ${item.lastName}`,
+              item.document,
+              item.phone,
+              item.email,
+            ]}
+            items={patients}
+            label="Paciente"
+            name="patientId"
+            onChange={setPatientId}
+            placeholder="Buscar por nombre, DNI o celular"
+            required
+            value={patientId}
+          />
           <button
             className="w-fit text-sm font-bold text-primary"
             onClick={onNewPatient}
@@ -137,7 +151,7 @@ function AppointmentForm({
           >
             + Registrar paciente nuevo
           </button>
-        </label>
+        </div>
         <label className="grid gap-1">
           Servicio
           <select className={cls} name="procedureId" required>
