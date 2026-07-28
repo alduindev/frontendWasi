@@ -13,6 +13,7 @@ import {
   setBusinessStatus,
 } from "../../services/platformService";
 import { getPlatformBusinessTypes } from "../../services/businessTypeService";
+import { getMedicalServiceTypes } from "../../services/medicalServiceTypeService";
 
 const nav = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard SaaS" },
@@ -62,17 +63,20 @@ function Progress({ current, max }) {
 }
 function BusinessTypeChanger({ business, onChanged }) {
   const [types, setTypes] = useState([]);
+  const [medicalServices, setMedicalServices] = useState([]);
+  const [medicalServiceIds, setMedicalServiceIds] = useState([]);
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    getPlatformBusinessTypes()
-      .then(setTypes)
-      .catch((requestError) =>
-        setError(requestError?.message || "No se pudieron cargar los rubros."),
-      );
+    Promise.all([getPlatformBusinessTypes(), getMedicalServiceTypes()])
+      .then(([businessTypes, services]) => {
+        setTypes(businessTypes);
+        setMedicalServices(Array.isArray(services) ? services : []);
+      })
+      .catch((requestError) => setError(requestError?.message || "No se pudieron cargar los rubros."));
   }, []);
   const visible = types.filter((x) =>
     `${x.name} ${x.slug} ${x.description || ""}`
@@ -83,15 +87,21 @@ function BusinessTypeChanger({ business, onChanged }) {
     (type) => type.id === business.businessTypeId,
   );
   const selectedType = types.find((type) => type.id === value);
+  const isMedicalConsultory = selectedType?.slug === "consultorio-medico";
   const save = async () => {
     if (!value) return;
+    if (isMedicalConsultory && !medicalServiceIds.length) {
+      setError("Selecciona al menos un servicio médico para el consultorio.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
-      await changeBusinessType(business.id, value);
+      await changeBusinessType(business.id, value, medicalServiceIds);
       await onChanged();
       setExpanded(false);
       setValue("");
+      setMedicalServiceIds([]);
       setQuery("");
     } catch (requestError) {
       setError(requestError?.message || "No se pudo cambiar el rubro.");
@@ -182,7 +192,10 @@ function BusinessTypeChanger({ business, onChanged }) {
                   }`}
                   disabled={type.id === business.businessTypeId}
                   key={type.id}
-                  onClick={() => setValue(type.id)}
+                  onClick={() => {
+                    setValue(type.id);
+                    if (type.slug !== "consultorio-medico") setMedicalServiceIds([]);
+                  }}
                   role="option"
                   type="button"
                 >
@@ -210,6 +223,35 @@ function BusinessTypeChanger({ business, onChanged }) {
               </p>
             )}
           </div>
+          {isMedicalConsultory ? (
+            <section className="mt-3 rounded-xl border border-primary/30 bg-primary-fixed/30 p-3">
+              <div className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-primary">medical_services</span>
+                <div>
+                  <h3 className="font-bold">Servicios del consultorio médico</h3>
+                  <p className="text-xs text-on-surface-variant">
+                    Esta selección define los roles y servicios que podrá usar la empresa después de la migración.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {medicalServices.map((service) => {
+                  const selected = medicalServiceIds.includes(service.id);
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={`min-h-11 rounded-xl border px-3 py-2 text-left text-sm font-bold ${selected ? "border-primary bg-primary text-white" : "border-outline-variant bg-white hover:border-primary"}`}
+                      key={service.id}
+                      onClick={() => setMedicalServiceIds((current) => selected ? current.filter((id) => id !== service.id) : [...current, service.id])}
+                      type="button"
+                    >
+                      {service.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
           {error ? (
             <p className="mt-2 rounded-xl bg-error-container p-2.5 text-sm text-on-error-container">
               {error}
