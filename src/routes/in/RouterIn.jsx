@@ -21,6 +21,8 @@ import HousekeepingAdmin from "../../pages/hospitality/HousekeepingAdmin";
 import HospitalityCalendar from "../../pages/hospitality/HospitalityCalendar";
 import HospitalityOperations from "../../pages/hospitality/HospitalityOperations";
 import HealthWorkspace from "../../pages/health/HealthWorkspace";
+import MedicalDashboard from "../../pages/health/MedicalDashboard";
+import MedicalWorkspace from "../../pages/health/MedicalWorkspace";
 import DentalWorkspace from "../../pages/dental/DentalWorkspace";
 import DentalOperations from "../../pages/dental/DentalOperations";
 import DentalCalendar from "../../pages/dental/DentalCalendar";
@@ -60,6 +62,7 @@ function DynamicHome() {
   if (config?.template?.dashboardKey === "hospitality")
     return <HospitalityDashboard />;
   if (config?.template?.dashboardKey === "dental") return <DentalDashboard />;
+  if (config?.template?.dashboardKey === "health") return <MedicalDashboard />;
   if (config?.template?.dashboardKey === "veterinary") return <VeterinaryDashboard />;
   return config?.template?.dashboardKey &&
     config.template.dashboardKey !== "commerce" ? (
@@ -198,6 +201,7 @@ function DynamicModule() {
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "veterinary") return <VeterinaryCalendar />;
   if (config?.template?.dashboardKey === "veterinary" && ["pets","invoices"].includes(moduleKey)) return <VeterinaryWorkspace />;
   if (module?.code?.startsWith("hospitality.")) return <HospitalityWorkspace />;
+  if (config?.template?.dashboardKey === "health" && module?.code?.startsWith("health.")) return <MedicalWorkspace />;
   if (module?.code?.startsWith("health.")) return <HealthWorkspace />;
   if (module?.code?.startsWith("dental.")) return ["odontogram","treatments"].includes(moduleKey) ? <DentalWorkspace /> : <DentalOperations />;
   return <ModulePlaceholder />;

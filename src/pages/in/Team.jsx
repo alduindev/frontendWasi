@@ -15,6 +15,12 @@ import { matchesEntitySearch } from "../../utils/entitySearch";
 import * as userService from "../../services/userService";
 import { getHospitalityStaffDashboard } from "../../services/hospitalityService";
 import {
+  createMedicalProfessionalProfile,
+  getBusinessMedicalServices,
+  getMedicalProfessionals,
+  updateMedicalProfessionalProfile,
+} from "../../services/medicalService";
+import {
   exportDentalChart,
   getDentalChart,
   getDentalStaffSummary,
@@ -929,7 +935,15 @@ function DentalStaffDetailModal({ attendanceItem, onClose, user }) {
   );
 }
 
-function UserForm({ access, onClose, onSaved, user }) {
+function UserForm({
+  access,
+  health,
+  medicalServices,
+  onClose,
+  onSaved,
+  professionalProfile,
+  user,
+}) {
   const initialPositionId = user?.positionId || access.positions[0]?.id || "";
   const initialPosition = access.positions.find(
     (item) => item.id === initialPositionId,
@@ -960,6 +974,22 @@ function UserForm({ access, onClose, onSaved, user }) {
   const selectedFunctions = access.functions.filter((item) =>
     functionIds.includes(item.id),
   );
+  const hasClinicalFunction = selectedFunctions.some((item) =>
+    item.permissions.some((permission) =>
+      ["health.records.create", "health.results.create"].includes(permission),
+    ),
+  );
+  const [attendsPatients, setAttendsPatients] = useState(
+    Boolean(professionalProfile),
+  );
+  const [professionalData, setProfessionalData] = useState({
+    professionalType: professionalProfile?.professionalType || "",
+    specialty: professionalProfile?.specialty || "",
+    licenseNumber: professionalProfile?.licenseNumber || "",
+    appointmentDurationMinutes:
+      String(professionalProfile?.appointmentDurationMinutes || 30),
+    medicalServiceIds: professionalProfile?.serviceTypeIds || [],
+  });
   const effectivePermissions = [
     ...new Set(selectedFunctions.flatMap((item) => item.permissions)),
   ];
@@ -1029,6 +1059,21 @@ function UserForm({ access, onClose, onSaved, user }) {
       );
       return;
     }
+    if (step === 1 && health && attendsPatients) {
+      if (!hasClinicalFunction) {
+        setError("Selecciona una función clínica compatible para habilitar la atención.");
+        return;
+      }
+      if (
+        professionalData.professionalType.trim().length < 2 ||
+        professionalData.specialty.trim().length < 2 ||
+        professionalData.licenseNumber.trim().length < 4 ||
+        !professionalData.medicalServiceIds.length
+      ) {
+        setError("Completa el perfil profesional y al menos un servicio clínico.");
+        return;
+      }
+    }
     setStep((current) => Math.min(2, current + 1));
   };
   const handleSubmit = async (event) => {
@@ -1049,8 +1094,26 @@ function UserForm({ access, onClose, onSaved, user }) {
     };
     if (user && !data.password) delete data.password;
     try {
-      if (user) await userService.updateUser(user.id, data);
-      else await userService.createUser(data);
+      const savedUser = user
+        ? await userService.updateUser(user.id, data)
+        : await userService.createUser(data);
+      if (health && attendsPatients) {
+        const profileData = {
+          userId: savedUser.id,
+          professionalType: professionalData.professionalType,
+          specialty: professionalData.specialty,
+          licenseNumber: professionalData.licenseNumber,
+          appointmentDurationMinutes: Number(
+            professionalData.appointmentDurationMinutes,
+          ),
+          medicalServiceIds: professionalData.medicalServiceIds,
+        };
+        if (professionalProfile) {
+          await updateMedicalProfessionalProfile(savedUser.id, profileData);
+        } else {
+          await createMedicalProfessionalProfile(profileData);
+        }
+      }
       onSaved();
     } catch (requestError) {
       setError(requestError.message);
@@ -1285,6 +1348,100 @@ function UserForm({ access, onClose, onSaved, user }) {
                 })}
               </div>
             </fieldset>
+            {health ? (
+              <section className="grid gap-3 rounded-2xl border border-outline-variant bg-surface-container-low p-4">
+                <label className="flex items-start gap-3 text-sm">
+                  <input
+                    checked={attendsPatients}
+                    disabled={!hasClinicalFunction && !professionalProfile}
+                    onChange={(event) => {
+                      const next = event.target.checked;
+                      setAttendsPatients(next);
+                      if (next && !professionalData.medicalServiceIds.length) {
+                        setProfessionalData((current) => ({
+                          ...current,
+                          medicalServiceIds: medicalServices.map((item) => item.id),
+                        }));
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                  <span>
+                    <b className="block">También atenderá pacientes</b>
+                    <span className="text-on-surface-variant">
+                      Crea un perfil profesional sobre esta misma cuenta y la habilita en la agenda.
+                    </span>
+                  </span>
+                </label>
+                {attendsPatients ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                      label="Tipo de profesional"
+                      minLength="2"
+                      onChange={(event) =>
+                        setProfessionalData((current) => ({ ...current, professionalType: event.target.value }))
+                      }
+                      value={professionalData.professionalType}
+                    />
+                    <Input
+                      label="Especialidad"
+                      minLength="2"
+                      onChange={(event) =>
+                        setProfessionalData((current) => ({ ...current, specialty: event.target.value }))
+                      }
+                      value={professionalData.specialty}
+                    />
+                    <Input
+                      label="Colegiatura o licencia"
+                      minLength="4"
+                      onChange={(event) =>
+                        setProfessionalData((current) => ({ ...current, licenseNumber: event.target.value.toUpperCase() }))
+                      }
+                      value={professionalData.licenseNumber}
+                    />
+                    <Input
+                      label="Duración promedio (minutos)"
+                      max="480"
+                      min="5"
+                      onChange={(event) =>
+                        setProfessionalData((current) => ({ ...current, appointmentDurationMinutes: event.target.value }))
+                      }
+                      type="number"
+                      value={professionalData.appointmentDurationMinutes}
+                    />
+                    <fieldset className="sm:col-span-2">
+                      <legend className="text-sm font-bold">Servicios que realizará</legend>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {medicalServices.map((item) => {
+                          const checked = professionalData.medicalServiceIds.includes(item.id);
+                          return (
+                            <label className={`cursor-pointer rounded-xl border px-3 py-2 text-sm font-bold ${checked ? "border-primary bg-primary text-white" : "border-outline-variant bg-white"}`} key={item.id}>
+                              <input
+                                checked={checked}
+                                className="sr-only"
+                                onChange={(event) =>
+                                  setProfessionalData((current) => ({
+                                    ...current,
+                                    medicalServiceIds: event.target.checked
+                                      ? [...current.medicalServiceIds, item.id]
+                                      : current.medicalServiceIds.filter((id) => id !== item.id),
+                                  }))
+                                }
+                                type="checkbox"
+                              />
+                              {item.name}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                    <p className="text-xs text-on-surface-variant sm:col-span-2">
+                      El horario inicial se crea de lunes a viernes, de 09:00 a 18:00. Puedes ajustarlo desde el botón de horario del colaborador.
+                    </p>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
           </section>
           <section className={step === 2 ? "grid gap-4" : "hidden"}>
             <div className="rounded-2xl bg-primary-fixed p-4">
@@ -1390,12 +1547,15 @@ export default function Team() {
   const { config } = useAppConfig();
   const hospitality = config?.template?.dashboardKey === "hospitality";
   const dental = config?.template?.dashboardKey === "dental";
+  const health = config?.template?.dashboardKey === "health";
   const veterinary = config?.template?.dashboardKey === "veterinary";
   const { showToast } = useToast();
   const [users, setUsers] = useState([]);
   const [cleaningStats, setCleaningStats] = useState({});
   const [attendance, setAttendance] = useState({});
   const [access, setAccess] = useState({ positions: [], functions: [] });
+  const [medicalServices, setMedicalServices] = useState([]);
+  const [professionalProfiles, setProfessionalProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(undefined);
@@ -1410,7 +1570,7 @@ export default function Team() {
     setLoading(true);
     setError("");
     try {
-      const [team, accessCatalog, housekeeping, attendanceToday] =
+      const [team, accessCatalog, housekeeping, attendanceToday, professionals, businessServices] =
         await Promise.all([
           userService.getUsers(),
           userService.getAccessCatalog(),
@@ -1418,9 +1578,13 @@ export default function Team() {
             ? getHospitalityStaffDashboard()
             : Promise.resolve({ employees: [] }),
           getTodayAttendance(),
+          health ? getMedicalProfessionals() : Promise.resolve([]),
+          health ? getBusinessMedicalServices() : Promise.resolve([]),
         ]);
       setUsers(team);
       setAccess(accessCatalog);
+      setProfessionalProfiles(professionals);
+      setMedicalServices(businessServices.map((item) => item.serviceType));
       setCleaningStats(
         Object.fromEntries(
           housekeeping.employees.map((item) => [item.employee, item]),
@@ -1434,11 +1598,11 @@ export default function Team() {
     } finally {
       setLoading(false);
     }
-  }, [hospitality]);
+  }, [health, hospitality]);
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
-  useLiveRefresh(load, ["/users", "/hospitality", "/attendance"]);
+  useLiveRefresh(load, ["/users", "/hospitality", "/attendance", "/medical"]);
   useEffect(() => {
     if (!hospitality) return undefined;
     const id = setInterval(() => {
@@ -1514,18 +1678,20 @@ export default function Team() {
           onClick={() => setEditing(null)}
           type="button"
         >
-          {dental || veterinary ? "Agregar colaborador" : "Agregar operador"}
+          {dental || veterinary || health ? "Agregar colaborador" : "Agregar operador"}
         </Button>
       }
       subtitle={
         dental
           ? "Asigna funciones clínicas sin exponer cobros, reportes ni datos administrativos."
+          : health
+            ? "Asigna funciones, perfiles profesionales y horarios sin duplicar cuentas."
           : veterinary
             ? "Organiza médicos, recepción, asistentes y estética con sus accesos correspondientes."
             : "Administra quién puede acceder al inventario de tu negocio."
       }
       title={
-        dental ? "Equipo dental" : veterinary ? "Equipo veterinario" : "Equipo"
+        dental ? "Equipo dental" : health ? "Equipo médico" : veterinary ? "Equipo veterinario" : "Equipo"
       }
     >
       <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
@@ -1757,8 +1923,13 @@ export default function Team() {
       {editing !== undefined ? (
         <UserForm
           access={access}
+          health={health}
+          medicalServices={medicalServices}
           onClose={() => setEditing(undefined)}
           onSaved={saved}
+          professionalProfile={professionalProfiles.find(
+            (profile) => profile.userId === editing?.id,
+          )}
           user={editing}
         />
       ) : null}

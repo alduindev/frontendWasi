@@ -12,6 +12,7 @@ import DentalCalendar from "../../pages/dental/DentalCalendar";
 import DentalWorkspace from "../../pages/dental/DentalWorkspace";
 import DentalOperations from "../../pages/dental/DentalOperations";
 import HealthWorkspace from "../../pages/health/HealthWorkspace";
+import MedicalWorkspace from "../../pages/health/MedicalWorkspace";
 import { useAppConfig } from "../../context/appConfigStore";
 import BusinessChat from "../../pages/chat/BusinessChat";
 import DentalBillingQueue from "../../pages/dental/DentalBillingQueue";
@@ -157,6 +158,7 @@ export default function OperatorRoutes() {
         }
       />
       <Route path="dental/:moduleKey" element={<DentalModuleAccess />} />
+      <Route path="medical/:moduleKey" element={<MedicalModuleAccess />} />
       <Route
         path="veterinary/pets"
         element={
@@ -213,6 +215,25 @@ function DentalModuleAccess() {
       <DentalOperations operator />
     );
   return <OperatorAccess frontendKey={moduleKey}>{page}</OperatorAccess>;
+}
+
+function MedicalModuleAccess() {
+  const { moduleKey } = useParams();
+  const { config } = useAppConfig();
+  const module = config?.modules?.find(
+    (item) => item.frontendKey === moduleKey,
+  );
+  if (
+    config?.template?.dashboardKey !== "health" ||
+    !module ||
+    !module.code.startsWith("health.")
+  )
+    return <Navigate replace to="/pos" />;
+  return (
+    <OperatorAccess frontendKey={moduleKey}>
+      <MedicalWorkspace operator />
+    </OperatorAccess>
+  );
 }
 
 function FunctionAccess({ children }) {

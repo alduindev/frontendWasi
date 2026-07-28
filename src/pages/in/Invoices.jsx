@@ -8,12 +8,14 @@ import ConfirmDialog from "../../components/molecules/ConfirmDialog";
 import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
+import InvoiceReceiptPreview from "../../components/invoices/InvoiceReceiptPreview";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { formatCurrency } from "../../data/dashboard";
 import { useInventory } from "../../hooks/useInventory";
 import { useToast } from "../../hooks/useToast";
 import * as invoiceService from "../../services/invoiceService";
+import { getMyBusiness } from "../../services/businessService";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { matchesEntitySearch } from "../../utils/entitySearch";
 import {
@@ -196,16 +198,17 @@ function SaleForm({ onClose, onIssued, products }) {
   );
 }
 
-function InvoiceDetail({ invoice, onClose }) {
+function InvoiceDetail({ business, invoice, onClose }) {
   const context = invoiceContext(invoice);
   const domain = invoiceDomain(invoice);
   const meta = domainMeta[domain];
   return (
     <Modal
+      dialogClassName="max-w-[58rem]"
       onClose={onClose}
       title={`${invoice.documentType === "factura" ? "Factura" : "Boleta"} ${documentNumber(invoice)}`}
     >
-      <div className="grid gap-4 p-5">
+      <div className="grid gap-4 p-3 sm:p-5">
         {meta ? (
           <div className="flex items-center gap-3 rounded-xl bg-primary-fixed p-3 text-primary">
             <span className="material-symbols-outlined">{meta.icon}</span>
@@ -222,51 +225,11 @@ function InvoiceDetail({ invoice, onClose }) {
             </div>
           </div>
         ) : null}
-        <div className="grid gap-2 rounded-xl bg-surface-container-low p-4 sm:grid-cols-2">
-          <p>
-            <b>Cliente:</b> {invoice.customerName}
-          </p>
-          <p>
-            <b>Documento:</b> {invoice.customerDocument || "Sin documento"}
-          </p>
-          <p>
-            <b>Fecha:</b> {new Date(invoice.issuedAt).toLocaleString("es-PE")}
-          </p>
-          <p>
-            <b>Emitido por:</b> {invoice.issuedBy.name}
-          </p>
-        </div>
-        <div className="grid gap-2">
-          {invoice.lines.map((line) => (
-            <div
-              className="flex justify-between gap-4 rounded-xl border border-outline-variant p-3"
-              key={line.id}
-            >
-              <span>
-                {line.quantity} × {line.productName}
-              </span>
-              <b>{formatCurrency(line.total)}</b>
-            </div>
-          ))}
-        </div>
-        <div className="ml-auto grid w-full max-w-xs gap-1 text-sm">
-          <p className="flex justify-between">
-            <span>Subtotal</span>
-            <b>{formatCurrency(invoice.subtotal)}</b>
-          </p>
-          <p className="flex justify-between">
-            <span>IGV</span>
-            <b>{formatCurrency(invoice.tax)}</b>
-          </p>
-          <p className="flex justify-between text-lg">
-            <span>Total</span>
-            <b>{formatCurrency(invoice.total)}</b>
-          </p>
-        </div>
+        <InvoiceReceiptPreview business={business} invoice={invoice} />
         <div className="flex justify-end">
           <Button
             icon="print"
-            onClick={() => printInvoice(invoice)}
+            onClick={() => printInvoice(invoice, business)}
             type="button"
             variant="secondary"
           >
@@ -291,6 +254,7 @@ export default function Invoices() {
     "health",
   ].includes(dashboardKey);
   const [invoices, setInvoices] = useState([]);
+  const [business, setBusiness] = useState(config?.business || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -311,6 +275,17 @@ export default function Invoices() {
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
+  useEffect(() => {
+    let active = true;
+    getMyBusiness()
+      .then((value) => {
+        if (active) setBusiness(value);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
   useLiveRefresh(load, ["/invoices"]);
   const issued = async (invoice) => {
     setCreating(false);
@@ -505,7 +480,11 @@ export default function Invoices() {
         />
       ) : null}
       {detail ? (
-        <InvoiceDetail invoice={detail} onClose={() => setDetail(null)} />
+        <InvoiceDetail
+          business={business}
+          invoice={detail}
+          onClose={() => setDetail(null)}
+        />
       ) : null}
       <ConfirmDialog
         description={

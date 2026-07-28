@@ -35,7 +35,7 @@ function capabilities(user, entityType) {
   const admin = ['admin', 'admin_owner'].includes(user?.role)
   if (admin) return { remove: true, upload: true }
   if (entityType === 'dental_patient') return { remove: false, upload: matchesPermission(user, 'dental.records.edit') && hasFunction(user, 'dentist') }
-  if (entityType === 'health_patient') return { remove: false, upload: matchesPermission(user, 'patients.edit') }
+  if (entityType === 'health_patient') return { remove: false, upload: matchesPermission(user, 'health.patients.edit') || matchesPermission(user, 'patients.edit') }
   if (entityType === 'veterinary_pet') return { remove: false, upload: matchesPermission(user, 'pets.edit') && hasFunction(user, 'veterinarian') }
   if (entityType === 'hospitality_guest') return { remove: false, upload: matchesPermission(user, 'hospitality.guests.manage') }
   if (entityType === 'hospitality_reservation') return { remove: false, upload: matchesPermission(user, 'hospitality.reservations.manage') }

@@ -30,9 +30,7 @@ export default function AuthLayout({
 
   return (
     <main className="min-h-svh w-full overflow-x-hidden bg-background p-3 text-left text-on-surface transition-colors duration-300 sm:p-6">
-      <div className="fixed right-3 top-3 z-20 sm:right-6 sm:top-6">
-        <PreferenceControls />
-      </div>
+      <PreferenceControls />
       <div className="mx-auto grid min-h-[calc(100svh-1.5rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#e9dfd4] bg-white shadow-xl shadow-primary/5 sm:rounded-3xl lg:h-[calc(100svh-3rem)] lg:min-h-0 lg:grid-cols-[0.9fr_1fr]">
         <section className="hidden min-h-0 overflow-y-auto bg-primary p-8 text-white lg:flex lg:flex-col lg:justify-between">
           <Link aria-label="Volver al inicio de Wasita" className="w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" to="/">

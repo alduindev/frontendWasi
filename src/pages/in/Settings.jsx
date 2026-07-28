@@ -101,7 +101,10 @@ export default function Settings() {
   const [businessLoading, setBusinessLoading] = useState(true);
   const [businessTypes, setBusinessTypes] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState(() => getSettings());
+  const [settings, setSettings] = useState(() => ({
+    ...getSettings(),
+    language: "es",
+  }));
   const { refresh } = useAppConfig();
   const { restartOnboarding } = useOnboarding();
   const { showToast } = useToast();
@@ -165,7 +168,7 @@ export default function Settings() {
           tone: "success",
         });
       } else {
-        setSettings(saveSettings(settings));
+        setSettings(saveSettings({ ...settings, language: "es" }));
         showToast({ title: "Preferencias guardadas", tone: "success" });
       }
     } catch (error) {
@@ -183,7 +186,7 @@ export default function Settings() {
   };
 
   const resetPreferences = () => {
-    setSettings(saveSettings(defaultSettings));
+    setSettings(saveSettings({ ...defaultSettings, language: "es" }));
     showToast({ title: "Preferencias restablecidas", tone: "info" });
   };
 
@@ -451,7 +454,7 @@ export default function Settings() {
                         Configura los formatos usados en este dispositivo.
                       </p>
                     </div>
-                    <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <Select
                         label="Moneda visual"
                         onChange={(event) =>
@@ -462,17 +465,6 @@ export default function Settings() {
                         <option value="PEN">PEN - Sol peruano</option>
                         <option value="USD">USD - Dólar</option>
                         <option value="EUR">EUR - Euro</option>
-                      </Select>
-                      <Select
-                        label="Idioma"
-                        onChange={(event) =>
-                          updateSetting("language", event.target.value)
-                        }
-                        value={settings.language}
-                      >
-                        <option value="es">Español</option>
-                        <option value="en">English</option>
-                        <option value="pt">Português</option>
                       </Select>
                       <Select
                         label="Formato de fecha"

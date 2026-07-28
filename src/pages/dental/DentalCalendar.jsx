@@ -76,9 +76,24 @@ const dayTitle = (value) =>
     month: "long",
   }).format(new Date(`${value}T12:00:00`));
 const cls = "min-h-11 rounded-xl border border-outline-variant bg-surface px-3";
+const appointmentDraftFor = (date) => ({
+  patientId: "",
+  procedureId: "",
+  professionalId: "",
+  date,
+  time: "09:00",
+  reason: "",
+  notes: "",
+});
+const appointmentSteps = [
+  { icon: "person_search", label: "Paciente" },
+  { icon: "dentistry", label: "Atención" },
+  { icon: "task_alt", label: "Confirmar" },
+];
 
 function AppointmentForm({
-  date,
+  draft,
+  onDraftChange,
   patients,
   procedures,
   professionals,
@@ -86,33 +101,85 @@ function AppointmentForm({
   onNewPatient,
   onSaved,
 }) {
+  const [step, setStep] = useState(0);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [patientId, setPatientId] = useState("");
+  const selectedPatient = patients.find(
+    (item) => String(item.id) === String(draft.patientId),
+  );
+  const selectedProcedure = procedures.find(
+    (item) => String(item.id) === String(draft.procedureId),
+  );
+  const selectedProfessional = professionals.find(
+    (item) => String(item.id) === String(draft.professionalId),
+  );
+  const today = iso(new Date());
+  const setValue = (key, value) => {
+    setFormError("");
+    onDraftChange((current) => ({ ...current, [key]: value }));
+  };
+  const validate = (currentStep = step) => {
+    if (currentStep === 0 && !selectedPatient) {
+      setFormError(
+        "Selecciona un paciente para continuar. Puedes buscarlo por nombre, DNI o celular.",
+      );
+      return false;
+    }
+    if (currentStep === 1) {
+      if (!selectedProcedure) {
+        setFormError("Selecciona el servicio que recibirá el paciente.");
+        return false;
+      }
+      if (!selectedProfessional) {
+        setFormError("Selecciona al odontólogo responsable de la atención.");
+        return false;
+      }
+      if (!draft.date || !draft.time) {
+        setFormError("Completa la fecha y la hora de la cita.");
+        return false;
+      }
+      const start = new Date(`${draft.date}T${draft.time}:00`);
+      if (Number.isNaN(start.getTime())) {
+        setFormError("La fecha u hora elegida no es válida.");
+        return false;
+      }
+      if (draft.date < today || start.getTime() <= Date.now()) {
+        setFormError("Elige una fecha y hora futura para la cita.");
+        return false;
+      }
+    }
+    setFormError("");
+    return true;
+  };
   const submit = async (event) => {
     event.preventDefault();
+    if (step < appointmentSteps.length - 1) {
+      if (validate(step)) setStep((current) => current + 1);
+      return;
+    }
+    if (!validate(0) || !validate(1)) return;
     setSaving(true);
     setFormError("");
-    const form = new FormData(event.currentTarget),
-      procedure = procedures.find(
-        (item) => item.id === form.get("procedureId"),
-      ),
-      start = new Date(`${date}T${form.get("time")}`),
+    const start = new Date(`${draft.date}T${draft.time}:00`),
       end = new Date(
-        start.getTime() + Number(procedure?.durationMinutes || 30) * 60000,
+        start.getTime() +
+          Number(selectedProcedure?.durationMinutes || 30) * 60000,
       );
     try {
-      await api.createHealthAppointment({
-        patientId: form.get("patientId"),
-        professionalId: form.get("professionalId"),
+      const appointment = await api.createHealthAppointment({
+        patientId: draft.patientId,
+        professionalId: draft.professionalId,
         startsAt: start.toISOString(),
         endsAt: end.toISOString(),
         professionalName: "",
-        specialty: procedure?.name || "Consulta odontológica",
-        reason: form.get("reason") || procedure?.name || "Atención dental",
-        notes: form.get("notes"),
+        specialty: selectedProcedure?.name || "Consulta odontológica",
+        reason:
+          draft.reason ||
+          selectedProcedure?.name ||
+          "Atención dental",
+        notes: draft.notes,
       });
-      onSaved();
+      onSaved(appointment);
     } catch (e) {
       setFormError(e.message);
     } finally {
@@ -120,91 +187,308 @@ function AppointmentForm({
     }
   };
   return (
-    <Modal onClose={onClose} title="Agendar cita dental">
-      <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={submit}>
-        <div className="grid gap-1">
-          <EntitySearchSelect
-            getLabel={(item) => `${item.lastName}, ${item.firstName}`}
-            getMeta={(item) =>
-              [item.document, item.phone].filter(Boolean).join(" · ")
-            }
-            getSearchValues={(item) => [
-              item.firstName,
-              item.lastName,
-              `${item.firstName} ${item.lastName}`,
-              item.document,
-              item.phone,
-              item.email,
-            ]}
-            items={patients}
-            label="Paciente"
-            name="patientId"
-            onChange={setPatientId}
-            placeholder="Buscar por nombre, DNI o celular"
-            required
-            value={patientId}
-          />
-          <button
-            className="w-fit text-sm font-bold text-primary"
-            onClick={onNewPatient}
-            type="button"
+    <Modal
+      dialogClassName="max-w-[52rem]"
+      onClose={onClose}
+      title="Agendar cita dental"
+    >
+      <form className="grid min-h-0" onSubmit={submit}>
+        <div className="border-b border-outline-variant px-4 py-3 sm:px-5">
+          <nav
+            aria-label="Pasos para agendar la cita"
+            className="grid grid-cols-3 gap-1 rounded-2xl bg-surface-container-low p-1"
           >
-            + Registrar paciente nuevo
-          </button>
+            {appointmentSteps.map((item, index) => (
+              <button
+                aria-current={index === step ? "step" : undefined}
+                className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition sm:text-sm ${
+                  index === step
+                    ? "bg-primary text-white shadow-md"
+                    : index < step
+                      ? "bg-primary-fixed text-primary"
+                      : "text-on-surface-variant"
+                }`}
+                disabled={index > step}
+                key={item.label}
+                onClick={() => {
+                  if (index < step) {
+                    setFormError("");
+                    setStep(index);
+                  }
+                }}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {index < step ? "check_circle" : item.icon}
+                </span>
+                <span className="truncate">
+                  <span className="sm:hidden">{index + 1}</span>
+                  <span className="hidden sm:inline">
+                    {index + 1}. {item.label}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </nav>
         </div>
-        <label className="grid gap-1">
-          Servicio
-          <select className={cls} name="procedureId" required>
-            <option value="">Selecciona un servicio</option>
-            {procedures.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.durationMinutes} min · S/{" "}
-                {Number(item.price).toFixed(2)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1">
-          Hora
-          <input
-            className={cls}
-            defaultValue="09:00"
-            name="time"
-            required
-            type="time"
-          />
-        </label>
-        <label className="grid gap-1">
-          Odontólogo
-          <select className={cls} name="professionalId" required>
-            <option value="">Selecciona un odontólogo</option>
-            {professionals.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.site}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 sm:col-span-2">
-          Motivo
-          <input
-            className={cls}
-            name="reason"
-            placeholder="Control, dolor, evaluación..."
-          />
-        </label>
-        <label className="grid gap-1 sm:col-span-2">
-          Notas
-          <textarea className={`${cls} min-h-20 py-2`} name="notes" />
-        </label>
-        {formError ? (
-          <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2">
-            {formError}
-          </p>
-        ) : null}
-        <div className="flex gap-2 sm:col-span-2">
-          <Button onClick={onClose} type="button" variant="secondary">
-            Cancelar
+
+        <div className="grid min-h-[20rem] content-start gap-4 p-4 sm:p-5">
+          {formError ? (
+            <div
+              className="flex items-start gap-2 rounded-xl bg-error-container p-3 text-sm text-on-error-container"
+              role="alert"
+            >
+              <span className="material-symbols-outlined text-lg">error</span>
+              <p>{formError}</p>
+            </div>
+          ) : null}
+
+          {step === 0 ? (
+            <fieldset className="grid gap-4">
+              <legend className="mb-1 text-lg font-bold">
+                ¿A quién atenderemos?
+              </legend>
+              <p className="-mt-3 text-sm text-on-surface-variant">
+                Busca por nombre, DNI o celular. Los resultados pertenecen
+                únicamente a tu empresa.
+              </p>
+              <EntitySearchSelect
+                emptyMessage="No encontramos al paciente. Puedes registrarlo sin perder esta cita."
+                getLabel={(item) => `${item.lastName}, ${item.firstName}`}
+                getMeta={(item) =>
+                  [item.document, item.phone].filter(Boolean).join(" · ")
+                }
+                getSearchValues={(item) => [
+                  item.firstName,
+                  item.lastName,
+                  `${item.firstName} ${item.lastName}`,
+                  `${item.lastName} ${item.firstName}`,
+                  item.document,
+                  item.phone,
+                  item.email,
+                ]}
+                items={patients}
+                label="Paciente"
+                name="patientId"
+                onChange={(value) => setValue("patientId", value)}
+                placeholder="Nombre, DNI o celular"
+                required
+                value={draft.patientId}
+              />
+              <button
+                className="flex min-h-12 items-center justify-between rounded-xl border border-primary/30 bg-primary-fixed px-4 text-left font-bold text-primary hover:border-primary"
+                onClick={onNewPatient}
+                type="button"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined">
+                    person_add
+                  </span>
+                  Registrar paciente nuevo
+                </span>
+                <span className="material-symbols-outlined">
+                  arrow_forward
+                </span>
+              </button>
+            </fieldset>
+          ) : null}
+
+          {step === 1 ? (
+            <fieldset className="grid gap-4">
+              <legend className="mb-1 text-lg font-bold">
+                Define la atención
+              </legend>
+              <p className="-mt-3 text-sm text-on-surface-variant">
+                Elige el servicio, el odontólogo responsable y un horario
+                disponible.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1 text-sm font-medium">
+                  Servicio *
+                  <select
+                    className={cls}
+                    onChange={(event) =>
+                      setValue("procedureId", event.target.value)
+                    }
+                    required
+                    value={draft.procedureId}
+                  >
+                    <option value="">Selecciona un servicio</option>
+                    {procedures.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {item.durationMinutes} min · S/{" "}
+                        {Number(item.price).toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm font-medium">
+                  Odontólogo *
+                  <select
+                    className={cls}
+                    onChange={(event) =>
+                      setValue("professionalId", event.target.value)
+                    }
+                    required
+                    value={draft.professionalId}
+                  >
+                    <option value="">Selecciona un odontólogo</option>
+                    {professionals.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {item.site}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm font-medium">
+                  Fecha *
+                  <input
+                    className={cls}
+                    min={today}
+                    onChange={(event) =>
+                      setValue("date", event.target.value)
+                    }
+                    required
+                    type="date"
+                    value={draft.date}
+                  />
+                </label>
+                <label className="grid gap-1 text-sm font-medium">
+                  Hora *
+                  <input
+                    className={cls}
+                    onChange={(event) =>
+                      setValue("time", event.target.value)
+                    }
+                    required
+                    type="time"
+                    value={draft.time}
+                  />
+                </label>
+              </div>
+              {selectedProcedure ? (
+                <div className="grid grid-cols-3 gap-2 rounded-2xl bg-primary-fixed p-3 text-center text-sm text-primary">
+                  <span>
+                    <b className="block">
+                      {selectedProcedure.durationMinutes} min
+                    </b>
+                    Duración
+                  </span>
+                  <span>
+                    <b className="block">
+                      S/ {Number(selectedProcedure.price).toFixed(2)}
+                    </b>
+                    Precio
+                  </span>
+                  <span>
+                    <b className="block">
+                      {new Date(
+                        new Date(
+                          `${draft.date}T${draft.time || "00:00"}:00`,
+                        ).getTime() +
+                          Number(
+                            selectedProcedure.durationMinutes || 30,
+                          ) *
+                            60000,
+                      ).toLocaleTimeString("es-PE", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </b>
+                    Finaliza
+                  </span>
+                </div>
+              ) : null}
+            </fieldset>
+          ) : null}
+
+          {step === 2 ? (
+            <fieldset className="grid gap-4">
+              <legend className="mb-1 text-lg font-bold">
+                Revisa y confirma
+              </legend>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+                <div className="grid gap-3">
+                  <label className="grid gap-1 text-sm font-medium">
+                    Motivo de la consulta
+                    <input
+                      className={cls}
+                      maxLength={160}
+                      onChange={(event) =>
+                        setValue("reason", event.target.value)
+                      }
+                      placeholder="Control, dolor, evaluación..."
+                      value={draft.reason}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-medium">
+                    Notas para el equipo
+                    <textarea
+                      className={`${cls} min-h-24 resize-none py-2`}
+                      maxLength={500}
+                      onChange={(event) =>
+                        setValue("notes", event.target.value)
+                      }
+                      placeholder="Indicaciones o información adicional (opcional)"
+                      value={draft.notes}
+                    />
+                  </label>
+                </div>
+                <div className="grid content-start gap-2 rounded-2xl border border-outline-variant bg-surface-container-low p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Resumen de la cita
+                  </p>
+                  <SummaryRow
+                    icon="person"
+                    label="Paciente"
+                    value={
+                      selectedPatient
+                        ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
+                        : "Sin seleccionar"
+                    }
+                  />
+                  <SummaryRow
+                    icon="dentistry"
+                    label="Servicio"
+                    value={selectedProcedure?.name || "Sin seleccionar"}
+                  />
+                  <SummaryRow
+                    icon="medical_services"
+                    label="Odontólogo"
+                    value={selectedProfessional?.name || "Sin seleccionar"}
+                  />
+                  <SummaryRow
+                    icon="calendar_month"
+                    label="Fecha y hora"
+                    value={`${dayTitle(draft.date)} · ${draft.time}`}
+                  />
+                </div>
+              </div>
+              <p className="flex items-start gap-2 rounded-xl bg-primary-fixed p-3 text-sm text-primary">
+                <span className="material-symbols-outlined text-lg">
+                  notifications_active
+                </span>
+                La cita aparecerá en la agenda del equipo después de
+                confirmarla.
+              </p>
+            </fieldset>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-outline-variant bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <Button
+            disabled={saving}
+            onClick={() => {
+              if (step === 0) onClose();
+              else {
+                setFormError("");
+                setStep((current) => current - 1);
+              }
+            }}
+            type="button"
+            variant="secondary"
+          >
+            {step === 0 ? "Cancelar" : "Anterior"}
           </Button>
           <Button
             disabled={
@@ -213,13 +497,32 @@ function AppointmentForm({
               !procedures.length ||
               !professionals.length
             }
+            icon={step === 2 ? "event_available" : "arrow_forward"}
             type="submit"
           >
-            {saving ? "Guardando..." : "Agendar cita"}
+            {saving
+              ? "Agendando..."
+              : step === 2
+                ? "Confirmar cita"
+                : "Continuar"}
           </Button>
         </div>
       </form>
     </Modal>
+  );
+}
+
+function SummaryRow({ icon, label, value }) {
+  return (
+    <div className="flex min-w-0 items-start gap-2 rounded-xl bg-white p-2.5">
+      <span className="material-symbols-outlined text-lg text-primary">
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <small className="block text-on-surface-variant">{label}</small>
+        <b className="block truncate text-sm capitalize">{value}</b>
+      </span>
+    </div>
   );
 }
 
@@ -602,6 +905,9 @@ export default function DentalCalendar({ operator = false }) {
   const [professionals, setProfessionals] = useState([]);
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState(null);
+  const [appointmentDraft, setAppointmentDraft] = useState(() =>
+    appointmentDraftFor(today),
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const canSchedule =
@@ -659,7 +965,14 @@ export default function DentalCalendar({ operator = false }) {
     if (date.getMonth() !== cursor.getMonth())
       setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
   };
-  const openSchedule = () => setModal({ type: "appointment" });
+  const openSchedule = () => {
+    setAppointmentDraft(appointmentDraftFor(selected));
+    setModal({ type: "appointment" });
+  };
+  const closeSchedule = () => {
+    setAppointmentDraft(appointmentDraftFor(selected));
+    setModal(null);
+  };
   const Shell = operator ? OperatorShell : DashboardShell;
   return (
     <Shell
@@ -813,11 +1126,22 @@ export default function DentalCalendar({ operator = false }) {
       </div>
       {modal?.type === "appointment" ? (
         <AppointmentForm
-          date={selected}
-          onClose={() => setModal(null)}
+          draft={appointmentDraft}
+          onClose={closeSchedule}
+          onDraftChange={setAppointmentDraft}
           onNewPatient={() => setModal({ type: "patient" })}
           onSaved={() => {
+            const scheduledDate = appointmentDraft.date;
             setModal(null);
+            setAppointmentDraft(appointmentDraftFor(scheduledDate));
+            setSelected(scheduledDate);
+            setCursor(
+              new Date(
+                Number(scheduledDate.slice(0, 4)),
+                Number(scheduledDate.slice(5, 7)) - 1,
+                1,
+              ),
+            );
             load();
           }}
           patients={patients}
@@ -833,8 +1157,15 @@ export default function DentalCalendar({ operator = false }) {
           <DynamicForm
             onCancel={() => setModal({ type: "appointment" })}
             onSubmit={async (values) => {
-              await api.createPatient(values);
-              await load();
+              const created = await api.createPatient(values);
+              const refreshedPatients = await api.getPatients();
+              setPatients(refreshedPatients);
+              if (created?.id) {
+                setAppointmentDraft((current) => ({
+                  ...current,
+                  patientId: String(created.id),
+                }));
+              }
               setModal({ type: "appointment" });
             }}
             submitLabel="Registrar y continuar"

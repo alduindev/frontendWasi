@@ -547,20 +547,22 @@ export default function DashboardShell({
               t={t}
             />
 
-            <PreferenceControls compact />
+            <PreferenceControls />
 
             <AccountMenu accountItems={accountItems} isOpen={accountOpen} items={accountItems} onClose={() => setAccountOpen(false)} onLogout={() => { setAccountOpen(false); setConfirmLogout(true) }} onToggle={() => setAccountOpen(current => !current)} role={role} t={t} user={user} />
 
-            <button
-              aria-controls="admin-mobile-navigation"
-              aria-expanded={mobileOpen}
-              aria-label={t('sidebar.open')}
-              className="material-symbols-outlined grid min-h-10 min-w-10 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary lg:hidden"
-              onClick={openMobile}
-              type="button"
-            >
-              menu
-            </button>
+            <div className="lg:hidden">
+              <button
+                aria-controls="admin-mobile-navigation"
+                aria-expanded={mobileOpen}
+                aria-label={t('sidebar.open')}
+                className="material-symbols-outlined grid min-h-10 min-w-10 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                onClick={openMobile}
+                type="button"
+              >
+                menu
+              </button>
+            </div>
           </div>
         </div>
       </header>

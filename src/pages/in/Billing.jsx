@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Card from "../../components/atoms/Card";
 import Button from "../../components/atoms/Button";
 import DashboardShell from "../../components/organisms/DashboardShell";
@@ -7,6 +8,7 @@ import { getPlans } from "../../services/platformService";
 import {
   cancelSubscription,
   createSubscriptionCheckout,
+  getSubscriptionCheckoutStatus,
   getSubscription,
   getUsage,
   reactivateSubscription,
@@ -30,6 +32,70 @@ const stateLabel = {
   pending_payment: "Pago pendiente",
   incomplete: "Incompleta",
 };
+
+const paymentProviderLabel = {
+  mercado_pago: "Mercado Pago",
+  manual: "Confirmación manual",
+};
+
+const paymentStatusLabel = {
+  created: "Orden creada",
+  pending: "Pendiente de pago",
+  pending_payment: "Pendiente de pago",
+  approved: "Pago aprobado",
+  succeeded: "Pago confirmado",
+  rejected: "Pago rechazado",
+  failed: "Pago no aprobado",
+  cancelled: "Pago cancelado",
+  canceled: "Pago cancelado",
+};
+
+const paymentStatusIcon = {
+  success: "check_circle",
+  pending: "schedule",
+  error: "error",
+  checking: "progress_activity",
+};
+
+const checkoutStorageKey = "wasi:subscription-checkout";
+
+function paymentLabel(status) {
+  return paymentStatusLabel[status] || "Estado en revisión";
+}
+
+function providerLabel(provider) {
+  return paymentProviderLabel[provider] || "Pago";
+}
+
+function CheckoutNotice({ status }) {
+  if (!status) return null;
+
+  const isChecking = status.kind === "checking";
+  const tone = {
+    success: "border-emerald-200 bg-emerald-50 text-emerald-950",
+    pending: "border-amber-200 bg-amber-50 text-amber-950",
+    error: "border-error bg-error-container text-error",
+    checking: "border-primary/20 bg-primary-fixed text-on-primary-fixed",
+  }[status.kind] || "border-outline-variant bg-surface-container text-on-surface";
+
+  return (
+    <Card aria-live="polite" className={`mb-4 border p-4 ${tone}`}>
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className={`material-symbols-outlined text-2xl ${isChecking ? "animate-spin" : ""}`}
+        >
+          {paymentStatusIcon[status.kind] || "info"}
+        </span>
+        <div className="min-w-0">
+          <p className="font-bold">{status.title}</p>
+          <p className="mt-1 text-sm opacity-90">{status.detail}</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function Meter({ label, value, max }) {
   const percentage = Math.min(
     100,
@@ -63,28 +129,65 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
   const [planCode, setPlanCode] = useState(current.plan.code);
   const [coupon, setCoupon] = useState("");
   const [saving, setSaving] = useState(false);
+  const [handoff, setHandoff] = useState(false);
   const [error, setError] = useState("");
   const selected = plans.find((x) => x.code === planCode);
   const price = selected?.prices?.find(
     (x) => x.currency === "PEN" && x.billingInterval === interval,
   );
   const submit = async () => {
+    if (!selected || !price) return;
+
     setSaving(true);
     setError("");
+    let redirecting = false;
     try {
       const order = await createSubscriptionCheckout({
         planCode,
         billingInterval: interval,
-        provider: "manual",
+        provider: "mercado_pago",
         couponCode: coupon,
       });
-      onCreated(order);
+      const shouldRedirect = await onCreated(order);
+      if (shouldRedirect && order.paymentConfigured && order.checkoutUrl) {
+        redirecting = true;
+        setHandoff(true);
+        window.setTimeout(() => window.location.assign(order.checkoutUrl), 350);
+      } else {
+        onClose();
+      }
     } catch (e) {
       setError(e.message);
     } finally {
-      setSaving(false);
+      if (!redirecting) setSaving(false);
     }
   };
+
+  if (handoff) {
+    return (
+      <Modal onClose={() => {}} title="Pago seguro">
+        <div className="grid place-items-center gap-4 p-8 text-center sm:p-10">
+          <span className="material-symbols-outlined animate-pulse text-5xl text-primary">
+            lock
+          </span>
+          <div>
+            <h3 className="font-heading text-xl font-bold">Abriendo Mercado Pago</h3>
+            <p className="mt-2 max-w-md text-sm text-on-surface-variant">
+              Te redirigiremos a su checkout seguro. Wasita no solicita ni guarda
+              los datos de tu tarjeta.
+            </p>
+          </div>
+          <span className="material-symbols-outlined animate-spin text-2xl text-primary">
+            progress_activity
+          </span>
+          <p className="text-xs text-on-surface-variant">
+            El cambio de plan se aplicará únicamente cuando el backend verifique
+            un pago aprobado.
+          </p>
+        </div>
+      </Modal>
+    );
+  }
   return (
     <Modal onClose={onClose} title="Cambiar plan o periodicidad">
       <div className="grid gap-4 p-5">
@@ -96,6 +199,7 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
         <div className="grid grid-cols-2 rounded-xl bg-surface-container p-1">
           <button
             className={`min-h-10 rounded-lg font-bold ${interval === "monthly" ? "bg-white text-primary" : ""}`}
+            disabled={saving}
             onClick={() => setInterval("monthly")}
             type="button"
           >
@@ -103,6 +207,7 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
           </button>
           <button
             className={`min-h-10 rounded-lg font-bold ${interval === "annual" ? "bg-white text-primary" : ""}`}
+            disabled={saving}
             onClick={() => setInterval("annual")}
             type="button"
           >
@@ -115,6 +220,7 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
             .map((plan) => (
               <button
                 className={`min-w-52 rounded-2xl border p-4 text-left ${planCode === plan.code ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}
+                disabled={saving}
                 key={plan.id}
                 onClick={() => setPlanCode(plan.code)}
                 type="button"
@@ -138,6 +244,7 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
           Cupón (opcional)
           <input
             className="min-h-11 rounded-xl border border-outline-variant px-3 uppercase"
+            disabled={saving}
             onChange={(e) => setCoupon(e.target.value)}
             value={coupon}
           />
@@ -148,16 +255,22 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
             <b>{money(price?.amount, price?.currency)}</b>
           </p>
           <p className="mt-2 text-xs text-on-surface-variant">
-            Se crea una orden; el cambio se activa únicamente después de que el
-            backend confirme el pago.
+            Se abrirá Mercado Pago en una ventana segura. El cambio se activa
+            únicamente después de que Wasita confirme el pago en el backend.
           </p>
         </Card>
         <div className="flex justify-end gap-2">
-          <Button onClick={onClose} type="button" variant="secondary">
+          <Button disabled={saving} onClick={onClose} type="button" variant="secondary">
             Cerrar
           </Button>
-          <Button disabled={saving} onClick={submit} type="button">
-            {saving ? "Creando orden..." : "Crear orden de cambio"}
+          <Button
+            disabled={!selected || !price}
+            loading={saving}
+            loadingLabel="Preparando pago seguro..."
+            onClick={submit}
+            type="button"
+          >
+            Continuar a Mercado Pago
           </Button>
         </div>
       </div>
@@ -166,6 +279,7 @@ function ChoosePlan({ current, onClose, onCreated, plans }) {
 }
 
 export default function Billing() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sub, setSub] = useState(null);
   const [usage, setUsage] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -173,7 +287,9 @@ export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
   const [choose, setChoose] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(null);
+  const [checkoutStatus, setCheckoutStatus] = useState(null);
+  const checkoutRequestRef = useRef("");
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -195,6 +311,108 @@ export default function Billing() {
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
+
+  useEffect(() => {
+    let storedCheckout = null;
+    try {
+      storedCheckout = JSON.parse(
+        window.sessionStorage.getItem(checkoutStorageKey) || "null",
+      );
+    } catch {
+      // El enlace de retorno conserva el identificador incluso si el navegador bloquea el almacenamiento.
+    }
+
+    const attemptId = searchParams.get("attemptId") || storedCheckout?.attemptId;
+    const paymentId =
+      searchParams.get("paymentId") ||
+      searchParams.get("payment_id") ||
+      searchParams.get("collection_id") ||
+      "";
+    const callbackState = searchParams.get("payment") || storedCheckout?.callbackState || "";
+
+    if (!attemptId) return undefined;
+
+    const requestKey = `${attemptId}:${paymentId}:${callbackState}`;
+    if (checkoutRequestRef.current === requestKey) return undefined;
+    checkoutRequestRef.current = requestKey;
+
+    let cancelled = false;
+    setCheckoutStatus({
+      kind: "checking",
+      title: "Verificando tu pago",
+      detail: "Wasita está confirmando el resultado directamente con Mercado Pago.",
+    });
+
+    const verify = async () => {
+      try {
+        const result = await getSubscriptionCheckoutStatus(attemptId, paymentId);
+        if (cancelled) return;
+
+        const isPaid = ["approved", "succeeded"].includes(result.status);
+        const isDeclined = ["failed", "rejected", "cancelled", "canceled"].includes(
+          result.status,
+        );
+        const wasCancelled = callbackState === "failure";
+        const isPending = !isPaid && !isDeclined && !wasCancelled;
+
+        if (isPaid) {
+          setCheckoutStatus({
+            kind: "success",
+            title: "Pago confirmado",
+            detail: "Tu pago fue verificado y los cambios de la suscripción ya se están aplicando.",
+          });
+        } else if (isDeclined || wasCancelled) {
+          setCheckoutStatus({
+            kind: "error",
+            title: "El pago no se completó",
+            detail: "Tu plan actual no cambió. Puedes intentarlo nuevamente cuando lo desees.",
+          });
+        } else if (isPending) {
+          setCheckoutStatus({
+            kind: "pending",
+            title: "Pago pendiente de verificación",
+            detail: "El plan se actualizará cuando Mercado Pago y Wasita confirmen el pago.",
+          });
+        }
+
+        try {
+          window.sessionStorage.removeItem(checkoutStorageKey);
+        } catch {
+          // El estado real se conserva en el backend; el navegador puede bloquear el almacenamiento local.
+        }
+        await load();
+
+        const next = new URLSearchParams(searchParams);
+        [
+          "attemptId",
+          "payment",
+          "paymentId",
+          "payment_id",
+          "collection_id",
+          "collection_status",
+          "status",
+          "merchant_order_id",
+          "preference_id",
+        ].forEach((key) => next.delete(key));
+        setSearchParams(next, { replace: true });
+      } catch (checkoutError) {
+        if (cancelled) return;
+        setCheckoutStatus({
+          kind: "error",
+          title: "No pudimos verificar el pago todavía",
+          detail:
+            checkoutError.message ||
+            "Actualiza esta página en unos instantes para volver a consultar el estado.",
+        });
+      }
+    };
+
+    void verify();
+    return () => {
+      cancelled = true;
+    };
+  }, [load, searchParams, setSearchParams]);
+
   useLiveRefresh(load, ["/subscription", "/billing"]);
   const cancel = async () => {
     if (
@@ -210,6 +428,38 @@ export default function Billing() {
     await reactivateSubscription();
     load();
   };
+  const handleCheckoutCreated = async (order) => {
+    setCheckoutStatus(null);
+
+    if (order.paymentConfigured && order.checkoutUrl) {
+      try {
+        window.sessionStorage.setItem(
+          checkoutStorageKey,
+          JSON.stringify({ attemptId: order.id, createdAt: Date.now() }),
+        );
+      } catch {
+        // El checkout incluye su identificador de retorno; no dependemos del almacenamiento del navegador.
+      }
+      setMessage({
+        kind: "checking",
+        title: "Pago seguro preparado",
+        detail:
+          "Abriremos Mercado Pago. El plan solo cambiará cuando Wasita verifique un pago aprobado.",
+      });
+      return true;
+    }
+
+    setMessage({
+      kind: "pending",
+      title: "Orden pendiente de confirmación",
+      detail:
+        order.fallbackReason ||
+        order.message ||
+        "No se pudo iniciar Mercado Pago. La suscripción se mantiene sin cambios hasta confirmar el pago.",
+    });
+    void load();
+    return false;
+  };
   const tabs = [
     ["summary", "Resumen"],
     ["usage", "Consumo"],
@@ -224,11 +474,7 @@ export default function Billing() {
       {error ? (
         <Card className="border-error p-4 text-error">{error}</Card>
       ) : null}
-      {message ? (
-        <p className="mb-4 rounded-xl bg-primary-fixed p-3 text-sm font-bold text-on-primary-fixed">
-          {message}
-        </p>
-      ) : null}
+      <CheckoutNotice status={checkoutStatus || message} />
       {loading ? <Card className="h-44 animate-pulse" /> : null}
       {sub && usage ? (
         <>
@@ -406,12 +652,9 @@ export default function Billing() {
                     key={x.id}
                   >
                     <div>
-                      <b>
-                        {x.provider} · {x.status}
-                      </b>
+                      <b>{providerLabel(x.provider)} · {paymentLabel(x.status)}</b>
                       <p className="text-xs text-on-surface-variant">
-                        {new Date(x.createdAt).toLocaleString("es-PE")} ·{" "}
-                        {x.externalReference}
+                        {new Date(x.createdAt).toLocaleString("es-PE")}
                       </p>
                     </div>
                     <b className="text-primary">
@@ -464,13 +707,7 @@ export default function Billing() {
         <ChoosePlan
           current={sub}
           onClose={() => setChoose(false)}
-          onCreated={(order) => {
-            setChoose(false);
-            setMessage(
-              `Orden ${order.externalReference} creada por ${money(order.amount, order.currency)}. Pendiente de confirmación.`,
-            );
-            load();
-          }}
+          onCreated={handleCheckoutCreated}
           plans={plans}
         />
       ) : null}
