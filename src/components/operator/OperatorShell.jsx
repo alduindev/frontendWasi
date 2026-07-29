@@ -118,6 +118,22 @@ const dentalNavigation = [
     to: "/pos/dental/dental-billing",
   },
 ];
+const medicalNavigation = [
+  {
+    capability: "health.patients.read",
+    icon: "personal_injury",
+    label: "Pacientes",
+    key: "medical-patients",
+    to: "/pos/medical/patients",
+  },
+  {
+    capability: "health.appointments.read",
+    icon: "calendar_month",
+    label: "Agenda",
+    key: "medical-appointments",
+    to: "/pos/medical/appointments",
+  },
+];
 const veterinaryNavigation = [
   {
     capability: "pets.read",
@@ -151,6 +167,7 @@ function OperatorNavigation({ collapsed = false, onNavigate }) {
   );
   const hospitality = config?.template?.dashboardKey === "hospitality";
   const dental = config?.template?.dashboardKey === "dental";
+  const medical = config?.template?.dashboardKey === "health";
   const veterinary = config?.template?.dashboardKey === "veterinary";
   const dynamicItems = hospitality
     ? Object.entries(departmentNavigation)
@@ -164,6 +181,8 @@ function OperatorNavigation({ collapsed = false, onNavigate }) {
     : [];
   const baseItems = dental
     ? [allNavigation[0], allNavigation[1], ...dentalNavigation]
+    : medical
+      ? [allNavigation[0], allNavigation[1], ...medicalNavigation]
     : veterinary
       ? [allNavigation[0], allNavigation[1], ...veterinaryNavigation]
     : hospitality
