@@ -6,6 +6,7 @@ import Input from '../atoms/Input'
 import Select from '../atoms/Select'
 
 export default function InventoryToolbar({
+  categories = productCategories,
   filters,
   onBulkCategory,
   onBulkStatus,
@@ -33,7 +34,7 @@ export default function InventoryToolbar({
         </Select>
         <Select label="Categoria" name="category" onChange={(event) => onChange('category', event.target.value)} value={filters.category}>
           <option value="all">Todas</option>
-          {productCategories.map((category) => <option key={category}>{category}</option>)}
+          {categories.map((category) => <option key={category}>{category}</option>)}
         </Select>
         <Select label="Estado" name="status" onChange={(event) => onChange('status', event.target.value)} value={filters.status}>
           <option value="all">Todos</option>
@@ -100,7 +101,7 @@ export default function InventoryToolbar({
           <Button onClick={onRemoveSelected} type="button" variant="danger">Eliminar</Button>
           <Select label="" onChange={(event) => event.target.value && onBulkCategory(event.target.value)} value="">
             <option value="">Cambiar categoria</option>
-            {productCategories.map((category) => <option key={category}>{category}</option>)}
+            {categories.map((category) => <option key={category}>{category}</option>)}
           </Select>
           <Select label="" onChange={(event) => event.target.value && onBulkStatus(event.target.value)} value="">
             <option value="">Cambiar estado</option>
