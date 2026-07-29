@@ -18,18 +18,18 @@ export function AppConfigProvider({ children }) {
 
   useEffect(() => {
     let active = true
-    if (!isAuthenticated || user?.role === 'super_admin') { queueMicrotask(() => { if (active) { setConfig(null); setIsLoading(false) } }); return () => { active = false } }
+    if (!isAuthenticated || user?.role === 'super_admin' || user?.mustChangePassword) { queueMicrotask(() => { if (active) { setConfig(null); setIsLoading(false) } }); return () => { active = false } }
     queueMicrotask(() => { if (active) refresh().catch(() => {}) })
     return () => { active = false }
-  }, [isAuthenticated, refresh, user?.id, user?.role])
+  }, [isAuthenticated, refresh, user?.id, user?.mustChangePassword, user?.role])
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role === 'super_admin') return undefined
+    if (!isAuthenticated || user?.role === 'super_admin' || user?.mustChangePassword) return undefined
     const sync = () => { if (document.visibilityState === 'visible') refresh({ silent: true }).catch(() => {}) }
     const id = setInterval(sync, 3000); document.addEventListener('visibilitychange', sync)
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', sync) }
-  }, [isAuthenticated, refresh, user?.role])
-  useLiveRefresh(() => { if (isAuthenticated && user?.role !== 'super_admin') refresh({ silent: true }).catch(() => {}) }, ['/users', '/business', '/platform'])
+  }, [isAuthenticated, refresh, user?.mustChangePassword, user?.role])
+  useLiveRefresh(() => { if (isAuthenticated && user?.role !== 'super_admin' && !user?.mustChangePassword) refresh({ silent: true }).catch(() => {}) }, ['/users', '/business', '/platform'])
 
   const value = useMemo(() => ({ config, error, isLoading, hasModule: code => Boolean(config?.capabilities?.includes(code)), refresh }), [config, error, isLoading, refresh])
   return <AppConfigContext.Provider value={value}>{children}</AppConfigContext.Provider>
