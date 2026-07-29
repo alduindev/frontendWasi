@@ -38,7 +38,9 @@ export default function IniciarSesion() {
     try {
       const user = await login({ password, phone });
       navigate(
-        user.role === "super_admin"
+        user.mustChangePassword
+          ? "/change-password-required"
+          : user.role === "super_admin"
           ? "/platform"
           : user.role === "operator"
             ? "/pos"
