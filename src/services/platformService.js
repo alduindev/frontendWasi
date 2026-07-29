@@ -3,6 +3,11 @@ export const getPlatformDashboard = () => apiRequest('/platform/dashboard')
 export const getPlatformBusinesses = () => apiRequest('/platform/businesses')
 export const setBusinessStatus = (id, status) => apiRequest(`/platform/businesses/${id}/status?status=${status}`, { method: 'POST' })
 export const getPlatformBusiness = (id) => apiRequest(`/platform/businesses/${id}`)
+export const resetPlatformUserPassword = (businessId, userId, reason) => apiRequest(`/platform/businesses/${businessId}/users/${userId}/password-reset`, {
+  method: 'POST',
+  body: JSON.stringify({ reason }),
+  sensitiveResponse: true,
+})
 export const changeBusinessPlan = (id, plan) => apiRequest(`/platform/businesses/${id}/plan?plan_code=${plan}`, { method: 'POST' })
 export const changeBusinessType = (id, businessTypeId, medicalServiceIds = []) => apiRequest(`/platform/businesses/${id}/business-type`, { method: 'POST', body: JSON.stringify({ businessTypeId, medicalServiceIds }) })
 export const getPlans = () => apiRequest('/plans')
