@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  changeSessionPassword,
   clearSession,
   getSessionUser,
   loginUser,
@@ -97,17 +98,28 @@ export function AuthProvider({ children }) {
     return nextUser;
   }, []);
 
+  const changePassword = useCallback(async (data) => {
+    const changeVersion = ++sessionVersionRef.current;
+    const result = await changeSessionPassword(data);
+    if (changeVersion === sessionVersionRef.current) {
+      setUser(result.user);
+      setIsLoading(false);
+    }
+    return result;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: Boolean(user),
       isLoading,
+      changePassword,
       login,
       logout,
       register,
       updateUser,
     }),
-    [isLoading, login, logout, register, updateUser, user],
+    [changePassword, isLoading, login, logout, register, updateUser, user],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
