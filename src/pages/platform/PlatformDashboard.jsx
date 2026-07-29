@@ -10,10 +10,12 @@ import {
   getPlatformBusiness,
   getPlatformBusinesses,
   getPlatformDashboard,
+  resetPlatformUserPassword,
   setBusinessStatus,
 } from "../../services/platformService";
 import { getPlatformBusinessTypes } from "../../services/businessTypeService";
 import { getMedicalServiceTypes } from "../../services/medicalServiceTypeService";
+import AdminPasswordResetModal from "../../components/credentials/AdminPasswordResetModal";
 
 const nav = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard SaaS" },
@@ -295,6 +297,7 @@ export default function PlatformDashboard() {
   const [businesses, setBusinesses] = useState([]);
   const [plans, setPlans] = useState([]);
   const [detail, setDetail] = useState(null);
+  const [passwordResetUser, setPasswordResetUser] = useState(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [menu, setMenu] = useState(false);
@@ -721,8 +724,15 @@ export default function PlatformDashboard() {
                   >
                     <div className="flex flex-wrap justify-between gap-2">
                       <b>{x.name}</b>
-                      <span className="rounded-full bg-white px-2 py-1 text-xs font-bold">
-                        {x.role}
+                      <span className="flex flex-wrap justify-end gap-1">
+                        {x.mustChangePassword ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">
+                            Cambio pendiente
+                          </span>
+                        ) : null}
+                        <span className="rounded-full bg-white px-2 py-1 text-xs font-bold">
+                          {x.role}
+                        </span>
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-on-surface-variant">
@@ -734,12 +744,54 @@ export default function PlatformDashboard() {
                         ? new Date(x.lastLoginAt).toLocaleString()
                         : "Nunca"}
                     </p>
+                    {["admin_owner", "admin", "operator"].includes(x.role) ? (
+                      <button
+                        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3 text-sm font-bold text-primary transition hover:border-primary hover:bg-primary-fixed disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!x.isActive}
+                        onClick={() => setPasswordResetUser(x)}
+                        title={
+                          x.isActive
+                            ? "Generar una contraseña temporal"
+                            : "Reactiva al usuario antes de restablecer su contraseña"
+                        }
+                        type="button"
+                      >
+                        <span className="material-symbols-outlined text-lg">key</span>
+                        Restablecer contraseña
+                      </button>
+                    ) : null}
                   </article>
                 ))}
               </div>
             </section>
           </aside>
         </div>
+      ) : null}
+      {detail && passwordResetUser ? (
+        <AdminPasswordResetModal
+          onClose={() => setPasswordResetUser(null)}
+          onReset={async (reason) => {
+            const result = await resetPlatformUserPassword(
+              detail.business.id,
+              passwordResetUser.id,
+              reason,
+            );
+            setDetail((current) =>
+              current
+                ? {
+                    ...current,
+                    users: current.users.map((item) =>
+                      item.id === passwordResetUser.id
+                        ? { ...item, mustChangePassword: true }
+                        : item,
+                    ),
+                  }
+                : current,
+            );
+            return result;
+          }}
+          target={passwordResetUser}
+        />
       ) : null}
     </div>
   );
