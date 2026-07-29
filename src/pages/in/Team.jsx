@@ -38,6 +38,7 @@ import {
 } from "../../services/attendanceService";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { OdontogramModal } from "../dental/DentalWorkspace";
+import AdminPasswordResetModal from "../../components/credentials/AdminPasswordResetModal";
 
 const hospitalityPositionFunctions = {
   reception: ["reception"],
@@ -959,7 +960,6 @@ function UserForm({
     email: user?.email || "",
     phone: user?.phone || "",
     site: user?.site || "",
-    passwordChanged: false,
   });
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
   const formRef = useRef(null);
@@ -1050,7 +1050,6 @@ function UserForm({
         email: elements.email.value,
         phone: elements.phone.value,
         site: elements.site.value || "Sin sede",
-        passwordChanged: Boolean(elements.password.value),
       });
     }
     if (step === 1 && !functionIds.length) {
@@ -1087,12 +1086,11 @@ function UserForm({
       email: form.get("email"),
       phone: form.get("phone"),
       site: form.get("site"),
-      password: form.get("password"),
       avatarUrl,
       positionId: positionId || null,
       functionIds,
     };
-    if (user && !data.password) delete data.password;
+    if (!user) data.password = form.get("password");
     try {
       const savedUser = user
         ? await userService.updateUser(user.id, data)
@@ -1276,23 +1274,19 @@ function UserForm({
               maxLength="120"
               name="site"
             />
-            <div className="sm:col-span-2">
-              <PasswordField
-                data-personal
-                helperText={
-                  user
-                    ? "Déjala vacía para conservar la contraseña actual."
-                    : "El operador podrá usarla para iniciar sesión."
-                }
-                label={
-                  user ? "Nueva contraseña (opcional)" : "Contraseña temporal"
-                }
-                minLength="8"
-                name="password"
-                required={!user}
-                showFeedback
-              />
-            </div>
+            {!user ? (
+              <div className="sm:col-span-2">
+                <PasswordField
+                  data-personal
+                  helperText="El operador la usará una vez para iniciar sesión y luego creará una definitiva."
+                  label="Contraseña temporal"
+                  minLength="8"
+                  name="password"
+                  required
+                  showFeedback
+                />
+              </div>
+            ) : null}
           </section>
           <section className={step === 1 ? "grid gap-4" : "hidden"}>
             <label className="grid gap-1 text-sm font-semibold">
@@ -1471,15 +1465,9 @@ function UserForm({
                   selectedFunctions.map((item) => item.name).join(", ") ||
                     "Sin funciones",
                 ],
-                [
-                  "password",
-                  "Contraseña",
-                  user
-                    ? summaryData.passwordChanged
-                      ? "Se actualizará"
-                      : "Se conservará la actual"
-                    : "Contraseña temporal definida",
-                ],
+                ...(!user
+                  ? [["password", "Contraseña", "Contraseña temporal definida"]]
+                  : []),
               ].map((item) => (
                 <div
                   className="min-w-0 rounded-2xl border border-outline-variant p-3"
@@ -1560,6 +1548,7 @@ export default function Team() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
+  const [passwordResetUser, setPasswordResetUser] = useState(null);
   const [scheduleUser, setScheduleUser] = useState(null);
   const [businessScheduleOpen, setBusinessScheduleOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
@@ -1810,6 +1799,14 @@ export default function Team() {
                         {user.phone || "Sin teléfono"}
                       </p>
                     </div>
+                    {user.mustChangePassword ? (
+                      <p className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900">
+                        <span className="material-symbols-outlined text-base">
+                          key
+                        </span>
+                        Cambio de contraseña pendiente
+                      </p>
+                    ) : null}
                     <div className="flex min-h-8 flex-wrap content-start gap-1">
                       {user.functions?.slice(0, 3).map((fn) => (
                         <span
@@ -1870,6 +1867,15 @@ export default function Team() {
                           variant="secondary"
                         />
                       ) : null}
+                      <Button
+                        aria-label={`Restablecer contraseña de ${user.name}`}
+                        className="!w-11 !min-w-11 !shrink-0 !px-0"
+                        icon="key"
+                        onClick={() => setPasswordResetUser(user)}
+                        title="Restablecer contraseña"
+                        type="button"
+                        variant="secondary"
+                      />
                       <Button
                         className="!w-auto min-w-0 flex-1 whitespace-nowrap !px-2"
                         icon="manage_accounts"
@@ -1956,6 +1962,15 @@ export default function Team() {
           attendanceItem={attendance[detailUser.id]}
           onClose={() => setDetailUser(null)}
           user={detailUser}
+        />
+      ) : null}
+      {passwordResetUser ? (
+        <AdminPasswordResetModal
+          onClose={() => setPasswordResetUser(null)}
+          onReset={(reason) =>
+            userService.resetUserPassword(passwordResetUser.id, reason)
+          }
+          target={passwordResetUser}
         />
       ) : null}
       <ConfirmDialog
