@@ -8,6 +8,8 @@ import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
+import { useAuth } from "../../context/authStore";
+import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import {
   createMedicalAppointment,
@@ -174,7 +176,7 @@ export function MedicalPatientForm({ close, onSaved, patient }) {
   );
 }
 
-function AppointmentForm({ appointment, close, done, patients, professionals, services }) {
+export function MedicalAppointmentForm({ appointment, close, done, patients, professionals, services }) {
   const [patientId, setPatientId] = useState(appointment?.patientId || "");
   const [professionalId, setProfessionalId] = useState(appointment?.professionalId || "");
   const [serviceId, setServiceId] = useState(appointment?.medicalServiceTypeId || "");
@@ -367,11 +369,13 @@ function ClinicalEditForm({ close, done, entry }) {
   </form></Modal>;
 }
 
-export function MedicalRecordModal({ close, onEdit, onReload, patient, record }) {
+export function MedicalRecordModal({ close, initialTab = "summary", onEdit, onReload, patient, record }) {
   const [clinicalType, setClinicalType] = useState("");
   const [editingEntry, setEditingEntry] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [activeTab, setActiveTab] = useState("summary");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [exporting, setExporting] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -436,14 +440,18 @@ export function MedicalRecordModal({ close, onEdit, onReload, patient, record })
     setClinicalType("");
     setEditingEntry({ type, item });
   };
-  const removeEntry = async (item) => {
-    if (!window.confirm("¿Eliminar este registro clínico? Esta acción no se puede deshacer.")) return;
+  const removeEntry = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
       setActionError("");
-      await tabConfig.remove(item.id);
+      await pendingDelete.remove(pendingDelete.item.id);
       await onReload(patient.id);
+      setPendingDelete(null);
     } catch (error) {
       setActionError(error.message || "No se pudo eliminar el registro.");
+    } finally {
+      setDeleting(false);
     }
   };
   return (
@@ -503,7 +511,7 @@ export function MedicalRecordModal({ close, onEdit, onReload, patient, record })
                   const title = activeTab === "records" ? item.title : activeTab === "diagnoses" ? item.name : activeTab === "prescriptions" ? item.medication : item.name;
                   const detail = activeTab === "records" ? item.content : activeTab === "diagnoses" ? item.notes : activeTab === "prescriptions" ? `${item.dose || ""} ${item.frequency || ""} ${item.duration || ""}` : `${item.status || ""} ${item.instructions || item.summary || ""}`;
                   const stamp = item.createdAt || item.issuedAt || item.orderedAt || item.resultedAt;
-                  return <article className="rounded-xl bg-surface-container-low p-3" key={item.id}><div className="flex flex-wrap justify-between gap-2"><b>{title}</b><small>{stamp ? new Date(stamp).toLocaleString("es-PE") : ""}</small></div><p className="mt-1 text-sm text-on-surface-variant">{detail || "Sin detalle adicional"}</p><div className="mt-3 flex justify-end gap-2"><Button icon="edit" onClick={() => openEdit(tabConfig.type, item)} size="small" variant="outlined">Editar</Button><Button icon="delete" onClick={() => removeEntry(item)} size="small" variant="danger">Eliminar</Button></div></article>;
+                  return <article className="rounded-xl bg-surface-container-low p-3" key={item.id}><div className="flex flex-wrap justify-between gap-2"><b>{title}</b><small>{stamp ? new Date(stamp).toLocaleString("es-PE") : ""}</small></div><p className="mt-1 text-sm text-on-surface-variant">{detail || "Sin detalle adicional"}</p><div className="mt-3 flex justify-end gap-2"><Button icon="edit" onClick={() => openEdit(tabConfig.type, item)} size="small" variant="outlined">Editar</Button><Button icon="delete" onClick={() => setPendingDelete({ item, remove: tabConfig.remove, title })} size="small" variant="danger">Eliminar</Button></div></article>;
                 })}
                 {!tabItems.length ? <EmptyState description="No hay información registrada en esta sección." icon="clinical_notes" title="Sin registros" /> : null}
               </div>
@@ -522,11 +530,24 @@ export function MedicalRecordModal({ close, onEdit, onReload, patient, record })
       </Modal>
       {clinicalType ? <ClinicalEntryForm close={() => setClinicalType("")} done={saveClinical} patient={patient} records={record.records} type={clinicalType} /> : null}
       {editingEntry ? <ClinicalEditForm close={() => setEditingEntry(null)} done={async () => { setEditingEntry(null); await onReload(patient.id); }} entry={editingEntry} /> : null}
+      {pendingDelete ? (
+        <Modal onClose={() => !deleting && setPendingDelete(null)} title="Eliminar registro clínico">
+          <div className="grid gap-4 p-5">
+            <p>
+              Se eliminará <b>{pendingDelete.title}</b>. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button disabled={deleting} onClick={() => setPendingDelete(null)} type="button" variant="secondary">Cancelar</Button>
+              <Button disabled={deleting} icon="delete" onClick={removeEntry} type="button" variant="danger">{deleting ? "Eliminando..." : "Eliminar"}</Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </>
   );
 }
 
-function AppointmentDetail({ appointment, close, done }) {
+export function MedicalAppointmentDetail({ appointment, canUpdateStatus = true, close, done, onOpenRecord }) {
   const [saving, setSaving] = useState(false);
   const setStatus = async (status) => {
     setSaving(true);
@@ -542,11 +563,24 @@ function AppointmentDetail({ appointment, close, done }) {
       <div className="grid gap-4 p-5">
         <div><p className="text-lg font-bold">{appointment.patient.firstName} {appointment.patient.lastName}</p><p className="text-sm text-on-surface-variant">{displayDate(appointment.startsAt)} · {displayTime(appointment.startsAt)} a {displayTime(appointment.endsAt)}</p></div>
         <div className="grid gap-2 rounded-xl bg-surface-container p-3 text-sm"><p><b>Profesional:</b> {appointment.professionalName}</p><p><b>Servicio:</b> {appointment.medicalServiceName}</p><p><b>Motivo:</b> {appointment.reason}</p><p><b>Estado:</b> {statusLabels[appointment.status]}</p></div>
+        {onOpenRecord ? (
+          <button
+            className="flex min-h-14 items-center justify-between rounded-2xl border border-primary/30 bg-primary-fixed p-4 text-left text-primary"
+            onClick={() => onOpenRecord(appointment.patient)}
+            type="button"
+          >
+            <span>
+              <b className="block">Abrir expediente médico</b>
+              <span className="text-xs">Historia, diagnósticos, recetas, órdenes, resultados y PDF</span>
+            </span>
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
+        ) : null}
         <div className="flex flex-wrap gap-2">
-          {appointment.status === "scheduled" || appointment.status === "confirmed" ? <Button disabled={saving} icon="play_circle" onClick={() => setStatus("in_attention")} size="small">Iniciar atención</Button> : null}
-          {appointment.status === "in_attention" ? <Button disabled={saving} icon="task_alt" onClick={() => setStatus("completed")} size="small">Finalizar atención</Button> : null}
-          {!['completed', 'cancelled', 'no_show'].includes(appointment.status) ? <Button disabled={saving} icon="event_busy" onClick={() => setStatus("cancelled")} size="small" variant="outlined">Cancelar</Button> : null}
-          {!['completed', 'cancelled', 'no_show'].includes(appointment.status) ? <Button disabled={saving} icon="person_off" onClick={() => setStatus("no_show")} size="small" variant="outlined">Inasistencia</Button> : null}
+          {canUpdateStatus && (appointment.status === "scheduled" || appointment.status === "confirmed") ? <Button disabled={saving} icon="play_circle" onClick={() => setStatus("in_attention")} size="small">Iniciar atención</Button> : null}
+          {canUpdateStatus && appointment.status === "in_attention" ? <Button disabled={saving} icon="task_alt" onClick={() => setStatus("completed")} size="small">Finalizar atención</Button> : null}
+          {canUpdateStatus && !['completed', 'cancelled', 'no_show'].includes(appointment.status) ? <Button disabled={saving} icon="event_busy" onClick={() => setStatus("cancelled")} size="small" variant="outlined">Cancelar</Button> : null}
+          {canUpdateStatus && !['completed', 'cancelled', 'no_show'].includes(appointment.status) ? <Button disabled={saving} icon="person_off" onClick={() => setStatus("no_show")} size="small" variant="outlined">Inasistencia</Button> : null}
         </div>
       </div>
     </Modal>
@@ -556,6 +590,8 @@ function AppointmentDetail({ appointment, close, done }) {
 export default function MedicalWorkspace({ operator = false }) {
   const { moduleKey } = useParams();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const { config } = useAppConfig();
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [professionals, setProfessionals] = useState([]);
@@ -575,6 +611,12 @@ export default function MedicalWorkspace({ operator = false }) {
   const [filters, setFilters] = useState({ professionalId: "", medicalServiceTypeId: "", status: "" });
   const isPatients = moduleKey === "patients";
   const Shell = operator ? OperatorShell : DashboardShell;
+  const administrator = ["admin", "admin_owner"].includes(user?.role);
+  const capabilities = new Set(config?.capabilities || []);
+  const canCreatePatient = administrator || capabilities.has("health.patients.edit");
+  const canCreateAppointment = administrator || capabilities.has("health.appointments.create");
+  const canUpdateAppointmentStatus = administrator || capabilities.has("health.appointments.status");
+  const canManagePatientLifecycle = ["admin", "admin_owner"].includes(user?.role);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -659,7 +701,7 @@ export default function MedicalWorkspace({ operator = false }) {
 
   return (
     <Shell
-      action={<Button icon="add" onClick={() => setModal(isPatients ? "patient" : "appointment")}>{isPatients ? "Registrar paciente" : "Nueva cita"}</Button>}
+      action={(isPatients ? canCreatePatient : canCreateAppointment) ? <Button icon="add" onClick={() => setModal(isPatients ? "patient" : "appointment")}>{isPatients ? "Registrar paciente" : "Nueva cita"}</Button> : null}
       subtitle={isPatients ? "Fichas clínicas, antecedentes y trazabilidad de pacientes." : "Agenda por profesional, servicio y estado de atención."}
       title={isPatients ? "Pacientes" : "Agenda médica"}
     >
@@ -678,7 +720,15 @@ export default function MedicalWorkspace({ operator = false }) {
                 <div className="flex items-start justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-fixed font-bold text-primary">{patient.firstName?.[0]}{patient.lastName?.[0]}</span><span className="min-w-0"><b className="block truncate">{patient.firstName} {patient.lastName}</b><small>{patient.documentType} {patient.document}</small></span></div><span className={`rounded-full px-2 py-1 text-xs font-bold ${patient.isActive ? "bg-emerald-50 text-emerald-800" : "bg-error-container text-on-error-container"}`}>{patient.isActive ? "Activo" : "Inactivo"}</span></div>
                 <p className="mt-3 text-sm text-on-surface-variant">{patient.phone || "Sin teléfono"} · {patient.email || "Sin correo"}</p>
                 <p className="mt-2 line-clamp-2 text-sm">{patient.allergies ? `Alergias: ${patient.allergies}` : "Sin alergias registradas"}</p>
-                <div className="mt-auto flex flex-wrap gap-2 pt-4"><Button icon="clinical_notes" onClick={() => openPatient(patient)} size="small">Expediente</Button><Button icon="edit" onClick={() => { setEditingPatient(patient); setModal("patient"); }} size="small" variant="outlined">Editar</Button>{patient.isActive ? <Button icon="person_off" onClick={() => askDeactivate(patient)} size="small" variant="outlined">Desactivar</Button> : <Button icon="restore" onClick={async () => { await restoreMedicalPatient(patient.id); await load(); }} size="small" variant="outlined">Restaurar</Button>}</div>
+                <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                  <Button icon="clinical_notes" onClick={() => openPatient(patient)} size="small">Expediente</Button>
+                  {canCreatePatient ? <Button icon="edit" onClick={() => { setEditingPatient(patient); setModal("patient"); }} size="small" variant="outlined">Editar</Button> : null}
+                  {canManagePatientLifecycle ? (
+                    patient.isActive
+                      ? <Button icon="person_off" onClick={() => askDeactivate(patient)} size="small" variant="outlined">Desactivar</Button>
+                      : <Button icon="restore" onClick={async () => { await restoreMedicalPatient(patient.id); await load(); }} size="small" variant="outlined">Restaurar</Button>
+                  ) : null}
+                </div>
               </Card>
             ))}
             {!filteredPatients.length ? <EmptyState description="Registra un paciente o ajusta la búsqueda." icon="groups" title="No hay pacientes para mostrar" /> : null}
@@ -708,11 +758,11 @@ export default function MedicalWorkspace({ operator = false }) {
         </section>
       ) : null}
       {modal === "patient" ? <MedicalPatientForm close={() => { setModal(""); setEditingPatient(null); }} onSaved={completeModal} patient={editingPatient} /> : null}
-      {modal === "appointment" ? <AppointmentForm close={() => setModal("")} done={completeModal} patients={patients.filter((item) => item.isActive)} professionals={professionals} services={services} /> : null}
+      {modal === "appointment" ? <MedicalAppointmentForm close={() => setModal("")} done={completeModal} patients={patients.filter((item) => item.isActive)} professionals={professionals} services={services} /> : null}
       {modal === "record" && selectedPatient ? <MedicalRecordModal close={() => { setModal(""); setSelectedPatient(null); }} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onReload={reloadPatientRecords} patient={selectedPatient} record={clinicalRecord} /> : null}
-      {modal === "appointment-detail" && selectedAppointment ? <AppointmentDetail appointment={selectedAppointment} close={() => setModal("")} done={completeModal} /> : null}
-      {modal === "deactivate" && selectedPatient ? <Modal onClose={() => setModal("")} title="Desactivar paciente"><div className="grid gap-4 p-5"><p>La ficha se conservará junto con sus citas e historia clínica. No se eliminarán datos de atención.</p><div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="person_off" onClick={async () => { await deactivateMedicalPatient(selectedPatient.id); setModal(""); await load(); }}>Desactivar</Button></div></div></Modal> : null}
-      {modal === "duplicates" ? <Modal onClose={() => setModal("")} title="Posibles pacientes duplicados"><div className="grid gap-3 p-5">{duplicateGroups.map((group) => { const [target, ...sources] = group.patients; return <Card className="p-3" key={target.id}><p className="text-sm">Conservar ficha: <b>{target.firstName} {target.lastName} · {target.document}</b></p>{sources.map((source) => <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant pt-2" key={source.id}><span className="text-sm">Fusionar {source.firstName} {source.lastName} · {source.document}</span><Button icon="merge_type" onClick={async () => { await mergeMedicalPatient(source.id, target.id); setModal(""); await load(); }} size="small">Fusionar</Button></div>)}</Card>; })}{!duplicateGroups.length ? <EmptyState description="No encontramos fichas activas con coincidencias de nombre, fecha, teléfono o correo." icon="verified" title="Sin duplicados" /> : null}</div></Modal> : null}
+      {modal === "appointment-detail" && selectedAppointment ? <MedicalAppointmentDetail appointment={selectedAppointment} canUpdateStatus={canUpdateAppointmentStatus} close={() => setModal("")} done={completeModal} onOpenRecord={(patient) => { setSelectedAppointment(null); openPatient(patient); }} /> : null}
+      {canManagePatientLifecycle && modal === "deactivate" && selectedPatient ? <Modal onClose={() => setModal("")} title="Desactivar paciente"><div className="grid gap-4 p-5"><p>La ficha se conservará junto con sus citas e historia clínica. No se eliminarán datos de atención.</p><div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="person_off" onClick={async () => { await deactivateMedicalPatient(selectedPatient.id); setModal(""); await load(); }}>Desactivar</Button></div></div></Modal> : null}
+      {modal === "duplicates" ? <Modal onClose={() => setModal("")} title="Posibles pacientes duplicados"><div className="grid gap-3 p-5">{!canManagePatientLifecycle && duplicateGroups.length ? <p className="rounded-xl bg-surface-container-low p-3 text-sm text-on-surface-variant">Solo la administración puede fusionar fichas de pacientes.</p> : null}{duplicateGroups.map((group) => { const [target, ...sources] = group.patients; return <Card className="p-3" key={target.id}><p className="text-sm">Conservar ficha: <b>{target.firstName} {target.lastName} · {target.document}</b></p>{sources.map((source) => <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant pt-2" key={source.id}><span className="text-sm">{canManagePatientLifecycle ? "Fusionar" : "Posible duplicado:"} {source.firstName} {source.lastName} · {source.document}</span>{canManagePatientLifecycle ? <Button icon="merge_type" onClick={async () => { await mergeMedicalPatient(source.id, target.id); setModal(""); await load(); }} size="small">Fusionar</Button> : null}</div>)}</Card>; })}{!duplicateGroups.length ? <EmptyState description="No encontramos fichas activas con coincidencias de nombre, fecha, teléfono o correo." icon="verified" title="Sin duplicados" /> : null}</div></Modal> : null}
     </Shell>
   );
 }
