@@ -12,6 +12,7 @@ import {
   getMyBusiness,
   updateMyBusiness,
 } from "../../services/businessService";
+import { getBusinessMedicalServices } from "../../services/medicalService";
 import {
   defaultSettings,
   getSettings,
@@ -100,6 +101,8 @@ export default function Settings() {
   const [businessError, setBusinessError] = useState("");
   const [businessLoading, setBusinessLoading] = useState(true);
   const [businessTypes, setBusinessTypes] = useState([]);
+  const [medicalServices, setMedicalServices] = useState([]);
+  const [medicalServicesError, setMedicalServicesError] = useState("");
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(() => ({
     ...getSettings(),
@@ -120,6 +123,22 @@ export default function Settings() {
       setBusiness(company);
       setBusinessDraft(businessForm(company));
       setBusinessTypes(types);
+      const businessType = types.find(
+        (item) => item.id === company.businessTypeId,
+      );
+      if (businessType?.slug === "consultorio-medico") {
+        try {
+          const services = await getBusinessMedicalServices();
+          setMedicalServices(services);
+          setMedicalServicesError("");
+        } catch (medicalError) {
+          setMedicalServices([]);
+          setMedicalServicesError(medicalError.message);
+        }
+      } else {
+        setMedicalServices([]);
+        setMedicalServicesError("");
+      }
     } catch (error) {
       setBusinessError(error.message);
     } finally {
@@ -414,25 +433,66 @@ export default function Settings() {
                       </p>
                     </div>
                     {selectedBusinessType ? (
-                      <div className="flex gap-3 rounded-2xl border border-outline-variant bg-surface-container-low p-4">
-                        <span className="material-symbols-outlined text-3xl text-primary">
-                          {selectedBusinessType.icon}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <b>{selectedBusinessType.name}</b>
-                            <span className="rounded-full bg-white px-2 py-1 text-xs font-bold">
-                              Cambio asistido
-                            </span>
+                      <div className="grid gap-3">
+                        <div className="flex gap-3 rounded-2xl border border-outline-variant bg-surface-container-low p-4">
+                          <span className="material-symbols-outlined text-3xl text-primary">
+                            {selectedBusinessType.icon}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <b>{selectedBusinessType.name}</b>
+                              <span className="rounded-full bg-white px-2 py-1 text-xs font-bold">
+                                Cambio asistido
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-on-surface-variant">
+                              {selectedBusinessType.description}
+                            </p>
+                            <p className="mt-2 text-xs font-semibold text-on-surface-variant">
+                              Para cambiar de rubro sin perder información,
+                              solicítalo al superadministrador de Wasita.
+                            </p>
                           </div>
-                          <p className="mt-1 text-sm text-on-surface-variant">
-                            {selectedBusinessType.description}
-                          </p>
-                          <p className="mt-2 text-xs font-semibold text-on-surface-variant">
-                            Para cambiar de rubro sin perder información,
-                            solicítalo al superadministrador de Wasita.
-                          </p>
                         </div>
+                        {selectedBusinessType.slug === "consultorio-medico" ? (
+                          <section className="rounded-2xl border border-primary/25 bg-primary-fixed/30 p-4">
+                            <div className="flex gap-2">
+                              <span className="material-symbols-outlined text-primary">
+                                medical_services
+                              </span>
+                              <div>
+                                <h3 className="font-bold">
+                                  Especialidades y servicios habilitados
+                                </h3>
+                                <p className="mt-1 text-sm text-on-surface-variant">
+                                  Esta configuración define las funciones y la
+                                  agenda disponibles en el consultorio.
+                                </p>
+                              </div>
+                            </div>
+                            {medicalServicesError ? (
+                              <p className="mt-3 rounded-xl bg-error-container p-3 text-sm text-on-error-container">
+                                {medicalServicesError}
+                              </p>
+                            ) : null}
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {medicalServices.map((item) => (
+                                <span
+                                  className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-primary"
+                                  key={item.id}
+                                >
+                                  {item.serviceType.name}
+                                </span>
+                              ))}
+                              {!medicalServices.length && !medicalServicesError ? (
+                                <p className="text-sm text-on-surface-variant">
+                                  Aún no hay servicios configurados. Solicita al
+                                  superadministrador que complete la migración.
+                                </p>
+                              ) : null}
+                            </div>
+                          </section>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="rounded-2xl border border-dashed border-outline-variant p-4 text-sm text-on-surface-variant">
@@ -537,6 +597,18 @@ export default function Settings() {
                         {selectedBusinessType?.name || "Sin definir"}
                       </dd>
                     </div>
+                    {selectedBusinessType?.slug === "consultorio-medico" ? (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-on-surface-variant">Especialidades</dt>
+                        <dd className="text-right font-bold">
+                          {medicalServices.length
+                            ? medicalServices
+                                .map((item) => item.serviceType.name)
+                                .join(", ")
+                            : "Sin configurar"}
+                        </dd>
+                      </div>
+                    ) : null}
                   </dl>
                 </Card>
               ) : (

@@ -1,4 +1,4 @@
-import { apiRequest } from "../api/httpClient";
+import { apiBlob, apiDownload, apiRequest } from "../api/httpClient";
 
 const json = (method, body) => ({ method, body: JSON.stringify(body) });
 
@@ -47,13 +47,39 @@ export const updateMedicalAppointment = (id, data) =>
   apiRequest(`/medical/appointments/${id}`, json("PATCH", data));
 export const getMedicalRecords = (patientId) =>
   apiRequest(`/medical/patients/${patientId}/records`);
+export const getMedicalClinicalRecord = (patientId) =>
+  apiRequest(`/medical/patients/${patientId}/clinical-record`);
+export const exportMedicalClinicalRecord = (patientId) =>
+  apiDownload(`/medical/patients/${patientId}/record/export`);
+export const previewMedicalClinicalRecordPdf = (patientId) =>
+  apiBlob(`/medical/patients/${patientId}/record/export`);
 export const createMedicalRecord = (data) =>
   apiRequest("/medical/records", json("POST", data));
+export const updateMedicalRecord = (id, data) =>
+  apiRequest(`/medical/records/${id}`, json("PATCH", data));
+export const deleteMedicalRecord = (id) =>
+  apiRequest(`/medical/records/${id}`, { method: "DELETE" });
 export const createMedicalDiagnosis = (data) =>
   apiRequest("/medical/diagnoses", json("POST", data));
+export const updateMedicalDiagnosis = (id, data) =>
+  apiRequest(`/medical/diagnoses/${id}`, json("PATCH", data));
+export const deleteMedicalDiagnosis = (id) =>
+  apiRequest(`/medical/diagnoses/${id}`, { method: "DELETE" });
 export const createMedicalPrescription = (data) =>
   apiRequest("/medical/prescriptions", json("POST", data));
+export const updateMedicalPrescription = (id, data) =>
+  apiRequest(`/medical/prescriptions/${id}`, json("PATCH", data));
+export const deleteMedicalPrescription = (id) =>
+  apiRequest(`/medical/prescriptions/${id}`, { method: "DELETE" });
 export const createMedicalOrder = (data) =>
   apiRequest("/medical/orders", json("POST", data));
+export const updateMedicalOrder = (id, data) =>
+  apiRequest(`/medical/orders/${id}`, json("PATCH", data));
+export const deleteMedicalOrder = (id) =>
+  apiRequest(`/medical/orders/${id}`, { method: "DELETE" });
 export const createMedicalResult = (data) =>
   apiRequest("/medical/results", json("POST", data));
+export const updateMedicalResult = (id, data) =>
+  apiRequest(`/medical/results/${id}`, json("PATCH", data));
+export const deleteMedicalResult = (id) =>
+  apiRequest(`/medical/results/${id}`, { method: "DELETE" });

@@ -17,17 +17,29 @@ import {
   createMedicalPrescription,
   createMedicalRecord,
   createMedicalResult,
+  deleteMedicalDiagnosis,
+  deleteMedicalOrder,
+  deleteMedicalPrescription,
+  deleteMedicalRecord,
+  deleteMedicalResult,
   deactivateMedicalPatient,
   getBusinessMedicalServices,
   getMedicalAppointments,
+  getMedicalClinicalRecord,
   getMedicalPatientDuplicates,
   getMedicalPatients,
   getMedicalProfessionals,
-  getMedicalRecords,
   mergeMedicalPatient,
+  exportMedicalClinicalRecord,
+  previewMedicalClinicalRecordPdf,
   restoreMedicalPatient,
   updateMedicalAppointment,
+  updateMedicalDiagnosis,
+  updateMedicalOrder,
   updateMedicalPatient,
+  updateMedicalPrescription,
+  updateMedicalRecord,
+  updateMedicalResult,
 } from "../../services/medicalService";
 import { matchesEntitySearch } from "../../utils/entitySearch";
 
@@ -100,7 +112,7 @@ function datesForView(view, referenceDate) {
   return Array.from({ length: 42 }, (_, index) => addDays(start, index));
 }
 
-function PatientForm({ close, onSaved, patient }) {
+export function MedicalPatientForm({ close, onSaved, patient }) {
   const [saving, setSaving] = useState(false);
   const submit = async (event) => {
     event.preventDefault();
@@ -108,9 +120,10 @@ function PatientForm({ close, onSaved, patient }) {
     const data = Object.fromEntries(form.entries());
     setSaving(true);
     try {
-      if (patient) await updateMedicalPatient(patient.id, data);
-      else await createMedicalPatient(data);
-      onSaved();
+      const saved = patient
+        ? await updateMedicalPatient(patient.id, data)
+        : await createMedicalPatient(data);
+      onSaved(saved);
     } finally {
       setSaving(false);
     }
@@ -319,45 +332,196 @@ function ClinicalEntryForm({ close, done, patient, records, type }) {
   );
 }
 
-function PatientRecord({ close, onEdit, onReload, patient, records }) {
+function ClinicalEditForm({ close, done, entry }) {
+  const [saving, setSaving] = useState(false);
+  const { item, type } = entry;
+  const config = {
+    record: { title: "Editar evolución", update: updateMedicalRecord },
+    diagnosis: { title: "Editar diagnóstico", update: updateMedicalDiagnosis },
+    prescription: { title: "Editar receta", update: updateMedicalPrescription },
+    order: { title: "Editar orden médica", update: updateMedicalOrder },
+    result: { title: "Editar resultado", update: updateMedicalResult },
+  }[type];
+  const submit = async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    try {
+      if (type === "record") await config.update(item.id, { title: form.get("title"), content: form.get("content") });
+      else if (type === "diagnosis") await config.update(item.id, { name: form.get("name"), notes: form.get("notes") });
+      else if (type === "prescription") await config.update(item.id, { medication: form.get("medication"), dose: form.get("dose"), frequency: form.get("frequency"), duration: form.get("duration"), instructions: form.get("instructions") });
+      else if (type === "order") await config.update(item.id, { name: form.get("name"), instructions: form.get("instructions"), status: form.get("status") });
+      else await config.update(item.id, { name: form.get("name"), summary: form.get("summary"), url: form.get("url"), status: form.get("status") });
+      done();
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <Modal onClose={close} title={config.title}><form className="grid gap-3 p-5" onSubmit={submit}>
+    {type === "record" ? <><label className="text-sm font-bold">Título<input className={`${field} mt-1`} defaultValue={item.title} name="title" required /></label><label className="text-sm font-bold">Evolución<textarea className={`${field} mt-1 min-h-28 py-2`} defaultValue={item.content} name="content" /></label></> : null}
+    {type === "diagnosis" ? <><label className="text-sm font-bold">Diagnóstico<input className={`${field} mt-1`} defaultValue={item.name} name="name" required /></label><label className="text-sm font-bold">Notas<textarea className={`${field} mt-1 min-h-20 py-2`} defaultValue={item.notes} name="notes" /></label></> : null}
+    {type === "prescription" ? <><label className="text-sm font-bold">Medicamento<input className={`${field} mt-1`} defaultValue={item.medication} name="medication" required /></label><div className="grid gap-3 sm:grid-cols-3"><label className="text-sm font-bold">Dosis<input className={`${field} mt-1`} defaultValue={item.dose} name="dose" /></label><label className="text-sm font-bold">Frecuencia<input className={`${field} mt-1`} defaultValue={item.frequency} name="frequency" /></label><label className="text-sm font-bold">Duración<input className={`${field} mt-1`} defaultValue={item.duration} name="duration" /></label></div><label className="text-sm font-bold">Indicaciones<textarea className={`${field} mt-1 min-h-20 py-2`} defaultValue={item.instructions} name="instructions" /></label></> : null}
+    {type === "order" ? <><label className="text-sm font-bold">Orden<input className={`${field} mt-1`} defaultValue={item.name} name="name" required /></label><label className="text-sm font-bold">Indicaciones<textarea className={`${field} mt-1 min-h-20 py-2`} defaultValue={item.instructions} name="instructions" /></label><label className="text-sm font-bold">Estado<select className={`${field} mt-1`} defaultValue={item.status} name="status"><option value="pending">Pendiente</option><option value="completed">Completada</option><option value="cancelled">Cancelada</option></select></label></> : null}
+    {type === "result" ? <><label className="text-sm font-bold">Resultado<input className={`${field} mt-1`} defaultValue={item.name} name="name" required /></label><label className="text-sm font-bold">Resumen<textarea className={`${field} mt-1 min-h-20 py-2`} defaultValue={item.summary} name="summary" /></label><label className="text-sm font-bold">Enlace del archivo<input className={`${field} mt-1`} defaultValue={item.url} name="url" type="url" /></label><label className="text-sm font-bold">Estado<select className={`${field} mt-1`} defaultValue={item.status} name="status"><option value="pending">Pendiente</option><option value="validated">Validado</option><option value="rejected">Rechazado</option></select></label></> : null}
+    <div className="flex justify-end gap-2"><Button onClick={close} type="button" variant="outlined">Cancelar</Button><Button disabled={saving} icon="save" type="submit">{saving ? "Guardando..." : "Guardar cambios"}</Button></div>
+  </form></Modal>;
+}
+
+export function MedicalRecordModal({ close, onEdit, onReload, patient, record }) {
   const [clinicalType, setClinicalType] = useState("");
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [actionError, setActionError] = useState("");
+  const [activeTab, setActiveTab] = useState("summary");
+  const [exporting, setExporting] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
   const saveClinical = async () => {
     setClinicalType("");
     await onReload(patient.id);
   };
+  useEffect(() => {
+    if (activeTab !== "report") return undefined;
+    let active = true;
+    let objectUrl = "";
+    queueMicrotask(() => {
+      if (active) {
+        setPdfLoading(true);
+        setPdfError("");
+      }
+    });
+    previewMedicalClinicalRecordPdf(patient.id)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPdfPreviewUrl(objectUrl);
+      })
+      .catch((error) => {
+        if (active) setPdfError(error.message || "No se pudo generar el PDF.");
+      })
+      .finally(() => {
+        if (active) setPdfLoading(false);
+      });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      queueMicrotask(() => setPdfPreviewUrl(""));
+    };
+  }, [activeTab, patient.id]);
+  const tabs = [
+    ["summary", "account_circle", "Resumen"],
+    ["records", "clinical_notes", "Evoluciones"],
+    ["diagnoses", "diagnosis", "Diagnósticos"],
+    ["prescriptions", "medication", "Recetas"],
+    ["orders", "lab_profile", "Órdenes"],
+    ["results", "science", "Resultados"],
+    ["files", "folder", "Archivos"],
+    ["report", "picture_as_pdf", "Reporte PDF"],
+  ];
+  const tabItems = record[activeTab] || [];
+  const tabConfig = {
+    records: { type: "record", label: "Evoluciones", icon: "note_add", remove: deleteMedicalRecord },
+    diagnoses: { type: "diagnosis", label: "Diagnósticos", icon: "diagnosis", remove: deleteMedicalDiagnosis },
+    prescriptions: { type: "prescription", label: "Recetas", icon: "medication", remove: deleteMedicalPrescription },
+    orders: { type: "order", label: "Órdenes", icon: "lab_profile", remove: deleteMedicalOrder },
+    results: { type: "result", label: "Resultados", icon: "science", remove: deleteMedicalResult },
+  }[activeTab];
+  const openCreate = (type) => {
+    setActionError("");
+    setEditingEntry(null);
+    setClinicalType(type);
+  };
+  const openEdit = (type, item) => {
+    setActionError("");
+    setClinicalType("");
+    setEditingEntry({ type, item });
+  };
+  const removeEntry = async (item) => {
+    if (!window.confirm("¿Eliminar este registro clínico? Esta acción no se puede deshacer.")) return;
+    try {
+      setActionError("");
+      await tabConfig.remove(item.id);
+      await onReload(patient.id);
+    } catch (error) {
+      setActionError(error.message || "No se pudo eliminar el registro.");
+    }
+  };
   return (
     <>
-      <Modal onClose={close} title={`${patient.firstName} ${patient.lastName} · Expediente`}>
-        <div className="grid gap-4 p-5">
-          <div className="grid gap-2 rounded-xl bg-surface-container p-3 text-sm sm:grid-cols-2">
-            <p><b>Documento:</b> {patient.document}</p>
-            <p><b>Teléfono:</b> {patient.phone || "Sin registrar"}</p>
-            <p className="sm:col-span-2"><b>Alergias:</b> {patient.allergies || "Sin alertas registradas"}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button icon="note_add" onClick={() => setClinicalType("record")} size="small">Evolución</Button>
-            <Button icon="diagnosis" onClick={() => setClinicalType("diagnosis")} size="small" variant="outlined">Diagnóstico</Button>
-            <Button icon="medication" onClick={() => setClinicalType("prescription")} size="small" variant="outlined">Receta</Button>
-            <Button icon="lab_profile" onClick={() => setClinicalType("order")} size="small" variant="outlined">Orden</Button>
-            <Button icon="upload_file" onClick={() => setClinicalType("result")} size="small" variant="outlined">Resultado</Button>
-            <Button icon="edit" onClick={() => onEdit(patient)} size="small" variant="outlined">Editar ficha</Button>
-          </div>
-          <section>
-            <h3 className="text-sm font-bold">Historia clínica</h3>
-            <div className="mt-2 grid gap-2">
-              {records.map((record) => (
-                <div className="border-l-2 border-primary bg-surface-container px-3 py-2" key={record.id}>
-                  <div className="flex flex-wrap justify-between gap-2"><b>{record.title}</b><small>{new Date(record.createdAt).toLocaleString("es-PE")}</small></div>
-                  <p className="mt-1 text-sm text-on-surface-variant">{record.content || "Sin texto adicional"}</p>
-                </div>
-              ))}
-              {!records.length ? <EmptyState description="Registra la primera evolución para iniciar la historia clínica." icon="clinical_notes" title="Sin evoluciones" /> : null}
+      <Modal
+        contentClassName="min-h-0 flex-1 overflow-hidden"
+        fixedHeight
+        onClose={close}
+        title={`Expediente médico · ${patient.firstName} ${patient.lastName}`}
+      >
+        <div className="flex h-full min-h-0 flex-col p-3 sm:p-5">
+          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface-container-low p-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-fixed font-bold text-primary">
+                {patient.firstName?.[0]}{patient.lastName?.[0]}
+              </span>
+              <div className="min-w-0">
+                <b>{patient.documentType} {patient.document}</b>
+                <p className="truncate text-sm text-on-surface-variant">
+                  {patient.phone || "Sin teléfono"} · {patient.allergies ? `Alergias: ${patient.allergies}` : "Sin alertas clínicas"}
+                </p>
+              </div>
             </div>
-          </section>
-          <EntityAttachments entityId={patient.id} entityType="health_patient" />
+            {onEdit ? <Button icon="edit" onClick={() => onEdit(patient)} size="small" variant="outlined">Editar ficha</Button> : null}
+          </div>
+          <div aria-label="Secciones del expediente médico" className="mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-2xl border border-outline-variant bg-white p-1.5" role="tablist">
+            {tabs.map(([id, icon, label]) => (
+              <button
+                aria-selected={activeTab === id}
+                className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold transition ${activeTab === id ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-primary-fixed hover:text-primary"}`}
+                key={id}
+                onClick={() => setActiveTab(id)}
+                role="tab"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+          {activeTab === "summary" ? (
+            <section className="grid min-h-0 flex-1 gap-3 overflow-y-auto pb-2 lg:grid-cols-3">
+              <Card className="p-4"><p className="text-xs font-bold uppercase tracking-wide text-primary">Ficha del paciente</p><dl className="mt-3 grid gap-2 text-sm"><div><dt className="text-xs text-on-surface-variant">Contacto</dt><dd>{patient.phone || "Sin teléfono"} · {patient.email || "Sin correo"}</dd></div><div><dt className="text-xs text-on-surface-variant">Antecedentes</dt><dd>{patient.chronicConditions || "Sin antecedentes registrados"}</dd></div><div><dt className="text-xs text-on-surface-variant">Contacto de emergencia</dt><dd>{patient.emergencyContact || "No registrado"}</dd></div></dl></Card>
+              <Card className="p-4"><p className="text-xs font-bold uppercase tracking-wide text-primary">Alertas clínicas</p><div className="mt-3 grid gap-2 text-sm"><p className={patient.allergies ? "rounded-xl bg-error-container p-2" : "text-on-surface-variant"}><b>Alergias:</b> {patient.allergies || "Sin alergias registradas"}</p><p><b>Tipo de sangre:</b> {patient.bloodType || "No registrado"}</p><p><b>Seguro:</b> {patient.insuranceProvider || "No registrado"}</p></div></Card>
+              <Card className="p-4"><p className="text-xs font-bold uppercase tracking-wide text-primary">Resumen conectado</p><div className="mt-3 grid grid-cols-2 gap-2 text-center"><div className="rounded-xl bg-primary-fixed p-2"><b className="block text-xl">{record.appointments.length}</b><span className="text-xs">Citas</span></div><div className="rounded-xl bg-primary-fixed p-2"><b className="block text-xl">{record.records.length}</b><span className="text-xs">Evoluciones</span></div><div className="rounded-xl bg-surface-container-low p-2"><b className="block text-xl">{record.diagnoses.length}</b><span className="text-xs">Diagnósticos</span></div><div className="rounded-xl bg-surface-container-low p-2"><b className="block text-xl">{record.orders.length + record.results.length}</b><span className="text-xs">Órdenes / resultados</span></div></div></Card>
+            </section>
+          ) : null}
+          {["records", "diagnoses", "prescriptions", "orders", "results"].includes(activeTab) ? (
+            <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-outline-variant p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-3">
+                <div><h3 className="font-bold">{tabConfig.label}</h3><p className="text-xs text-on-surface-variant">Registra, edita o elimina información clínica de esta categoría.</p></div>
+                <Button icon={tabConfig.icon} onClick={() => openCreate(tabConfig.type)} size="small">Agregar</Button>
+              </div>
+              {actionError ? <p className="mb-3 rounded-xl bg-error-container p-3 text-sm text-error">{actionError}</p> : null}
+              <div className="grid gap-2 sm:grid-cols-2">
+                {tabItems.map((item) => {
+                  const title = activeTab === "records" ? item.title : activeTab === "diagnoses" ? item.name : activeTab === "prescriptions" ? item.medication : item.name;
+                  const detail = activeTab === "records" ? item.content : activeTab === "diagnoses" ? item.notes : activeTab === "prescriptions" ? `${item.dose || ""} ${item.frequency || ""} ${item.duration || ""}` : `${item.status || ""} ${item.instructions || item.summary || ""}`;
+                  const stamp = item.createdAt || item.issuedAt || item.orderedAt || item.resultedAt;
+                  return <article className="rounded-xl bg-surface-container-low p-3" key={item.id}><div className="flex flex-wrap justify-between gap-2"><b>{title}</b><small>{stamp ? new Date(stamp).toLocaleString("es-PE") : ""}</small></div><p className="mt-1 text-sm text-on-surface-variant">{detail || "Sin detalle adicional"}</p><div className="mt-3 flex justify-end gap-2"><Button icon="edit" onClick={() => openEdit(tabConfig.type, item)} size="small" variant="outlined">Editar</Button><Button icon="delete" onClick={() => removeEntry(item)} size="small" variant="danger">Eliminar</Button></div></article>;
+                })}
+                {!tabItems.length ? <EmptyState description="No hay información registrada en esta sección." icon="clinical_notes" title="Sin registros" /> : null}
+              </div>
+            </section>
+          ) : null}
+          {activeTab === "files" ? <div className="min-h-0 flex-1 overflow-y-auto pb-2"><EntityAttachments entityId={patient.id} entityType="health_patient" /></div> : null}
+          {activeTab === "report" ? (
+            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-outline-variant bg-white">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-low p-3"><div><p className="text-xs font-bold uppercase tracking-wide text-primary">Expediente clínico integral</p><h3 className="font-bold">Reporte médico de {patient.firstName} {patient.lastName}</h3></div><Button disabled={exporting} icon="picture_as_pdf" onClick={async () => { setExporting(true); try { await exportMedicalClinicalRecord(patient.id); } finally { setExporting(false); } }} variant="outlined">{exporting ? "Generando..." : "Descargar PDF"}</Button></div>
+              {pdfError ? <p className="m-3 rounded-xl bg-error-container p-3 text-sm text-error">{pdfError}</p> : null}
+              {pdfLoading ? <div className="grid min-h-0 flex-1 place-items-center bg-surface-container-low text-sm text-on-surface-variant">Generando vista previa...</div> : null}
+              {!pdfLoading && pdfPreviewUrl ? <iframe className="min-h-0 flex-1 w-full bg-surface-container-low" src={pdfPreviewUrl} title={`Reporte médico de ${patient.firstName} ${patient.lastName}`} /> : null}
+            </section>
+          ) : null}
         </div>
       </Modal>
-      {clinicalType ? <ClinicalEntryForm close={() => setClinicalType("")} done={saveClinical} patient={patient} records={records} type={clinicalType} /> : null}
+      {clinicalType ? <ClinicalEntryForm close={() => setClinicalType("")} done={saveClinical} patient={patient} records={record.records} type={clinicalType} /> : null}
+      {editingEntry ? <ClinicalEditForm close={() => setEditingEntry(null)} done={async () => { setEditingEntry(null); await onReload(patient.id); }} entry={editingEntry} /> : null}
     </>
   );
 }
@@ -396,7 +560,7 @@ export default function MedicalWorkspace({ operator = false }) {
   const [appointments, setAppointments] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [services, setServices] = useState([]);
-  const [records, setRecords] = useState([]);
+  const [clinicalRecord, setClinicalRecord] = useState({ appointments: [], records: [], diagnoses: [], prescriptions: [], orders: [], results: [] });
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [duplicateGroups, setDuplicateGroups] = useState([]);
@@ -459,14 +623,14 @@ export default function MedicalWorkspace({ operator = false }) {
     setSelectedPatient(patient);
     setModal("record");
     try {
-      setRecords(await getMedicalRecords(patient.id));
+      setClinicalRecord(await getMedicalClinicalRecord(patient.id));
     } catch (requestError) {
       setError(requestError.message);
-      setRecords([]);
+      setClinicalRecord({ appointments: [], records: [], diagnoses: [], prescriptions: [], orders: [], results: [] });
     }
   };
   const reloadPatientRecords = async (patientId) => {
-    setRecords(await getMedicalRecords(patientId));
+    setClinicalRecord(await getMedicalClinicalRecord(patientId));
     await load();
   };
   const completeModal = async () => {
@@ -543,9 +707,9 @@ export default function MedicalWorkspace({ operator = false }) {
           </div>
         </section>
       ) : null}
-      {modal === "patient" ? <PatientForm close={() => { setModal(""); setEditingPatient(null); }} onSaved={completeModal} patient={editingPatient} /> : null}
+      {modal === "patient" ? <MedicalPatientForm close={() => { setModal(""); setEditingPatient(null); }} onSaved={completeModal} patient={editingPatient} /> : null}
       {modal === "appointment" ? <AppointmentForm close={() => setModal("")} done={completeModal} patients={patients.filter((item) => item.isActive)} professionals={professionals} services={services} /> : null}
-      {modal === "record" && selectedPatient ? <PatientRecord close={() => { setModal(""); setSelectedPatient(null); }} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onReload={reloadPatientRecords} patient={selectedPatient} records={records} /> : null}
+      {modal === "record" && selectedPatient ? <MedicalRecordModal close={() => { setModal(""); setSelectedPatient(null); }} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onReload={reloadPatientRecords} patient={selectedPatient} record={clinicalRecord} /> : null}
       {modal === "appointment-detail" && selectedAppointment ? <AppointmentDetail appointment={selectedAppointment} close={() => setModal("")} done={completeModal} /> : null}
       {modal === "deactivate" && selectedPatient ? <Modal onClose={() => setModal("")} title="Desactivar paciente"><div className="grid gap-4 p-5"><p>La ficha se conservará junto con sus citas e historia clínica. No se eliminarán datos de atención.</p><div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="person_off" onClick={async () => { await deactivateMedicalPatient(selectedPatient.id); setModal(""); await load(); }}>Desactivar</Button></div></div></Modal> : null}
       {modal === "duplicates" ? <Modal onClose={() => setModal("")} title="Posibles pacientes duplicados"><div className="grid gap-3 p-5">{duplicateGroups.map((group) => { const [target, ...sources] = group.patients; return <Card className="p-3" key={target.id}><p className="text-sm">Conservar ficha: <b>{target.firstName} {target.lastName} · {target.document}</b></p>{sources.map((source) => <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant pt-2" key={source.id}><span className="text-sm">Fusionar {source.firstName} {source.lastName} · {source.document}</span><Button icon="merge_type" onClick={async () => { await mergeMedicalPatient(source.id, target.id); setModal(""); await load(); }} size="small">Fusionar</Button></div>)}</Card>; })}{!duplicateGroups.length ? <EmptyState description="No encontramos fichas activas con coincidencias de nombre, fecha, teléfono o correo." icon="verified" title="Sin duplicados" /> : null}</div></Modal> : null}

@@ -13,6 +13,7 @@ import DentalWorkspace from "../../pages/dental/DentalWorkspace";
 import DentalOperations from "../../pages/dental/DentalOperations";
 import HealthWorkspace from "../../pages/health/HealthWorkspace";
 import MedicalWorkspace from "../../pages/health/MedicalWorkspace";
+import MedicalCalendar from "../../pages/health/MedicalCalendar";
 import { useAppConfig } from "../../context/appConfigStore";
 import BusinessChat from "../../pages/chat/BusinessChat";
 import DentalBillingQueue from "../../pages/dental/DentalBillingQueue";
@@ -231,7 +232,7 @@ function MedicalModuleAccess() {
     return <Navigate replace to="/pos" />;
   return (
     <OperatorAccess frontendKey={moduleKey}>
-      <MedicalWorkspace operator />
+      {moduleKey === "appointments" ? <MedicalCalendar operator /> : <MedicalWorkspace operator />}
     </OperatorAccess>
   );
 }

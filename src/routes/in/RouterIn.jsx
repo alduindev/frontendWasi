@@ -22,6 +22,7 @@ import HospitalityCalendar from "../../pages/hospitality/HospitalityCalendar";
 import HospitalityOperations from "../../pages/hospitality/HospitalityOperations";
 import HealthWorkspace from "../../pages/health/HealthWorkspace";
 import MedicalDashboard from "../../pages/health/MedicalDashboard";
+import MedicalCalendar from "../../pages/health/MedicalCalendar";
 import MedicalWorkspace from "../../pages/health/MedicalWorkspace";
 import DentalWorkspace from "../../pages/dental/DentalWorkspace";
 import DentalOperations from "../../pages/dental/DentalOperations";
@@ -197,6 +198,7 @@ function DynamicModule() {
     return <Navigate to="/dashboard" replace />;
   if (moduleKey === "housekeeping") return <HousekeepingAdmin />;
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "dental") return <DentalCalendar />;
+  if (moduleKey === "appointments" && config?.template?.dashboardKey === "health") return <MedicalCalendar />;
   if (moduleKey === "dental-billing" && config?.template?.dashboardKey === "dental") return <DentalBillingQueue />;
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "veterinary") return <VeterinaryCalendar />;
   if (config?.template?.dashboardKey === "veterinary" && ["pets","invoices"].includes(moduleKey)) return <VeterinaryWorkspace />;
