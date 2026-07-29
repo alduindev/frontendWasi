@@ -33,14 +33,15 @@ function networkActivity(phase, path, method = 'GET') {
 }
 
 export async function apiRequest(path, options = {}) {
+  const { sensitiveResponse = false, ...requestOptions } = options
   const requestAccessToken = getAccessToken()
-  const headers = requestHeaders(options, requestAccessToken)
-  const method = String(options.method || 'GET').toUpperCase()
+  const headers = requestHeaders(requestOptions, requestAccessToken)
+  const method = String(requestOptions.method || 'GET').toUpperCase()
   networkActivity('start', path, method)
   try {
     let response
     try {
-      response = await fetch(`${API_URL}${path}`, { ...options, credentials: 'include', headers })
+      response = await fetch(`${API_URL}${path}`, { ...requestOptions, credentials: 'include', headers })
     } catch (error) {
       throw new ApiError('No se pudo leer la respuesta del backend. Verifica que el API esté activo y que CORS permita este origen.', 0, error)
     }
@@ -62,7 +63,9 @@ export async function apiRequest(path, options = {}) {
       throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload, response.headers.get('X-Request-ID') || '')
     }
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-      window.dispatchEvent(new CustomEvent('wasi:data-changed', { detail: { method, path, payload } }))
+      window.dispatchEvent(new CustomEvent('wasi:data-changed', {
+        detail: sensitiveResponse ? { method, path } : { method, path, payload },
+      }))
     }
     return payload
   } finally {
