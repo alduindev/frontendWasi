@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
 import Input from "../../components/atoms/Input";
@@ -409,7 +410,54 @@ export default function Settings() {
                           </option>
                         ))}
                       </Select>
+                      <Input
+                        inputClassName="cursor-default bg-surface-container-low font-semibold"
+                        label="Rubro del negocio"
+                        readOnly
+                        value={selectedBusinessType?.name || "Sin definir"}
+                      />
+                      {selectedBusinessType?.slug === "consultorio-medico" ? (
+                        <Input
+                          inputClassName="cursor-default bg-surface-container-low font-semibold"
+                          label="Especialidades"
+                          readOnly
+                          value={
+                            medicalServicesError
+                              ? "No se pudieron cargar"
+                              : medicalServices.length
+                              ? medicalServices
+                                  .map((item) => item.serviceType.name)
+                                  .join(", ")
+                              : "Sin configurar"
+                          }
+                        />
+                      ) : null}
                     </div>
+                    {selectedBusinessType?.slug === "consultorio-medico" ? (
+                      <Link
+                        className="mt-4 flex min-h-20 items-center gap-3 rounded-2xl border border-primary/25 bg-primary-fixed/30 p-4 transition hover:border-primary hover:bg-primary-fixed/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        to="/dashboard/inventory"
+                      >
+                        <span className="material-symbols-outlined flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white text-2xl text-primary">
+                          medical_inventory
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-bold text-on-surface">
+                            Inventario clínico e insumos
+                          </span>
+                          <span className="mt-1 block text-sm text-on-surface-variant">
+                            Administra medicamentos, insumos clínicos, material
+                            de rehabilitación y equipos del consultorio.
+                          </span>
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="material-symbols-outlined shrink-0 text-primary"
+                        >
+                          arrow_forward
+                        </span>
+                      </Link>
+                    ) : null}
                     <div className="mt-4 flex gap-2 rounded-2xl bg-surface-container-low p-3 text-xs leading-5 text-on-surface-variant">
                       <span className="material-symbols-outlined text-lg text-primary">
                         verified_user
@@ -422,84 +470,6 @@ export default function Settings() {
                     </div>
                   </Card>
 
-                  <Card className="p-4 sm:p-5">
-                    <div className="mb-4">
-                      <h2 className="font-heading text-xl font-bold">
-                        Rubro del negocio
-                      </h2>
-                      <p className="mt-1 text-sm text-on-surface-variant">
-                        El rubro determina los módulos, flujos y permisos
-                        disponibles.
-                      </p>
-                    </div>
-                    {selectedBusinessType ? (
-                      <div className="grid gap-3">
-                        <div className="flex gap-3 rounded-2xl border border-outline-variant bg-surface-container-low p-4">
-                          <span className="material-symbols-outlined text-3xl text-primary">
-                            {selectedBusinessType.icon}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <b>{selectedBusinessType.name}</b>
-                              <span className="rounded-full bg-white px-2 py-1 text-xs font-bold">
-                                Cambio asistido
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm text-on-surface-variant">
-                              {selectedBusinessType.description}
-                            </p>
-                            <p className="mt-2 text-xs font-semibold text-on-surface-variant">
-                              Para cambiar de rubro sin perder información,
-                              solicítalo al superadministrador de Wasita.
-                            </p>
-                          </div>
-                        </div>
-                        {selectedBusinessType.slug === "consultorio-medico" ? (
-                          <section className="rounded-2xl border border-primary/25 bg-primary-fixed/30 p-4">
-                            <div className="flex gap-2">
-                              <span className="material-symbols-outlined text-primary">
-                                medical_services
-                              </span>
-                              <div>
-                                <h3 className="font-bold">
-                                  Especialidades y servicios habilitados
-                                </h3>
-                                <p className="mt-1 text-sm text-on-surface-variant">
-                                  Esta configuración define las funciones y la
-                                  agenda disponibles en el consultorio.
-                                </p>
-                              </div>
-                            </div>
-                            {medicalServicesError ? (
-                              <p className="mt-3 rounded-xl bg-error-container p-3 text-sm text-on-error-container">
-                                {medicalServicesError}
-                              </p>
-                            ) : null}
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {medicalServices.map((item) => (
-                                <span
-                                  className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-primary"
-                                  key={item.id}
-                                >
-                                  {item.serviceType.name}
-                                </span>
-                              ))}
-                              {!medicalServices.length && !medicalServicesError ? (
-                                <p className="text-sm text-on-surface-variant">
-                                  Aún no hay servicios configurados. Solicita al
-                                  superadministrador que complete la migración.
-                                </p>
-                              ) : null}
-                            </div>
-                          </section>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="rounded-2xl border border-dashed border-outline-variant p-4 text-sm text-on-surface-variant">
-                        Rubro no identificado. Contacta al soporte de Wasita.
-                      </p>
-                    )}
-                  </Card>
                 </>
               ) : null}
 
