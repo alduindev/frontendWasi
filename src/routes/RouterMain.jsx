@@ -1,5 +1,11 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
 import { I18nProvider } from "../context/I18nContext";
 import { ToastProvider } from "../context/ToastContext";
@@ -20,6 +26,9 @@ const BusinessTypeCatalog = lazy(
 );
 const PlatformModules = lazy(() => import("../pages/platform/PlatformModules"));
 const PlatformBilling = lazy(() => import("../pages/platform/PlatformBilling"));
+const RequiredPasswordChange = lazy(
+  () => import("../pages/out/CambiarContrasenaTemporal"),
+);
 
 function RouteLoading() {
   return <WasitaLoadingScreen />;
@@ -38,6 +47,12 @@ function ProtectedRoute({ children, area }) {
       : operatorArea
         ? "/pos"
         : "/dashboard";
+  if (area === "password-change") {
+    return user.mustChangePassword ? children : <Navigate to={destination} replace />;
+  }
+  if (user.mustChangePassword) {
+    return <Navigate to="/change-password-required" replace />;
+  }
   if (
     (area === "platform" && user.role !== "super_admin") ||
     (area === "operator" && !operatorArea) ||
@@ -48,8 +63,26 @@ function ProtectedRoute({ children, area }) {
 }
 
 function AppRoutes() {
+  const { user } = useAuth();
+  const location = useLocation();
+  if (
+    user?.mustChangePassword &&
+    location.pathname !== "/change-password-required"
+  ) {
+    return <Navigate to="/change-password-required" replace />;
+  }
   return (
     <Routes>
+      <Route
+        path="/change-password-required"
+        element={
+          <ProtectedRoute area="password-change">
+            <Suspense fallback={<RouteLoading />}>
+              <RequiredPasswordChange />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/platform"
         element={
