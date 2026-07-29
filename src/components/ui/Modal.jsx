@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 
 const modalStack = []
 
-export default function Modal({ children, closeOnBackdrop = false, contentClassName = '', dialogClassName = '', fixedHeight = false, onClose, title }) {
+export default function Modal({ children, closeOnBackdrop = false, contentClassName = '', dialogClassName = '', fixedHeight = false, onClose, overlayClassName = '', title }) {
   const id = useRef(Symbol('modal'))
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -25,7 +25,7 @@ export default function Modal({ children, closeOnBackdrop = false, contentClassN
   }, [])
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 p-2 backdrop-blur-sm sm:p-4" onMouseDown={closeOnBackdrop ? onClose : undefined}>
+    <div className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/35 p-2 backdrop-blur-sm sm:p-4 ${overlayClassName}`} onMouseDown={closeOnBackdrop ? onClose : undefined}>
       <motion.div
         aria-labelledby={titleId}
         aria-modal="true"
