@@ -4,7 +4,7 @@ import Card from "../atoms/Card";
 import Input from "../atoms/Input";
 import PasswordField from "../molecules/PasswordField";
 import { useToast } from "../../hooks/useToast";
-import { changeSessionPassword } from "../../services/authService";
+import { useAuth } from "../../context/authStore";
 
 const EMPTY_PASSWORDS = {
   confirmation: "",
@@ -36,6 +36,7 @@ export default function ProfileSettings({
   siteReadOnly = false,
   user,
 }) {
+  const { changePassword } = useAuth();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
@@ -124,7 +125,7 @@ export default function ProfileSettings({
     passwordSubmissionRef.current = true;
     setSavingPassword(true);
     try {
-      const response = await changeSessionPassword({
+      const response = await changePassword({
         currentPassword: passwords.currentPassword,
         newPassword: passwords.newPassword,
       });
