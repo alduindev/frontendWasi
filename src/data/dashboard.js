@@ -10,6 +10,7 @@ export const navItems = [
 ]
 
 export const productCategories = ['Alimentos', 'Bebidas', 'Snacks', 'Minibar', 'Amenities', 'Suministros hotel', 'Hogar', 'Limpieza', 'Textil']
+export const medicalProductCategories = ['Medicamentos', 'Insumos clínicos', 'Material de rehabilitación', 'Equipos médicos', 'Higiene y protección', 'Otros insumos']
 export const productStatuses = ['Activo', 'Inactivo', 'Descontinuado']
 export const productUnits = ['unidad', 'kg', 'g', 'litro', 'ml', 'caja', 'paquete']
 
