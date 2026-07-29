@@ -24,10 +24,16 @@ function readImage(file) {
   })
 }
 
-export default function ProductModal({ product, onClose, onSave, onToast }) {
+export default function ProductModal({ categories = productCategories, product, onClose, onSave, onToast }) {
   const { t } = useI18n()
   const isEditing = Boolean(product)
-  const values = createDefaultProduct(product || {})
+  const values = createDefaultProduct({
+    category: categories[0] || 'General',
+    ...(product || {}),
+  })
+  const categoryOptions = values.category && !categories.includes(values.category)
+    ? [values.category, ...categories]
+    : categories
   const fileInputRef = useRef(null)
   const [image, setImage] = useState(values.image)
   const [imageName, setImageName] = useState(values.imageName)
@@ -139,7 +145,7 @@ export default function ProductModal({ product, onClose, onSave, onToast }) {
             <Input defaultValue={values.sku} label={`${t('products.sku')} *`} maxLength="24" name="sku" onInput={limitText(24)} placeholder={t('forms.placeholder.sku')} required />
             <Input defaultValue={values.barcode} inputMode="numeric" label={t('products.barcode')} maxLength="14" name="barcode" onInput={limitInteger(14)} />
             <Select defaultValue={values.category} label={t('products.category')} name="category">
-              {productCategories.map((category) => <option key={category}>{category}</option>)}
+              {categoryOptions.map((category) => <option key={category}>{category}</option>)}
             </Select>
             <Input defaultValue={values.brand} label={t('products.brand')} maxLength="50" name="brand" onInput={limitText(50)} />
             <Input defaultValue={values.supplier} label={t('products.supplier')} maxLength="60" name="supplier" onInput={limitText(60)} />
