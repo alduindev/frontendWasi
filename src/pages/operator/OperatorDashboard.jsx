@@ -11,6 +11,7 @@ import { getOperatorInvoices, getOperatorSummary } from '../../services/operator
 import { useLiveRefresh } from '../../hooks/useLiveRefresh'
 import DentalOperatorDashboard from './DentalOperatorDashboard'
 import VeterinaryOperatorDashboard from './VeterinaryOperatorDashboard'
+import MedicalDashboard from '../health/MedicalDashboard'
 
 const shortcuts = [
   { functionCode: 'reception', icon: 'concierge', label: 'Recepción', note: 'Llegadas, huéspedes y salidas', to: '/pos/reception', primary: true },
@@ -53,6 +54,7 @@ export default function OperatorDashboard() {
   }, ['/operator', '/hospitality', '/products'])
 
   if (config?.template?.dashboardKey === 'dental') return <DentalOperatorDashboard />
+  if (config?.template?.dashboardKey === 'health') return <MedicalDashboard operator />
   if (config?.template?.dashboardKey === 'veterinary') return <VeterinaryOperatorDashboard />
 
   if (!isLoading && config && !functions.size && hospitality) return <OperatorShell subtitle="Tu cuenta está activa, pero todavía no tienes funciones operativas asignadas." title={`Hola, ${user.name}`}><Card className="p-8 text-center"><span className="material-symbols-outlined text-5xl text-primary">lock_person</span><h2 className="mt-3 text-xl font-bold">Sin accesos asignados</h2><p className="mt-2 text-sm text-on-surface-variant">Solicita al administrador que te asigne una función.</p><Link className="mt-4 inline-block font-bold text-primary" to="/pos/profile">Ver mi perfil</Link></Card></OperatorShell>
