@@ -10,6 +10,7 @@ import ProductList from '../../components/organisms/ProductList'
 import ProductModal from '../../components/organisms/ProductModal'
 import { useAuth } from '../../context/authStore'
 import { useAppConfig } from '../../context/appConfigStore'
+import { medicalProductCategories, productCategories } from '../../data/dashboard'
 import { useInventory } from '../../hooks/useInventory'
 import { useI18n } from '../../hooks/useI18n'
 import { useToast } from '../../hooks/useToast'
@@ -35,6 +36,7 @@ export default function Inventory() {
   const { t } = useI18n()
   const { showToast } = useToast()
   const permissions = useMemo(() => getPermissions(user), [user])
+  const isMedicalInventory = config?.template?.dashboardKey === 'health'
   const inventory = useInventory(user?.name)
   const [searchParams] = useSearchParams()
   const [confirm, setConfirm] = useState(null)
@@ -42,6 +44,11 @@ export default function Inventory() {
   const [filters, setFilters] = useState(defaultFilters)
   const [modalOpen, setModalOpen] = useState(false)
   const focusedProductId = searchParams.get('focus')
+  const inventoryCategories = useMemo(() => {
+    const configuredCategories = isMedicalInventory ? medicalProductCategories : productCategories
+    const existingCategories = inventory.products.map((product) => product.category).filter(Boolean)
+    return [...new Set([...configuredCategories, ...existingCategories])]
+  }, [inventory.products, isMedicalInventory])
 
   const filteredProducts = useMemo(() => {
     const effectiveFilters = focusedProductId
@@ -129,10 +136,23 @@ export default function Inventory() {
       onSearch={(value) => updateFilter('query', value)}
       searchPlaceholder={t('inventory.searchPlaceholder')}
       searchValue={filters.query}
-      subtitle={config?.template?.dashboardKey === 'hospitality' ? 'Productos de minibar, room service, amenities y suministros conectados al stock.' : t('inventory.subtitle')}
-      title={config?.template?.dashboardKey === 'hospitality' ? 'Productos y almacén' : t('inventory.title')}
+      subtitle={
+        config?.template?.dashboardKey === 'hospitality'
+          ? 'Productos de minibar, room service, amenities y suministros conectados al stock.'
+          : isMedicalInventory
+            ? 'Medicamentos, insumos clínicos, material de rehabilitación y equipos conectados al stock.'
+            : t('inventory.subtitle')
+      }
+      title={
+        config?.template?.dashboardKey === 'hospitality'
+          ? 'Productos y almacén'
+          : isMedicalInventory
+            ? 'Inventario clínico e insumos'
+            : t('inventory.title')
+      }
     >
       <InventoryToolbar
+        categories={inventoryCategories}
         filters={filters}
         onBulkCategory={async (category) => {
           await inventory.bulkUpdateSelected({ category })
@@ -174,6 +194,7 @@ export default function Inventory() {
 
       {modalOpen ? (
         <ProductModal
+          categories={inventoryCategories}
           onClose={() => setModalOpen(false)}
           onSave={handleSaveProduct}
           onToast={showToast}
