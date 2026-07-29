@@ -1,6 +1,13 @@
 import { apiBlob,apiDownload,apiRequest } from '../api/httpClient'
 const json=(method,body)=>({method,body:JSON.stringify(body)})
+const queryString=(filters={})=>{
+ const params=new URLSearchParams()
+ Object.entries(filters).forEach(([key,value])=>{if(value!==undefined&&value!==null&&value!=="")params.set(key,value)})
+ const query=params.toString()
+ return query?`?${query}`:""
+}
 export const getPatients=(search='')=>apiRequest(`/health/patients?search=${encodeURIComponent(search)}`)
+export const getPatientsPage=(filters={})=>apiRequest(`/health/patients/page${queryString(filters)}`)
 export const createPatient=(data)=>apiRequest('/health/patients',json('POST',data))
 export const updatePatient=(id,data)=>apiRequest(`/health/patients/${id}`,json('PATCH',data))
 export const getHealthAppointments=()=>apiRequest('/health/appointments')

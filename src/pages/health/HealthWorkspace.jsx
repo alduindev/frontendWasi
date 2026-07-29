@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
+import PatientDirectoryList from "../../components/patients/PatientDirectoryList";
 import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
@@ -15,7 +16,6 @@ import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import * as api from "../../services/healthService";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
-import { matchesEntitySearch } from "../../utils/entitySearch";
 
 function AppointmentForm({ patients, close, done }) {
   const [patientId, setPatientId] = useState("");
@@ -114,24 +114,46 @@ export default function HealthWorkspace({ operator = false }) {
   const [attentionId, setAttentionId] = useState("");
   const [selectedTooth, setSelectedTooth] = useState(null);
   const [query, setQuery] = useState(() => searchParams.get("search") || "");
-  const [patientPage, setPatientPage] = useState(0);
-  const pageSize = 6;
+  const [patientTotal, setPatientTotal] = useState(0);
+  const [patientPage, setPatientPage] = useState(1);
+  const [patientPageSize, setPatientPageSize] = useState(15);
+  const [patientStatus, setPatientStatus] = useState("active");
+  const isPatients = moduleKey === "patients";
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
+      const patientRequest = isPatients
+        ? api.getPatientsPage({
+            page: patientPage,
+            page_size: patientPageSize,
+            search: query,
+            status: patientStatus === "all" ? undefined : patientStatus,
+          })
+        : api.getPatients();
       const [patientRows, appointmentRows] = await Promise.all([
-        api.getPatients(),
+        patientRequest,
         api.getHealthAppointments(),
       ]);
-      setPatients(patientRows);
+      if (isPatients) {
+        const totalPages = Math.max(1, Math.ceil(patientRows.total / patientPageSize));
+        if (patientRows.total > 0 && patientPage > totalPages) {
+          setPatientPage(totalPages);
+          return;
+        }
+        setPatients(patientRows.items);
+        setPatientTotal(patientRows.total);
+      } else {
+        setPatients(patientRows);
+        setPatientTotal(patientRows.length);
+      }
       setAppointments(appointmentRows);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isPatients, patientPage, patientPageSize, patientStatus, query]);
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
@@ -140,7 +162,6 @@ export default function HealthWorkspace({ operator = false }) {
     setModal("");
     load();
   };
-  const isPatients = moduleKey === "patients";
   const Shell = operator ? OperatorShell : DashboardShell;
   const openRecord = async (patient) => {
     setSelected(patient);
@@ -161,29 +182,9 @@ export default function HealthWorkspace({ operator = false }) {
     admin || config?.capabilities?.includes("dental.records.edit");
   const canEditOdontogram =
     admin || config?.capabilities?.includes("dental.odontogram.edit");
-  const filteredPatients = useMemo(
-    () =>
-      patients.filter((patient) =>
-        matchesEntitySearch(patient, query, (item) => [
-          item.firstName,
-          item.lastName,
-          `${item.firstName} ${item.lastName}`,
-          item.document,
-          item.phone,
-          item.email,
-        ]),
-      ),
-    [patients, query],
-  );
-  const patientPages = Math.max(
-    1,
-    Math.ceil(filteredPatients.length / pageSize),
-  );
-  const effectivePage = Math.min(patientPage, patientPages - 1);
-  const visiblePatients = filteredPatients.slice(
-    effectivePage * pageSize,
-    (effectivePage + 1) * pageSize,
-  );
+  const patientTotalPages = Math.max(1, Math.ceil(patientTotal / patientPageSize));
+  const patientRangeStart = patientTotal ? (patientPage - 1) * patientPageSize + 1 : 0;
+  const patientRangeEnd = Math.min(patientPage * patientPageSize, patientTotal);
   const reloadChart = async () => {
     try {
       setChart(await api.getDentalChart(selected.id));
@@ -234,119 +235,108 @@ export default function HealthWorkspace({ operator = false }) {
       ) : null}
       {loading ? <Card className="h-40 animate-pulse" /> : null}
       {!loading && !error && isPatients ? (
-        <section>
-          <Card className="mb-3 flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
-            <label className="flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3">
-              <span className="material-symbols-outlined text-on-surface-variant">
+        <section className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex min-h-11 min-w-56 flex-[1_1_24rem] items-center gap-2 rounded-xl border border-outline-variant bg-white px-3">
+              <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">
                 search
               </span>
               <input
                 className="min-w-0 flex-1 bg-transparent outline-none"
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPatientPage(1);
+                }}
                 placeholder="Buscar por nombre, DNI, teléfono o correo"
                 value={query}
               />
             </label>
-            <span className="shrink-0 rounded-xl bg-primary-fixed px-3 py-2 text-sm font-bold text-primary">
-              {filteredPatients.length} pacientes
-            </span>
-          </Card>
-          <div className="grid min-h-[23rem] content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {visiblePatients.map((patient) => (
-              <button
-                className="min-w-0 text-left"
-                key={patient.id}
-                onClick={() => openRecord(patient)}
-                type="button"
-              >
-                <Card className="flex h-44 flex-col p-3 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-fixed text-xs font-bold text-primary">
-                        {patient.firstName?.[0]}
-                        {patient.lastName?.[0]}
-                      </span>
-                      <span className="min-w-0">
-                        <b className="block truncate">
-                          {patient.firstName} {patient.lastName}
-                        </b>
-                        <small className="text-on-surface-variant">
-                          {patient.documentType} {patient.document}
-                        </small>
-                      </span>
-                    </span>
-                    <span className="rounded-full bg-primary-fixed px-2 py-1 text-[10px]">
-                      {patient.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 truncate text-xs text-on-surface-variant">
-                    {patient.phone || "Sin teléfono"} ·{" "}
-                    {patient.email || "Sin correo"}
-                  </p>
-                  {patient.allergies ? (
-                    <p className="mt-2 line-clamp-2 rounded-lg bg-error-container px-2 py-1.5 text-xs">
-                      Alergias: {patient.allergies}
-                    </p>
-                  ) : (
-                    <p className="mt-2 rounded-lg bg-emerald-50 px-2 py-1.5 text-xs text-emerald-800">
-                      Sin alertas clínicas
-                    </p>
-                  )}
-                  <p className="mt-auto flex items-center gap-1 text-xs font-bold text-primary">
-                    <span className="material-symbols-outlined text-base">
-                      clinical_notes
-                    </span>
-                    Abrir expediente completo
-                  </p>
-                </Card>
-              </button>
-            ))}
-            {!visiblePatients.length ? (
-              <Card className="col-span-full grid min-h-48 place-items-center text-on-surface-variant">
-                No se encontraron pacientes.
-              </Card>
-            ) : null}
-          </div>
-          {patientPages > 1 ? (
-            <nav
-              aria-label="Páginas de pacientes"
-              className="mt-3 flex items-center justify-center gap-2"
-            >
-              <button
-                aria-label="Página anterior"
-                className="material-symbols-outlined grid size-10 place-items-center rounded-full border border-outline-variant bg-white disabled:opacity-30"
-                disabled={patientPage === 0}
-                onClick={() => setPatientPage((page) => Math.max(0, page - 1))}
-                type="button"
-              >
-                chevron_left
-              </button>
-              <div className="flex gap-1">
-                {Array.from({ length: patientPages }, (_, index) => (
-                  <button
-                    aria-label={`Página ${index + 1}`}
-                    className={`h-2.5 rounded-full transition-all ${patientPage === index ? "w-8 bg-primary" : "w-2.5 bg-outline-variant"}`}
-                    key={index}
-                    onClick={() => setPatientPage(index)}
-                    type="button"
-                  />
-                ))}
-              </div>
-              <span className="min-w-16 text-center text-xs font-bold text-on-surface-variant">
-                {patientPage + 1} / {patientPages}
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3 text-sm font-bold">
+              <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">
+                filter_list
               </span>
-              <button
-                aria-label="Página siguiente"
-                className="material-symbols-outlined grid size-10 place-items-center rounded-full border border-outline-variant bg-white disabled:opacity-30"
-                disabled={patientPage >= patientPages - 1}
-                onClick={() =>
-                  setPatientPage((page) => Math.min(patientPages - 1, page + 1))
-                }
-                type="button"
+              <span className="sr-only">Estado</span>
+              <select
+                aria-label="Filtrar pacientes por estado"
+                className="bg-transparent outline-none"
+                onChange={(event) => {
+                  setPatientStatus(event.target.value);
+                  setPatientPage(1);
+                }}
+                value={patientStatus}
               >
-                chevron_right
-              </button>
-            </nav>
+                <option value="active">Activos</option>
+                <option value="all">Todos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
+            </label>
+          </div>
+
+          {patients.length ? (
+            <PatientDirectoryList
+              actionIcon="dentistry"
+              actionLabel="Expediente"
+              onOpen={openRecord}
+              patients={patients}
+            />
+          ) : (
+            <EmptyState
+              description="Prueba con otro nombre, documento o estado."
+              icon="groups"
+              title="No hay pacientes para mostrar"
+            />
+          )}
+
+          {patientTotal ? (
+            <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-on-surface-variant">
+                Mostrando <b className="text-on-surface">{patientRangeStart}–{patientRangeEnd}</b> de{" "}
+                <b className="text-on-surface">{patientTotal}</b> pacientes
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-on-surface-variant">
+                  Filas
+                  <select
+                    aria-label="Pacientes por página"
+                    className="min-h-9 rounded-lg border border-outline-variant bg-white px-2 text-sm font-bold text-on-surface"
+                    onChange={(event) => {
+                      setPatientPageSize(Number(event.target.value));
+                      setPatientPage(1);
+                    }}
+                    value={patientPageSize}
+                  >
+                    <option value={15}>15</option>
+                    <option value={30}>30</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+                <button
+                  aria-label="Página anterior"
+                  className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={patientPage <= 1}
+                  onClick={() => setPatientPage((currentPage) => Math.max(1, currentPage - 1))}
+                  type="button"
+                >
+                  <span aria-hidden="true" className="material-symbols-outlined">
+                    chevron_left
+                  </span>
+                </button>
+                <span className="min-w-16 text-center font-bold">
+                  {patientPage} / {patientTotalPages}
+                </span>
+                <button
+                  aria-label="Página siguiente"
+                  className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={patientPage >= patientTotalPages}
+                  onClick={() => setPatientPage((currentPage) => Math.min(patientTotalPages, currentPage + 1))}
+                  type="button"
+                >
+                  <span aria-hidden="true" className="material-symbols-outlined">
+                    chevron_right
+                  </span>
+                </button>
+              </div>
+            </div>
           ) : null}
         </section>
       ) : null}

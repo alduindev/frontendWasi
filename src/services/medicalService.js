@@ -24,6 +24,8 @@ export const updateMedicalProfessionalProfile = (userId, data) =>
   apiRequest(`/medical/professionals/${userId}`, json("PUT", data));
 export const getMedicalPatients = (filters = {}) =>
   apiRequest(`/medical/patients${queryString(filters)}`);
+export const getMedicalPatientsPage = (filters = {}) =>
+  apiRequest(`/medical/patients/page${queryString(filters)}`);
 export const getMedicalPatientDuplicates = () =>
   apiRequest("/medical/patients/duplicates");
 export const createMedicalPatient = (data) =>
@@ -32,6 +34,8 @@ export const updateMedicalPatient = (id, data) =>
   apiRequest(`/medical/patients/${id}`, json("PATCH", data));
 export const deactivateMedicalPatient = (id) =>
   apiRequest(`/medical/patients/${id}`, { method: "DELETE" });
+export const permanentlyDeleteMedicalPatient = (id) =>
+  apiRequest(`/medical/patients/${id}/permanent`, { method: "DELETE" });
 export const restoreMedicalPatient = (id) =>
   apiRequest(`/medical/patients/${id}/restore`, { method: "POST" });
 export const mergeMedicalPatient = (sourceId, targetPatientId) =>

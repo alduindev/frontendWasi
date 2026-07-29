@@ -3,11 +3,13 @@ import { useParams, useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
 import EntityAttachments from "../../components/attachments/EntityAttachments";
+import PatientDirectoryList from "../../components/patients/PatientDirectoryList";
 import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
+import Tooltip from "../../components/ui/Tooltip";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
@@ -30,9 +32,11 @@ import {
   getMedicalClinicalRecord,
   getMedicalPatientDuplicates,
   getMedicalPatients,
+  getMedicalPatientsPage,
   getMedicalProfessionals,
   mergeMedicalPatient,
   exportMedicalClinicalRecord,
+  permanentlyDeleteMedicalPatient,
   previewMedicalClinicalRecordPdf,
   restoreMedicalPatient,
   updateMedicalAppointment,
@@ -43,7 +47,6 @@ import {
   updateMedicalRecord,
   updateMedicalResult,
 } from "../../services/medicalService";
-import { matchesEntitySearch } from "../../utils/entitySearch";
 
 const statusLabels = {
   scheduled: "Programada",
@@ -57,6 +60,95 @@ const statusLabels = {
 const field =
   "min-h-11 w-full rounded-xl border border-outline-variant bg-white px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15";
 
+function PatientActionsMenu({
+  canEdit,
+  canManageLifecycle,
+  isOpen,
+  onDeactivate,
+  onDelete,
+  onEdit,
+  onOpenChange,
+  onRestore,
+  patient,
+}) {
+  if (!canEdit && !canManageLifecycle) return null;
+  const closeAndRun = (action) => () => {
+    onOpenChange(null);
+    action(patient);
+  };
+
+  return (
+    <div
+      className="relative shrink-0"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(null);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onOpenChange(null);
+      }}
+    >
+      <Tooltip label="Más acciones" placement="top-end">
+        <button
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+          aria-label={`Más acciones para ${patient.firstName} ${patient.lastName}`}
+          className="grid size-9 place-items-center rounded-lg border border-outline-variant bg-white text-on-surface-variant shadow-sm transition hover:border-primary hover:bg-primary-fixed hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          onClick={() => onOpenChange(isOpen ? null : patient.id)}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">more_vert</span>
+        </button>
+      </Tooltip>
+      {isOpen ? (
+        <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border border-outline-variant bg-white p-1.5 shadow-xl" role="menu">
+          {canEdit ? <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition hover:bg-surface-container-low" onClick={closeAndRun(onEdit)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>Editar ficha</button> : null}
+          {canManageLifecycle ? (
+            <>
+              <div className="my-1 border-t border-outline-variant" />
+              {patient.isActive
+                ? <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition hover:bg-surface-container-low" onClick={closeAndRun(onDeactivate)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">person_off</span>Desactivar paciente</button>
+                : <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition hover:bg-surface-container-low" onClick={closeAndRun(onRestore)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">restore</span>Restaurar paciente</button>}
+              <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-error transition hover:bg-error-container" onClick={closeAndRun(onDelete)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">delete_forever</span>Eliminar definitivamente</button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MedicalPatientList({
+  canEdit,
+  canManageLifecycle,
+  onDeactivate,
+  onDelete,
+  onEdit,
+  onOpen,
+  onOpenChange,
+  onRestore,
+  openPatientActionsId,
+  patients,
+}) {
+  return (
+    <PatientDirectoryList
+      actionContent={(patient) => (
+        <PatientActionsMenu
+          canEdit={canEdit}
+          canManageLifecycle={canManageLifecycle}
+          isOpen={openPatientActionsId === patient.id}
+          onDeactivate={onDeactivate}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onOpenChange={onOpenChange}
+          onRestore={onRestore}
+          patient={patient}
+        />
+      )}
+      onOpen={onOpen}
+      patients={patients}
+    />
+  );
+}
 function asDate(value) {
   return new Date(value);
 }
@@ -180,16 +272,39 @@ export function MedicalAppointmentForm({ appointment, close, done, patients, pro
   const [patientId, setPatientId] = useState(appointment?.patientId || "");
   const [professionalId, setProfessionalId] = useState(appointment?.professionalId || "");
   const [serviceId, setServiceId] = useState(appointment?.medicalServiceTypeId || "");
+  const [minimumDateTime] = useState(() => {
+    const nextMinute = new Date();
+    nextMinute.setSeconds(0, 0);
+    nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+    return localDateTimeValue(nextMinute);
+  });
+  const [startsAt, setStartsAt] = useState(() => appointment?.startsAt ? localDateTimeValue(appointment.startsAt) : minimumDateTime);
+  const [endsAt, setEndsAt] = useState(() => appointment?.endsAt ? localDateTimeValue(appointment.endsAt) : localDateTimeValue(new Date(new Date(minimumDateTime).getTime() + 30 * 60_000)));
+  const [scheduleError, setScheduleError] = useState("");
   const [saving, setSaving] = useState(false);
   const submit = async (event) => {
     event.preventDefault();
+    const start = new Date(startsAt);
+    const end = new Date(endsAt);
+    const now = new Date();
+
+    if (Number.isNaN(start.getTime()) || start.getTime() < now.getTime()) {
+      setScheduleError("Selecciona una fecha y hora futura para la cita.");
+      return;
+    }
+    if (Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
+      setScheduleError("La hora de fin debe ser posterior a la hora de inicio.");
+      return;
+    }
+
+    setScheduleError("");
     const form = new FormData(event.currentTarget);
     const data = {
       patientId,
       professionalId,
       medicalServiceTypeId: serviceId,
-      startsAt: form.get("startsAt"),
-      endsAt: form.get("endsAt"),
+      startsAt,
+      endsAt,
       reason: form.get("reason"),
       notes: form.get("notes"),
     };
@@ -235,12 +350,13 @@ export function MedicalAppointmentForm({ appointment, close, done, patients, pro
         </label>
         <label className="text-sm font-bold">
           Inicio
-          <input className={`${field} mt-1`} defaultValue={localDateTimeValue(appointment?.startsAt)} name="startsAt" required type="datetime-local" />
+          <input className={`${field} mt-1`} min={minimumDateTime} name="startsAt" onChange={(event) => { setStartsAt(event.target.value); setScheduleError(""); }} required type="datetime-local" value={startsAt} />
         </label>
         <label className="text-sm font-bold">
           Fin
-          <input className={`${field} mt-1`} defaultValue={localDateTimeValue(appointment?.endsAt || addDays(new Date(), 0))} name="endsAt" required type="datetime-local" />
+          <input className={`${field} mt-1`} min={startsAt > minimumDateTime ? startsAt : minimumDateTime} name="endsAt" onChange={(event) => { setEndsAt(event.target.value); setScheduleError(""); }} required type="datetime-local" value={endsAt} />
         </label>
+        {scheduleError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container sm:col-span-2" role="alert">{scheduleError}</p> : null}
         <label className="text-sm font-bold sm:col-span-2">
           Motivo de consulta
           <input className={`${field} mt-1`} defaultValue={appointment?.reason || ""} name="reason" required />
@@ -602,10 +718,15 @@ export default function MedicalWorkspace({ operator = false }) {
   const [duplicateGroups, setDuplicateGroups] = useState([]);
   const [modal, setModal] = useState("");
   const [editingPatient, setEditingPatient] = useState(null);
+  const [patientActionError, setPatientActionError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(() => searchParams.get("search") || "");
-  const [showInactive, setShowInactive] = useState(false);
+  const [patientTotal, setPatientTotal] = useState(0);
+  const [patientPage, setPatientPage] = useState(1);
+  const [patientPageSize, setPatientPageSize] = useState(15);
+  const [patientStatus, setPatientStatus] = useState("active");
+  const [openPatientActionsId, setOpenPatientActionsId] = useState(null);
   const [view, setView] = useState("week");
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [filters, setFilters] = useState({ professionalId: "", medicalServiceTypeId: "", status: "" });
@@ -622,8 +743,17 @@ export default function MedicalWorkspace({ operator = false }) {
     setLoading(true);
     try {
       setError("");
+      const patientRequest = isPatients
+        ? getMedicalPatientsPage({
+          include_inactive: patientStatus === "all",
+          page: patientPage,
+          page_size: patientPageSize,
+          search: query,
+          status: patientStatus === "all" ? undefined : patientStatus,
+        })
+        : getMedicalPatients();
       const [patientRows, appointmentRows, professionalsRows, businessServices] = await Promise.all([
-        getMedicalPatients({ include_inactive: showInactive }),
+        patientRequest,
         getMedicalAppointments({
           professional_id: filters.professionalId,
           medical_service_type_id: filters.medicalServiceTypeId,
@@ -632,7 +762,18 @@ export default function MedicalWorkspace({ operator = false }) {
         getMedicalProfessionals(),
         getBusinessMedicalServices(),
       ]);
-      setPatients(patientRows);
+      if (isPatients) {
+        const totalPages = Math.max(1, Math.ceil(patientRows.total / patientPageSize));
+        if (patientRows.total > 0 && patientPage > totalPages) {
+          setPatientPage(totalPages);
+          return;
+        }
+        setPatients(patientRows.items);
+        setPatientTotal(patientRows.total);
+      } else {
+        setPatients(patientRows);
+        setPatientTotal(patientRows.length);
+      }
       setAppointments(appointmentRows);
       setProfessionals(professionalsRows);
       setServices(businessServices.map((item) => item.serviceType));
@@ -641,17 +782,13 @@ export default function MedicalWorkspace({ operator = false }) {
     } finally {
       setLoading(false);
     }
-  }, [filters, showInactive]);
+  }, [filters, isPatients, patientPage, patientPageSize, patientStatus, query]);
 
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
   useLiveRefresh(load, ["/medical"]);
 
-  const filteredPatients = useMemo(
-    () => patients.filter((item) => matchesEntitySearch(item, query, [item.firstName, item.lastName, item.document, item.phone, item.email])),
-    [patients, query],
-  );
   const days = useMemo(() => datesForView(view, referenceDate), [referenceDate, view]);
   const appointmentsByDay = useMemo(() => {
     const grouped = new Map();
@@ -687,7 +824,22 @@ export default function MedicalWorkspace({ operator = false }) {
   };
   const askDeactivate = (patient) => {
     setSelectedPatient(patient);
+    setPatientActionError("");
     setModal("deactivate");
+  };
+  const askPermanentDelete = (patient) => {
+    setSelectedPatient(patient);
+    setPatientActionError("");
+    setModal("permanent-delete");
+  };
+  const restorePatient = async (patient) => {
+    try {
+      setError("");
+      await restoreMedicalPatient(patient.id);
+      await load();
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo restaurar al paciente.");
+    }
   };
   const detectDuplicates = async () => {
     try {
@@ -698,6 +850,9 @@ export default function MedicalWorkspace({ operator = false }) {
       setError(requestError.message);
     }
   };
+  const patientTotalPages = Math.max(1, Math.ceil(patientTotal / patientPageSize));
+  const patientRangeStart = patientTotal ? (patientPage - 1) * patientPageSize + 1 : 0;
+  const patientRangeEnd = Math.min(patientPage * patientPageSize, patientTotal);
 
   return (
     <Shell
@@ -709,30 +864,13 @@ export default function MedicalWorkspace({ operator = false }) {
       {loading ? <Card className="h-44 animate-pulse" /> : null}
       {!loading && !error && isPatients ? (
         <section className="grid gap-3">
-          <div className="flex flex-wrap gap-2">
-            <label className="flex min-h-11 min-w-56 flex-1 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3"><span className="material-symbols-outlined text-on-surface-variant">search</span><input className="min-w-0 flex-1 bg-transparent outline-none" onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, DNI, teléfono o correo" value={query} /></label>
-            <Button icon="content_copy" onClick={detectDuplicates} variant="outlined">Detectar duplicados</Button>
-            <button aria-pressed={showInactive} className={`min-h-11 rounded-xl border px-3 text-sm font-bold ${showInactive ? "border-primary bg-primary text-white" : "border-outline-variant bg-white"}`} onClick={() => setShowInactive((current) => !current)} type="button">{showInactive ? "Ocultar inactivos" : "Ver inactivos"}</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex min-h-11 min-w-56 flex-[1_1_24rem] items-center gap-2 rounded-xl border border-outline-variant bg-white px-3"><span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">search</span><input className="min-w-0 flex-1 bg-transparent outline-none" onChange={(event) => { setQuery(event.target.value); setPatientPage(1); }} placeholder="Buscar por nombre, DNI, teléfono o correo" value={query} /></label>
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3 text-sm font-bold"><span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">filter_list</span><span className="sr-only">Estado</span><select aria-label="Filtrar pacientes por estado" className="bg-transparent outline-none" onChange={(event) => { setPatientStatus(event.target.value); setPatientPage(1); }} value={patientStatus}><option value="active">Activos</option><option value="all">Todos</option><option value="inactive">Inactivos</option></select></label>
+            <Button icon="content_copy" onClick={detectDuplicates} variant="secondary">Detectar duplicados</Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredPatients.map((patient) => (
-              <Card className="flex min-h-48 flex-col p-4" key={patient.id}>
-                <div className="flex items-start justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-fixed font-bold text-primary">{patient.firstName?.[0]}{patient.lastName?.[0]}</span><span className="min-w-0"><b className="block truncate">{patient.firstName} {patient.lastName}</b><small>{patient.documentType} {patient.document}</small></span></div><span className={`rounded-full px-2 py-1 text-xs font-bold ${patient.isActive ? "bg-emerald-50 text-emerald-800" : "bg-error-container text-on-error-container"}`}>{patient.isActive ? "Activo" : "Inactivo"}</span></div>
-                <p className="mt-3 text-sm text-on-surface-variant">{patient.phone || "Sin teléfono"} · {patient.email || "Sin correo"}</p>
-                <p className="mt-2 line-clamp-2 text-sm">{patient.allergies ? `Alergias: ${patient.allergies}` : "Sin alergias registradas"}</p>
-                <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                  <Button icon="clinical_notes" onClick={() => openPatient(patient)} size="small">Expediente</Button>
-                  {canCreatePatient ? <Button icon="edit" onClick={() => { setEditingPatient(patient); setModal("patient"); }} size="small" variant="outlined">Editar</Button> : null}
-                  {canManagePatientLifecycle ? (
-                    patient.isActive
-                      ? <Button icon="person_off" onClick={() => askDeactivate(patient)} size="small" variant="outlined">Desactivar</Button>
-                      : <Button icon="restore" onClick={async () => { await restoreMedicalPatient(patient.id); await load(); }} size="small" variant="outlined">Restaurar</Button>
-                  ) : null}
-                </div>
-              </Card>
-            ))}
-            {!filteredPatients.length ? <EmptyState description="Registra un paciente o ajusta la búsqueda." icon="groups" title="No hay pacientes para mostrar" /> : null}
-          </div>
+          {patients.length ? <MedicalPatientList canEdit={canCreatePatient} canManageLifecycle={canManagePatientLifecycle} onDeactivate={askDeactivate} onDelete={askPermanentDelete} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onOpen={openPatient} onOpenChange={setOpenPatientActionsId} onRestore={restorePatient} openPatientActionsId={openPatientActionsId} patients={patients} /> : <EmptyState description="Prueba con otro nombre, documento o estado." icon="groups" title="No hay pacientes para mostrar" />}
+          {patientTotal ? <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-on-surface-variant">Mostrando <b className="text-on-surface">{patientRangeStart}–{patientRangeEnd}</b> de <b className="text-on-surface">{patientTotal}</b> pacientes</p><div className="flex flex-wrap items-center gap-2"><label className="flex items-center gap-2 text-on-surface-variant">Filas<select aria-label="Pacientes por página" className="min-h-9 rounded-lg border border-outline-variant bg-white px-2 text-sm font-bold text-on-surface" onChange={(event) => { setPatientPageSize(Number(event.target.value)); setPatientPage(1); }} value={patientPageSize}><option value={15}>15</option><option value={30}>30</option><option value={50}>50</option></select></label><button aria-label="Página anterior" className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40" disabled={patientPage <= 1} onClick={() => setPatientPage((current) => Math.max(1, current - 1))} type="button"><span aria-hidden="true" className="material-symbols-outlined">chevron_left</span></button><span className="min-w-16 text-center font-bold">{patientPage} / {patientTotalPages}</span><button aria-label="Página siguiente" className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40" disabled={patientPage >= patientTotalPages} onClick={() => setPatientPage((current) => Math.min(patientTotalPages, current + 1))} type="button"><span aria-hidden="true" className="material-symbols-outlined">chevron_right</span></button></div></div> : null}
         </section>
       ) : null}
       {!loading && !error && !isPatients ? (
@@ -759,9 +897,10 @@ export default function MedicalWorkspace({ operator = false }) {
       ) : null}
       {modal === "patient" ? <MedicalPatientForm close={() => { setModal(""); setEditingPatient(null); }} onSaved={completeModal} patient={editingPatient} /> : null}
       {modal === "appointment" ? <MedicalAppointmentForm close={() => setModal("")} done={completeModal} patients={patients.filter((item) => item.isActive)} professionals={professionals} services={services} /> : null}
-      {modal === "record" && selectedPatient ? <MedicalRecordModal close={() => { setModal(""); setSelectedPatient(null); }} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onReload={reloadPatientRecords} patient={selectedPatient} record={clinicalRecord} /> : null}
+      {modal === "record" && selectedPatient ? <MedicalRecordModal close={() => { setModal(""); setSelectedPatient(null); }} onEdit={canCreatePatient ? (patient) => { setEditingPatient(patient); setModal("patient"); } : undefined} onReload={reloadPatientRecords} patient={selectedPatient} record={clinicalRecord} /> : null}
       {modal === "appointment-detail" && selectedAppointment ? <MedicalAppointmentDetail appointment={selectedAppointment} canUpdateStatus={canUpdateAppointmentStatus} close={() => setModal("")} done={completeModal} onOpenRecord={(patient) => { setSelectedAppointment(null); openPatient(patient); }} /> : null}
-      {canManagePatientLifecycle && modal === "deactivate" && selectedPatient ? <Modal onClose={() => setModal("")} title="Desactivar paciente"><div className="grid gap-4 p-5"><p>La ficha se conservará junto con sus citas e historia clínica. No se eliminarán datos de atención.</p><div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="person_off" onClick={async () => { await deactivateMedicalPatient(selectedPatient.id); setModal(""); await load(); }}>Desactivar</Button></div></div></Modal> : null}
+      {canManagePatientLifecycle && modal === "deactivate" && selectedPatient ? <Modal onClose={() => setModal("")} title="Desactivar paciente"><div className="grid gap-4 p-5"><p>La ficha se conservará junto con sus citas e historia clínica. No se eliminarán datos de atención.</p>{patientActionError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{patientActionError}</p> : null}<div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="person_off" onClick={async () => { try { setPatientActionError(""); await deactivateMedicalPatient(selectedPatient.id); setModal(""); await load(); } catch (requestError) { setPatientActionError(requestError.message || "No se pudo desactivar al paciente."); } }}>Desactivar</Button></div></div></Modal> : null}
+      {canManagePatientLifecycle && modal === "permanent-delete" && selectedPatient ? <Modal onClose={() => setModal("")} title="Eliminar paciente definitivamente"><div className="grid gap-4 p-5"><p>Se eliminará definitivamente la ficha de <b>{selectedPatient.firstName} {selectedPatient.lastName}</b>. Solo se permite si no tiene citas, historia clínica, pagos ni archivos adjuntos.</p><p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">Esta acción no se puede deshacer. Si el paciente ya tiene atención registrada, usa Desactivar.</p>{patientActionError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{patientActionError}</p> : null}<div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="delete_forever" onClick={async () => { try { setPatientActionError(""); await permanentlyDeleteMedicalPatient(selectedPatient.id); setSelectedPatient(null); setModal(""); await load(); } catch (requestError) { setPatientActionError(requestError.message || "No se pudo eliminar al paciente."); } }} type="button" variant="danger">Eliminar definitivamente</Button></div></div></Modal> : null}
       {modal === "duplicates" ? <Modal onClose={() => setModal("")} title="Posibles pacientes duplicados"><div className="grid gap-3 p-5">{!canManagePatientLifecycle && duplicateGroups.length ? <p className="rounded-xl bg-surface-container-low p-3 text-sm text-on-surface-variant">Solo la administración puede fusionar fichas de pacientes.</p> : null}{duplicateGroups.map((group) => { const [target, ...sources] = group.patients; return <Card className="p-3" key={target.id}><p className="text-sm">Conservar ficha: <b>{target.firstName} {target.lastName} · {target.document}</b></p>{sources.map((source) => <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant pt-2" key={source.id}><span className="text-sm">{canManagePatientLifecycle ? "Fusionar" : "Posible duplicado:"} {source.firstName} {source.lastName} · {source.document}</span>{canManagePatientLifecycle ? <Button icon="merge_type" onClick={async () => { await mergeMedicalPatient(source.id, target.id); setModal(""); await load(); }} size="small">Fusionar</Button> : null}</div>)}</Card>; })}{!duplicateGroups.length ? <EmptyState description="No encontramos fichas activas con coincidencias de nombre, fecha, teléfono o correo." icon="verified" title="Sin duplicados" /> : null}</div></Modal> : null}
     </Shell>
   );
