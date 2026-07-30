@@ -2,7 +2,7 @@ import { registerFormTemplate } from "../../engine/templateRegistry";
 export default registerFormTemplate({
   key: "health.patient",
   title: { create: "Registrar paciente", edit: "Editar paciente" },
-  defaults: { documentType: "DNI", sex: "unspecified", status: "active" },
+  defaults: { documentType: "DNI", sex: "unspecified" },
   toPayload: (v) => ({ ...v, birthDate: v.birthDate || null }),
   sections: [
     {
@@ -65,7 +65,11 @@ export default registerFormTemplate({
       title: "Información médica",
       icon: "medical_information",
       fields: [
-        { name: "bloodType", label: "Grupo sanguíneo" },
+        {
+          name: "bloodType",
+          label: "Grupo sanguíneo",
+          nonNumericMaxLength: 20,
+        },
         { name: "allergies", label: "Alergias", type: "textarea" },
         {
           name: "chronicConditions",

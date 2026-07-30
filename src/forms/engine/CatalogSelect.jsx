@@ -8,12 +8,14 @@ export default function CatalogSelect({
   onChange,
   required,
   searchable = false,
+  validationError,
   value,
 }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const errorId = validationError ? `${name}-error` : undefined;
   useEffect(() => {
     let active = true;
     const timer = setTimeout(
@@ -23,11 +25,11 @@ export default function CatalogSelect({
           .then((response) => {
             if (active) {
               setItems(response.items);
-              setError("");
+              setLoadError("");
             }
           })
           .catch((requestError) => {
-            if (active) setError(requestError.message);
+            if (active) setLoadError(requestError.message);
           })
           .finally(() => {
             if (active) setLoading(false);
@@ -56,7 +58,9 @@ export default function CatalogSelect({
         />
       ) : null}
       <select
-        className="min-h-11 rounded-xl border border-outline-variant bg-white px-3 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+        aria-describedby={errorId}
+        aria-invalid={validationError ? true : undefined}
+        className={`min-h-11 rounded-xl border bg-white px-3 font-normal outline-none transition focus:ring-2 ${validationError ? "border-error focus:border-error focus:ring-error/20" : "border-outline-variant focus:border-primary focus:ring-primary/20"}`}
         name={name}
         onChange={onChange}
         required={required}
@@ -65,7 +69,7 @@ export default function CatalogSelect({
         <option value="">
           {loading
             ? "Cargando opciones..."
-            : error || `Seleccionar ${label.toLowerCase()}`}
+            : loadError || `Seleccionar ${label.toLowerCase()}`}
         </option>
         {items.map((item) => (
           <option key={item.id} value={item.code}>
@@ -73,7 +77,8 @@ export default function CatalogSelect({
           </option>
         ))}
       </select>
-      {error ? <small className="font-normal text-error">{error}</small> : null}
+      {loadError ? <small className="font-normal text-error">{loadError}</small> : null}
+      {validationError ? <small className="font-normal text-error" id={errorId} role="alert">{validationError}</small> : null}
     </label>
   );
 }
