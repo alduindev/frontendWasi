@@ -9,7 +9,7 @@ export const navItems = [
   { icon: 'settings', label: 'Configuracion', to: '/dashboard/settings' },
 ]
 
-export const productCategories = ['Alimentos', 'Bebidas', 'Snacks', 'Minibar', 'Amenities', 'Suministros hotel', 'Hogar', 'Limpieza', 'Textil']
+export const productCategories = ['Alimentos', 'Bebidas', 'Snacks', 'Minibar', 'Amenities', 'Suministros hotel', 'Hogar', 'Limpieza', 'Textil', 'Insumos clínicos', 'Medicamentos', 'Material de rehabilitación', 'Equipos médicos', 'Higiene y protección', 'Otros insumos']
 export const medicalProductCategories = ['Medicamentos', 'Insumos clínicos', 'Material de rehabilitación', 'Equipos médicos', 'Higiene y protección', 'Otros insumos']
 export const productStatuses = ['Activo', 'Inactivo', 'Descontinuado']
 export const productUnits = ['unidad', 'kg', 'g', 'litro', 'ml', 'caja', 'paquete']
