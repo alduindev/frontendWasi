@@ -97,6 +97,65 @@ function OpenRecordButton({ actionIcon, actionLabel, onOpen, patient }) {
   );
 }
 
+export function PatientDirectoryPagination({
+  onPageChange,
+  page,
+  pageSize,
+  total,
+}) {
+  if (!total) return null;
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const rangeStart = (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, total);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-on-surface-variant">
+        Mostrando <b className="text-on-surface">{rangeStart}–{rangeEnd}</b> de{" "}
+        <b className="text-on-surface">{total}</b> pacientes
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-container-low px-2.5 text-sm font-bold text-on-surface-variant"
+          title="Se ajusta automáticamente al tamaño de la ventana"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined text-base">
+            view_list
+          </span>
+          {pageSize} por página
+        </span>
+        <button
+          aria-label="Página anterior"
+          className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">
+            chevron_left
+          </span>
+        </button>
+        <span aria-live="polite" className="min-w-24 text-center font-bold">
+          Página {currentPage} de {totalPages}
+        </span>
+        <button
+          aria-label="Página siguiente"
+          className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">
+            chevron_right
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Shared responsive directory used by clinical modules. Each workspace keeps
  * ownership of permissions and actions, while this component owns the layout.

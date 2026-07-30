@@ -3,7 +3,9 @@ import { useParams, useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
 import EntityAttachments from "../../components/attachments/EntityAttachments";
-import PatientDirectoryList from "../../components/patients/PatientDirectoryList";
+import PatientDirectoryList, {
+  PatientDirectoryPagination,
+} from "../../components/patients/PatientDirectoryList";
 import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
@@ -13,6 +15,7 @@ import Tooltip from "../../components/ui/Tooltip";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import useResponsivePatientPageSize from "../../hooks/useResponsivePatientPageSize";
 import {
   createMedicalAppointment,
   createMedicalDiagnosis,
@@ -724,7 +727,7 @@ export default function MedicalWorkspace({ operator = false }) {
   const [query, setQuery] = useState(() => searchParams.get("search") || "");
   const [patientTotal, setPatientTotal] = useState(0);
   const [patientPage, setPatientPage] = useState(1);
-  const [patientPageSize, setPatientPageSize] = useState(15);
+  const patientPageSize = useResponsivePatientPageSize();
   const [patientStatus, setPatientStatus] = useState("active");
   const [openPatientActionsId, setOpenPatientActionsId] = useState(null);
   const [view, setView] = useState("week");
@@ -850,10 +853,6 @@ export default function MedicalWorkspace({ operator = false }) {
       setError(requestError.message);
     }
   };
-  const patientTotalPages = Math.max(1, Math.ceil(patientTotal / patientPageSize));
-  const patientRangeStart = patientTotal ? (patientPage - 1) * patientPageSize + 1 : 0;
-  const patientRangeEnd = Math.min(patientPage * patientPageSize, patientTotal);
-
   return (
     <Shell
       action={(isPatients ? canCreatePatient : canCreateAppointment) ? <Button icon="add" onClick={() => setModal(isPatients ? "patient" : "appointment")}>{isPatients ? "Registrar paciente" : "Nueva cita"}</Button> : null}
@@ -870,7 +869,12 @@ export default function MedicalWorkspace({ operator = false }) {
             <Button icon="content_copy" onClick={detectDuplicates} variant="secondary">Detectar duplicados</Button>
           </div>
           {patients.length ? <MedicalPatientList canEdit={canCreatePatient} canManageLifecycle={canManagePatientLifecycle} onDeactivate={askDeactivate} onDelete={askPermanentDelete} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onOpen={openPatient} onOpenChange={setOpenPatientActionsId} onRestore={restorePatient} openPatientActionsId={openPatientActionsId} patients={patients} /> : <EmptyState description="Prueba con otro nombre, documento o estado." icon="groups" title="No hay pacientes para mostrar" />}
-          {patientTotal ? <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-white px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-on-surface-variant">Mostrando <b className="text-on-surface">{patientRangeStart}–{patientRangeEnd}</b> de <b className="text-on-surface">{patientTotal}</b> pacientes</p><div className="flex flex-wrap items-center gap-2"><label className="flex items-center gap-2 text-on-surface-variant">Filas<select aria-label="Pacientes por página" className="min-h-9 rounded-lg border border-outline-variant bg-white px-2 text-sm font-bold text-on-surface" onChange={(event) => { setPatientPageSize(Number(event.target.value)); setPatientPage(1); }} value={patientPageSize}><option value={15}>15</option><option value={30}>30</option><option value={50}>50</option></select></label><button aria-label="Página anterior" className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40" disabled={patientPage <= 1} onClick={() => setPatientPage((current) => Math.max(1, current - 1))} type="button"><span aria-hidden="true" className="material-symbols-outlined">chevron_left</span></button><span className="min-w-16 text-center font-bold">{patientPage} / {patientTotalPages}</span><button aria-label="Página siguiente" className="grid size-9 place-items-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40" disabled={patientPage >= patientTotalPages} onClick={() => setPatientPage((current) => Math.min(patientTotalPages, current + 1))} type="button"><span aria-hidden="true" className="material-symbols-outlined">chevron_right</span></button></div></div> : null}
+          <PatientDirectoryPagination
+            onPageChange={setPatientPage}
+            page={patientPage}
+            pageSize={patientPageSize}
+            total={patientTotal}
+          />
         </section>
       ) : null}
       {!loading && !error && !isPatients ? (

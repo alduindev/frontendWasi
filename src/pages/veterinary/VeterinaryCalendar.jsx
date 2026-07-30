@@ -19,6 +19,7 @@ import {
 import { useAppConfig } from "../../context/appConfigStore";
 import { useAuth } from "../../context/authStore";
 import * as api from "../../services/veterinaryService";
+import VeterinaryAttentionForm from "./VeterinaryAttentionForm";
 import VeterinaryPaymentModal from "./VeterinaryPaymentModal";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 import {
@@ -47,6 +48,12 @@ function toUtc(date, time) {
   return new Date(`${date}T${time}:00-05:00`).toISOString();
 }
 
+const appointmentSteps = [
+  { icon: "pets", label: "Mascota" },
+  { icon: "event_available", label: "Horario" },
+  { icon: "task_alt", label: "Confirmar" },
+];
+
 function AppointmentForm({
   date,
   onClose,
@@ -54,28 +61,66 @@ function AppointmentForm({
   pets,
   professionals,
 }) {
+  const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [petId, setPetId] = useState("");
+  const [draft, setDraft] = useState({
+    petId: "",
+    professionalId: "",
+    startsAt: "09:00",
+    endsAt: "09:30",
+    reason: "",
+    notes: "",
+  });
+  const pet = pets.find((item) => String(item.id) === String(draft.petId));
+  const professional = professionals.find(
+    (item) => String(item.id) === String(draft.professionalId),
+  );
+  const setValue = (key, value) => {
+    setError("");
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+  const validate = (currentStep = step) => {
+    if (currentStep === 0 && !pet) {
+      setError("Selecciona una mascota para continuar.");
+      return false;
+    }
+    if (currentStep === 1) {
+      if (!draft.startsAt || !draft.endsAt || !draft.reason.trim()) {
+        setError("Completa el horario y el motivo de la cita.");
+        return false;
+      }
+      const startsAt = toUtc(date, draft.startsAt);
+      const endsAt = toUtc(date, draft.endsAt);
+      if (new Date(endsAt) <= new Date(startsAt)) {
+        setError("La hora de fin debe ser posterior al inicio.");
+        return false;
+      }
+      if (new Date(startsAt) <= new Date()) {
+        setError("Elige una hora futura para la cita.");
+        return false;
+      }
+    }
+    setError("");
+    return true;
+  };
   const save = async (event) => {
     event.preventDefault();
+    if (step < appointmentSteps.length - 1) {
+      if (validate(step)) setStep((current) => current + 1);
+      return;
+    }
+    if (!validate(0) || !validate(1)) return;
     setError("");
     setSaving(true);
-    const form = new FormData(event.currentTarget);
-    const startsAt = toUtc(date, form.get("starts_at"));
-    const endsAt = toUtc(date, form.get("ends_at"));
     try {
-      if (new Date(endsAt) <= new Date(startsAt))
-        throw new Error("La hora de fin debe ser posterior al inicio.");
-      if (new Date(startsAt) < new Date())
-        throw new Error("No puedes programar una cita en una hora pasada.");
       await api.createVeterinaryAppointment({
-        pet_id: form.get("pet_id"),
-        professional_id: form.get("professional_id") || null,
-        starts_at: startsAt,
-        ends_at: endsAt,
-        reason: form.get("reason"),
-        notes: form.get("notes"),
+        pet_id: draft.petId,
+        professional_id: draft.professionalId || null,
+        starts_at: toUtc(date, draft.startsAt),
+        ends_at: toUtc(date, draft.endsAt),
+        reason: draft.reason.trim(),
+        notes: draft.notes.trim(),
       });
       onSaved();
     } catch (requestError) {
@@ -85,100 +130,95 @@ function AppointmentForm({
     }
   };
   return (
-    <Modal onClose={onClose} title="Agendar cita veterinaria">
-      <form className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5" onSubmit={save}>
-        <div className="rounded-xl bg-primary-fixed p-3 sm:col-span-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-primary">
-            Fecha seleccionada
-          </p>
-          <b className="capitalize">{dayLabel(date)}</b>
-        </div>
-        <EntitySearchSelect
-          getLabel={(pet) => pet.name}
-          getMeta={(pet) =>
-            [pet.owner?.name, pet.owner?.document, pet.owner?.phone]
-              .filter(Boolean)
-              .join(" · ")
-          }
-          getSearchValues={(pet) => [
-            pet.name,
-            pet.code,
-            pet.owner?.name,
-            pet.owner?.document,
-            pet.owner?.phone,
-            pet.owner?.email,
-          ]}
-          items={pets}
-          label="Mascota o propietario"
-          name="pet_id"
-          onChange={setPetId}
-          placeholder="Buscar mascota, propietario, DNI o celular"
-          required
-          value={petId}
-        />
-        <label className="grid gap-1">
-          Profesional
-          <select className={field} name="professional_id">
-            <option value="">Por asignar</option>
-            {professionals.map((professional) => (
-              <option key={professional.id} value={professional.id}>
-                {professional.name} · {professional.site}
-              </option>
+    <Modal dialogClassName="sm:max-w-3xl" onClose={onClose} title="Agendar cita veterinaria">
+      <form className="grid min-h-0" onSubmit={save}>
+        <div className="border-b border-outline-variant px-4 py-3 sm:px-5">
+          <nav aria-label="Pasos para agendar la cita" className="grid grid-cols-3 gap-1 rounded-2xl bg-surface-container-low p-1">
+            {appointmentSteps.map((item, index) => (
+              <button
+                aria-current={index === step ? "step" : undefined}
+                className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition sm:text-sm ${index === step ? "bg-primary text-white shadow-md" : index < step ? "bg-primary-fixed text-primary" : "text-on-surface-variant"}`}
+                disabled={index > step}
+                key={item.label}
+                onClick={() => {
+                  if (index < step) {
+                    setError("");
+                    setStep(index);
+                  }
+                }}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg">{index < step ? "check_circle" : item.icon}</span>
+                <span className="truncate"><span className="sm:hidden">{index + 1}</span><span className="hidden sm:inline">{index + 1}. {item.label}</span></span>
+              </button>
             ))}
-          </select>
-        </label>
-        <label className="grid gap-1">
-          Inicio
-          <input
-            className={field}
-            defaultValue="09:00"
-            name="starts_at"
-            required
-            type="time"
-          />
-        </label>
-        <label className="grid gap-1">
-          Fin
-          <input
-            className={field}
-            defaultValue="09:30"
-            name="ends_at"
-            required
-            type="time"
-          />
-        </label>
-        <label className="grid gap-1 sm:col-span-2">
-          Motivo
-          <input
-            className={field}
-            maxLength="300"
-            name="reason"
-            placeholder="Consulta, vacuna, control, estética..."
-            required
-          />
-        </label>
-        <label className="grid gap-1 sm:col-span-2">
-          Indicaciones
-          <textarea
-            className={`${field} min-h-20 py-2`}
-            maxLength="2000"
-            name="notes"
-          />
-        </label>
-        {error ? (
-          <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2">
-            {error}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap justify-end gap-2 sm:col-span-2">
-          <Button onClick={onClose} type="button" variant="secondary">
-            Cancelar
+          </nav>
+        </div>
+        <div className="grid min-h-[20rem] content-start gap-4 p-4 sm:p-5">
+          {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error">{error}</p> : null}
+          {step === 0 ? (
+            <fieldset className="grid gap-4">
+              <legend className="text-lg font-bold">¿Qué mascota atenderemos?</legend>
+              <p className="-mt-3 text-sm text-on-surface-variant">Busca por mascota, propietario, documento o celular.</p>
+              <EntitySearchSelect
+                getLabel={(item) => item.name}
+                getMeta={(item) => [item.owner?.name, item.owner?.document, item.owner?.phone].filter(Boolean).join(" · ")}
+                getSearchValues={(item) => [item.name, item.code, item.owner?.name, item.owner?.document, item.owner?.phone, item.owner?.email]}
+                items={pets}
+                label="Mascota o propietario"
+                name="pet_id"
+                onChange={(value) => setValue("petId", value)}
+                placeholder="Mascota, propietario, DNI o celular"
+                required
+                value={draft.petId}
+              />
+              {pet ? <div className="rounded-xl bg-primary-fixed p-3 text-primary"><b>{pet.name}</b><p className="text-sm">{pet.code} · {pet.owner?.name || "Propietario no registrado"}</p></div> : null}
+            </fieldset>
+          ) : null}
+          {step === 1 ? (
+            <fieldset className="grid gap-4">
+              <legend className="text-lg font-bold">Define el horario</legend>
+              <div className="rounded-xl bg-primary-fixed p-3 text-primary"><b className="block">{dayLabel(date)}</b><span className="text-sm">Fecha elegida en el calendario</span></div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1">Profesional
+                  <select className={field} onChange={(event) => setValue("professionalId", event.target.value)} value={draft.professionalId}>
+                    <option value="">Por asignar</option>
+                    {professionals.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.site}</option>)}
+                  </select>
+                </label>
+                <label className="grid gap-1">Inicio
+                  <input className={field} onChange={(event) => setValue("startsAt", event.target.value)} required type="time" value={draft.startsAt} />
+                </label>
+                <label className="grid gap-1">Fin
+                  <input className={field} onChange={(event) => setValue("endsAt", event.target.value)} required type="time" value={draft.endsAt} />
+                </label>
+                <label className="grid gap-1 sm:col-span-2">Motivo
+                  <input className={field} maxLength="300" onChange={(event) => setValue("reason", event.target.value)} placeholder="Consulta, vacuna, control, estética..." required value={draft.reason} />
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
+          {step === 2 ? (
+            <fieldset className="grid gap-4">
+              <legend className="text-lg font-bold">Revisa y confirma</legend>
+              <div className="grid gap-2 rounded-2xl border border-outline-variant bg-surface-container-low p-4 text-sm">
+                <p><b>Mascota:</b> {pet?.name} · {pet?.owner?.name}</p>
+                <p><b>Profesional:</b> {professional?.name || "Por asignar"}</p>
+                <p><b>Horario:</b> {dayLabel(date)} · {draft.startsAt} - {draft.endsAt}</p>
+                <p><b>Motivo:</b> {draft.reason}</p>
+              </div>
+              <label className="grid gap-1">Indicaciones para el equipo
+                <textarea className={`${field} min-h-24 py-2`} maxLength="2000" onChange={(event) => setValue("notes", event.target.value)} value={draft.notes} />
+              </label>
+            </fieldset>
+          ) : null}
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t border-outline-variant bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <Button disabled={saving} onClick={() => { if (step === 0) onClose(); else { setError(""); setStep((current) => current - 1); } }} type="button" variant="secondary">
+            {step === 0 ? "Cancelar" : "Anterior"}
           </Button>
-          <Button
-            disabled={saving || !pets.length}
-            type="submit"
-          >
-            {saving ? "Guardando..." : "Agendar cita"}
+          <Button disabled={saving || !pets.length} icon={step === appointmentSteps.length - 1 ? "event_available" : "arrow_forward"} type="submit">
+            {saving ? "Agendando..." : step === appointmentSteps.length - 1 ? "Confirmar cita" : "Continuar"}
           </Button>
         </div>
       </form>
@@ -303,6 +343,14 @@ function RecordView({ appointment, canSeeBilling, onBack }) {
                     <Badge>{item.recordType}</Badge>
                     <b className="ml-2">{item.diagnosis || "Atención clínica"}</b>
                     <p className="mt-1 text-sm">{item.treatment}</p>
+                    {item.supplies?.length ? (
+                      <p className="mt-2 text-xs text-primary">
+                        <b>Inventario:</b>{" "}
+                        {item.supplies
+                          .map((supply) => `${supply.quantity} × ${supply.product.name}`)
+                          .join(", ")}
+                      </p>
+                    ) : null}
                     <small className="text-on-surface-variant">
                       {dateTimeInLima(item.createdAt)} · {item.professional?.name || "Equipo veterinario"}
                     </small>
@@ -411,12 +459,17 @@ export function AppointmentDetail({
   canManage,
   canSeeBilling,
   canStart,
+  canRecord = canStart,
+  appointments = [],
   onClose,
   onSaved,
+  professionals = [],
 }) {
   const [recordOpen, setRecordOpen] = useState(false);
+  const [attentionOpen, setAttentionOpen] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [reminding, setReminding] = useState(false);
   const meta = statusMeta[appointment.status] || statusMeta.scheduled;
   const change = async (status) => {
     setSaving(true);
@@ -430,6 +483,33 @@ export function AppointmentDetail({
       setSaving(false);
     }
   };
+  const remind = async () => {
+    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
+    setReminding(true);
+    setError("");
+    try {
+      const result = await api.prepareVeterinaryAppointmentWhatsApp(appointment.id);
+      if (popup) popup.location.href = result.url;
+      else window.location.href = result.url;
+    } catch (requestError) {
+      if (popup) popup.close();
+      setError(requestError.message);
+    } finally {
+      setReminding(false);
+    }
+  };
+  if (attentionOpen)
+    return (
+      <VeterinaryAttentionForm
+        appointments={appointments}
+        initialAppointmentId={appointment.id}
+        initialProfessionalId={appointment.professional?.id || ""}
+        onClose={() => setAttentionOpen(false)}
+        onSaved={onSaved}
+        pet={appointment.pet}
+        professionals={professionals}
+      />
+    );
   return (
     <Modal
       contentClassName="min-h-0 overflow-hidden"
@@ -514,6 +594,17 @@ export function AppointmentDetail({
             <Button onClick={onClose} type="button" variant="secondary">
               Cerrar
             </Button>
+            {canManage && ["scheduled", "confirmed"].includes(appointment.status) ? (
+              <Button
+                disabled={saving || reminding}
+                icon="chat"
+                onClick={remind}
+                type="button"
+                variant="secondary"
+              >
+                {reminding ? "Preparando..." : "Recordar por WhatsApp"}
+              </Button>
+            ) : null}
             {canManage && appointment.status === "scheduled" ? (
               <Button
                 disabled={saving}
@@ -530,6 +621,16 @@ export function AppointmentDetail({
                 onClick={() => change("in_attention")}
               >
                 Iniciar atención
+              </Button>
+            ) : null}
+            {canRecord && appointment.status === "in_attention" ? (
+              <Button
+                disabled={saving}
+                icon="clinical_notes"
+                onClick={() => setAttentionOpen(true)}
+                type="button"
+              >
+                Registrar atención
               </Button>
             ) : null}
             {canManage && ["scheduled", "confirmed"].includes(appointment.status) ? (
@@ -578,7 +679,7 @@ export default function VeterinaryCalendar({ operator = false }) {
   const capabilities = new Set(config?.capabilities || []);
   const reception = functions.has("veterinary-reception");
   const clinical =
-    functions.has("veterinarian") || functions.has("veterinary-assistant");
+    functions.has("veterinarian") || functions.has("veterinary-groomer");
   const canSchedule = admin || reception;
   const canManage = admin || reception;
   const canStart = (admin || clinical) && (admin || capabilities.has("pets.edit"));
@@ -770,11 +871,14 @@ export default function VeterinaryCalendar({ operator = false }) {
       {modal?.type === "detail" ? (
         <AppointmentDetail
           appointment={modal.appointment}
+          appointments={appointments}
           canManage={canManage}
+          canRecord={canStart}
           canSeeBilling={canSeeBilling}
           canStart={canStart}
           onClose={() => setModal(null)}
           onSaved={saved}
+          professionals={professionals}
         />
       ) : null}
     </Shell>

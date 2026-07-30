@@ -8,7 +8,12 @@ import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import EntityAttachments from "../../components/attachments/EntityAttachments";
+import VeterinaryPetDirectoryList from "../../components/patients/VeterinaryPetDirectoryList";
+import Tooltip from "../../components/ui/Tooltip";
+import { useAppConfig } from "../../context/appConfigStore";
+import { useAuth } from "../../context/authStore";
 import * as api from "../../services/veterinaryService";
+import VeterinaryAttentionForm from "./VeterinaryAttentionForm";
 import VeterinaryPaymentModal from "./VeterinaryPaymentModal";
 import { matchesEntitySearch } from "../../utils/entitySearch";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
@@ -79,9 +84,10 @@ function Metric({ icon, label, value, note }) {
     </Card>
   );
 }
-function PetForm({ close, done }) {
-  const [photo, setPhoto] = useState(""),
-    [fileError, setFileError] = useState("");
+function PetForm({ close, done, pet = null }) {
+  const [photo, setPhoto] = useState(pet?.photoUrl || ""),
+    [fileError, setFileError] = useState(""),
+    [formError, setFormError] = useState("");
   const selectPhoto = async (event) => {
     const file = event.target.files?.[0];
     setFileError("");
@@ -103,8 +109,10 @@ function PetForm({ close, done }) {
   };
   const save = async (event) => {
     event.preventDefault();
+    setFormError("");
     const x = submitData(event);
-    await api.createPet({
+    const payload = {
+      code: pet?.code || "",
       name: x.name,
       species: x.species,
       breed: x.breed,
@@ -115,22 +123,30 @@ function PetForm({ close, done }) {
       microchip: x.microchip,
       allergies: x.allergies,
       conditions: x.conditions,
-      photo_url: photo || "",
+      status: x.status || pet?.status || "active",
+      photo_url: photo,
       owner: {
         name: x.owner_name,
         document: x.owner_document,
         phone: x.owner_phone,
         email: x.owner_email,
         address: x.owner_address,
+        notes: pet?.owner?.notes || "",
       },
-    });
-    done();
+    };
+    try {
+      if (pet) await api.updatePet(pet.id, payload);
+      else await api.createPet(payload);
+      await done();
+    } catch (requestError) {
+      setFormError(requestError.message);
+    }
   };
   return (
     <Modal
       dialogClassName="sm:max-w-3xl"
       onClose={close}
-      title="Registrar mascota"
+      title={pet ? `Editar mascota · ${pet.name}` : "Registrar mascota"}
     >
       <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
         <div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-3">
@@ -175,11 +191,11 @@ function PetForm({ close, done }) {
         </h3>
         <label>
           Nombre
-          <input className={field} name="name" required />
+          <input className={field} defaultValue={pet?.name || ""} name="name" required />
         </label>
         <label>
           Especie
-          <select className={field} name="species">
+          <select className={field} defaultValue={pet?.species || "dog"} name="species">
             <option value="dog">Perro</option>
             <option value="cat">Gato</option>
             <option value="bird">Ave</option>
@@ -189,11 +205,11 @@ function PetForm({ close, done }) {
         </label>
         <label>
           Raza
-          <input className={field} name="breed" />
+          <input className={field} defaultValue={pet?.breed || ""} name="breed" />
         </label>
         <label>
           Sexo
-          <select className={field} name="sex">
+          <select className={field} defaultValue={pet?.sex || "unknown"} name="sex">
             <option value="unknown">Sin especificar</option>
             <option value="female">Hembra</option>
             <option value="male">Macho</option>
@@ -201,12 +217,13 @@ function PetForm({ close, done }) {
         </label>
         <label>
           Nacimiento
-          <input className={field} name="birth_date" type="date" />
+          <input className={field} defaultValue={(pet?.birthDate || "").slice(0, 10)} name="birth_date" type="date" />
         </label>
         <label>
           Peso (kg)
           <input
             className={field}
+            defaultValue={pet?.weightKg || ""}
             min="0"
             name="weight_kg"
             step="0.01"
@@ -215,31 +232,42 @@ function PetForm({ close, done }) {
         </label>
         <label>
           Color
-          <input className={field} name="color" />
+          <input className={field} defaultValue={pet?.color || ""} name="color" />
         </label>
         <label>
           Microchip
-          <input className={field} name="microchip" />
+          <input className={field} defaultValue={pet?.microchip || ""} name="microchip" />
         </label>
+        {pet ? (
+          <label>
+            Estado
+            <select className={field} defaultValue={pet.status || "active"} name="status">
+              <option value="active">Activa</option>
+              <option value="inactive">Inactiva</option>
+              <option value="deceased">Fallecida</option>
+            </select>
+          </label>
+        ) : null}
         <label className="sm:col-span-2">
           Alergias
-          <input className={field} name="allergies" />
+          <input className={field} defaultValue={pet?.allergies || ""} name="allergies" />
         </label>
         <label className="sm:col-span-2">
           Condiciones previas
-          <input className={field} name="conditions" />
+          <input className={field} defaultValue={pet?.conditions || ""} name="conditions" />
         </label>
         <h3 className="sm:col-span-2 mt-2 font-bold text-primary">
           Propietario
         </h3>
         <label>
           Nombre completo
-          <input className={field} name="owner_name" required />
+          <input className={field} defaultValue={pet?.owner?.name || ""} name="owner_name" required />
         </label>
         <label>
           DNI / documento
           <input
             className={field}
+            defaultValue={pet?.owner?.document || ""}
             inputMode="numeric"
             maxLength="12"
             name="owner_document"
@@ -251,6 +279,7 @@ function PetForm({ close, done }) {
           Teléfono
           <input
             className={field}
+            defaultValue={pet?.owner?.phone || ""}
             inputMode="numeric"
             maxLength="15"
             name="owner_phone"
@@ -258,22 +287,53 @@ function PetForm({ close, done }) {
         </label>
         <label>
           Correo
-          <input className={field} name="owner_email" type="email" />
+          <input className={field} defaultValue={pet?.owner?.email || ""} name="owner_email" type="email" />
         </label>
         <label className="sm:col-span-2">
           Dirección
-          <input className={field} name="owner_address" />
+          <input className={field} defaultValue={pet?.owner?.address || ""} name="owner_address" />
         </label>
+        {formError ? <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2">{formError}</p> : null}
         <div className="sm:col-span-2 flex flex-wrap justify-end gap-2">
           <Button onClick={close} type="button" variant="secondary">
             Cancelar
           </Button>
           <Button disabled={Boolean(fileError)} type="submit">
-            Guardar mascota
+            {pet ? "Guardar cambios" : "Guardar mascota"}
           </Button>
         </div>
       </form>
     </Modal>
+  );
+}
+function PetActionsMenu({
+  canEdit,
+  canManageLifecycle,
+  isOpen,
+  onDeactivate,
+  onDelete,
+  onEdit,
+  onOpenChange,
+  onRestore,
+  pet,
+}) {
+  if (!canEdit && !canManageLifecycle) return null;
+  const closeAndRun = (action) => () => {
+    onOpenChange(null);
+    action(pet);
+  };
+  return (
+    <div className="relative shrink-0" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(null); }} onKeyDown={(event) => { if (event.key === "Escape") onOpenChange(null); }}>
+      <Tooltip label="Más acciones" placement="top-end">
+        <button aria-expanded={isOpen} aria-haspopup="menu" aria-label={`Más acciones para ${pet.name}`} className="grid size-9 place-items-center rounded-lg border border-outline-variant bg-white text-on-surface-variant shadow-sm transition hover:border-primary hover:bg-primary-fixed hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30" onClick={() => onOpenChange(isOpen ? null : pet.id)} type="button"><span aria-hidden="true" className="material-symbols-outlined text-xl">more_vert</span></button>
+      </Tooltip>
+      {isOpen ? (
+        <div className="absolute right-0 top-full z-40 mt-2 w-60 rounded-xl border border-outline-variant bg-white p-1.5 shadow-xl" role="menu">
+          {canEdit ? <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition hover:bg-surface-container-low" onClick={closeAndRun(onEdit)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>Editar ficha</button> : null}
+          {canManageLifecycle ? <><div className="my-1 border-t border-outline-variant" />{pet.status === "active" ? <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition hover:bg-surface-container-low" onClick={closeAndRun(onDeactivate)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">pets</span>Desactivar mascota</button> : null}{pet.status === "inactive" ? <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition hover:bg-surface-container-low" onClick={closeAndRun(onRestore)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">restore</span>Restaurar mascota</button> : null}<button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-error transition hover:bg-error-container" onClick={closeAndRun(onDelete)} role="menuitem" type="button"><span aria-hidden="true" className="material-symbols-outlined text-lg">delete_forever</span>Eliminar definitivamente</button></> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 function AppointmentForm({ pets, professionals, close, done }) {
@@ -359,123 +419,6 @@ function AppointmentForm({ pets, professionals, close, done }) {
             Cancelar
           </Button>
           <Button type="submit">Agendar</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-function AttentionForm({ pet, appointments, professionals, close, done }) {
-  const save = async (event) => {
-    event.preventDefault();
-    const x = submitData(event);
-    await api.createVeterinaryRecord({
-      pet_id: pet.id,
-      appointment_id: x.appointment_id || null,
-      professional_id: x.professional_id || null,
-      record_type: x.record_type,
-      diagnosis: x.diagnosis,
-      treatment: x.treatment,
-      notes: x.notes,
-      temperature: x.temperature ? Number(x.temperature) : null,
-      weight_kg: x.weight_kg ? Number(x.weight_kg) : null,
-      amount: Number(x.amount || 0),
-    });
-    done();
-  };
-  return (
-    <Modal onClose={close} title={`Atención · ${pet.name}`}>
-      <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
-        <label>
-          Tipo
-          <select className={field} name="record_type">
-            <option value="consultation">Consulta</option>
-            <option value="emergency">Emergencia</option>
-            <option value="surgery">Cirugía</option>
-            <option value="control">Control</option>
-            <option value="laboratory">Laboratorio</option>
-            <option value="grooming">Estética</option>
-          </select>
-        </label>
-        <label>
-          Cita vinculada
-          <select className={field} name="appointment_id">
-            <option value="">Sin cita</option>
-            {appointments
-              .filter(
-                (x) =>
-                  x.petId === pet.id &&
-                  ["scheduled", "confirmed", "in_attention"].includes(x.status),
-              )
-              .map((x) => (
-                <option key={x.id} value={x.id}>
-                  {local(x.startsAt)} · {x.reason}
-                </option>
-              ))}
-          </select>
-        </label>
-        <label>
-          Profesional
-          <select className={field} name="professional_id">
-            <option value="">Sin asignar</option>
-            {professionals.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Importe
-          <input
-            className={field}
-            min="0"
-            name="amount"
-            step="0.01"
-            type="number"
-          />
-        </label>
-        <label>
-          Temperatura °C
-          <input
-            className={field}
-            max="45"
-            min="30"
-            name="temperature"
-            step="0.1"
-            type="number"
-          />
-        </label>
-        <label>
-          Peso kg
-          <input
-            className={field}
-            min="0"
-            name="weight_kg"
-            step="0.01"
-            type="number"
-          />
-        </label>
-        <label className="sm:col-span-2">
-          Diagnóstico
-          <input className={field} name="diagnosis" required />
-        </label>
-        <label className="sm:col-span-2">
-          Tratamiento
-          <textarea
-            className={`${field} min-h-20 py-2`}
-            name="treatment"
-            required
-          />
-        </label>
-        <label className="sm:col-span-2">
-          Notas
-          <textarea className={`${field} min-h-20 py-2`} name="notes" />
-        </label>
-        <div className="sm:col-span-2 flex justify-end gap-2">
-          <Button onClick={close} type="button" variant="secondary">
-            Cancelar
-          </Button>
-          <Button type="submit">Finalizar atención</Button>
         </div>
       </form>
     </Modal>
@@ -764,6 +707,14 @@ function PetRecord({ data, close, onAttention, onVaccine }) {
                         {x.diagnosis || "Atención clínica"}
                       </b>
                       <p className="mt-1 break-words text-sm">{x.treatment}</p>
+                      {x.supplies?.length ? (
+                        <p className="mt-2 text-xs text-primary">
+                          <b>Inventario:</b>{" "}
+                          {x.supplies
+                            .map((supply) => `${supply.quantity} × ${supply.product.name}`)
+                            .join(", ")}
+                        </p>
+                      ) : null}
                       <small className="text-on-surface-variant">
                         {local(x.createdAt)} ·{" "}
                         {x.professional?.name || "Equipo veterinario"}
@@ -835,6 +786,8 @@ function PetRecord({ data, close, onAttention, onVaccine }) {
 
 export default function VeterinaryWorkspace({ dashboard = false }) {
   const { moduleKey } = useParams();
+  const { user } = useAuth();
+  const { config } = useAppConfig();
   const mode = dashboard
     ? "dashboard"
     : moduleKey === "appointments"
@@ -842,6 +795,10 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
       : moduleKey === "invoices"
         ? "billing"
         : "pets";
+  const administrator = ["admin", "admin_owner"].includes(user?.role);
+  const capabilities = new Set(config?.capabilities || []);
+  const canEditPets = administrator || capabilities.has("pets.edit");
+  const canManagePetLifecycle = administrator;
   const [summary, setSummary] = useState({}),
     [pets, setPets] = useState([]),
     [appointments, setAppointments] = useState([]),
@@ -854,6 +811,10 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
     [record, setRecord] = useState(null),
     [query, setQuery] = useState(""),
     [paymentRecord, setPaymentRecord] = useState(null);
+  const [editingPet, setEditingPet] = useState(null);
+  const [petStatus, setPetStatus] = useState("active");
+  const [openPetActionsId, setOpenPetActionsId] = useState(null);
+  const [petActionError, setPetActionError] = useState("");
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -879,9 +840,11 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
-  const done = () => {
+  const done = async () => {
     setModal("");
-    load();
+    setEditingPet(null);
+    setSelected(null);
+    await load();
   };
   const openRecord = async (pet) => {
     setSelected(pet);
@@ -892,19 +855,45 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
       setError(e.message);
     }
   };
+  const askDeactivate = (pet) => {
+    setSelected(pet);
+    setRecord(null);
+    setPetActionError("");
+    setModal("deactivate");
+  };
+  const askPermanentDelete = (pet) => {
+    setSelected(pet);
+    setRecord(null);
+    setPetActionError("");
+    setModal("permanent-delete");
+  };
+  const restorePet = async (pet) => {
+    try {
+      setError("");
+      await api.restorePet(pet.id);
+      await load();
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo restaurar la mascota.");
+    }
+  };
   const filtered = useMemo(
     () =>
-      pets.filter((x) =>
-        matchesEntitySearch(x, query, (item) => [
-          item.name,
-          item.code,
-          item.owner?.name,
-          item.owner?.document,
-          item.owner?.phone,
-          item.owner?.email,
-        ]),
+      pets.filter(
+        (x) =>
+          (petStatus === "all" || x.status === petStatus) &&
+          matchesEntitySearch(x, query, (item) => [
+            item.name,
+            item.code,
+            item.owner?.name,
+            item.owner?.document,
+            item.owner?.phone,
+            item.owner?.email,
+            item.allergies,
+            item.conditions,
+            item.microchip,
+          ]),
       ),
-    [pets, query],
+    [petStatus, pets, query],
   );
   const today = new Date().toLocaleDateString("en-CA");
   const todayAppointments = appointments.filter(
@@ -912,9 +901,7 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
   );
   const action = (
     <div className="flex gap-2">
-      <Button icon="pets" onClick={() => setModal("pet")}>
-        Registrar mascota
-      </Button>
+      {canEditPets ? <Button icon="pets" onClick={() => { setEditingPet(null); setModal("pet"); }}>Registrar mascota</Button> : null}
       <Button
         icon="event_available"
         onClick={() => setModal("appointment")}
@@ -1069,45 +1056,14 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
         </>
       ) : null}
       {!loading && mode === "pets" && !dashboard ? (
-        <>
-          <Card className="mb-3 flex gap-2 p-3">
-            <input
-              className={field}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar mascota, propietario, DNI o celular"
-              value={query}
-            />
+        <section className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex min-h-11 min-w-56 flex-[1_1_24rem] items-center gap-2 rounded-xl border border-outline-variant bg-white px-3"><span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">search</span><input className="min-w-0 flex-1 bg-transparent outline-none" onChange={(event) => setQuery(event.target.value)} placeholder="Buscar mascota, propietario, DNI, celular, alergia o microchip" value={query} /></label>
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3 text-sm font-bold"><span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">filter_list</span><span className="sr-only">Estado</span><select aria-label="Filtrar mascotas por estado" className="bg-transparent outline-none" onChange={(event) => setPetStatus(event.target.value)} value={petStatus}><option value="active">Activas</option><option value="all">Todas</option><option value="inactive">Inactivas</option><option value="deceased">Fallecidas</option></select></label>
             <Badge>{filtered.length} mascotas</Badge>
-          </Card>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((x) => (
-              <button
-                className="text-left"
-                key={x.id}
-                onClick={() => openRecord(x)}
-                type="button"
-              >
-                <Card className="h-44 p-4 transition hover:-translate-y-1 hover:border-primary">
-                  <div className="flex justify-between gap-3">
-                    <PetAvatar className="size-12" pet={x} />
-                    <Badge>{x.status === "active" ? "Activo" : x.status}</Badge>
-                  </div>
-                  <b className="mt-3 block truncate text-lg">
-                    {x.name} · {x.breed || x.species}
-                  </b>
-                  <p className="truncate text-sm text-on-surface-variant">
-                    {x.code} · {x.owner.name}
-                  </p>
-                  {x.allergies ? (
-                    <p className="mt-2 truncate rounded-lg bg-error-container px-2 py-1 text-xs">
-                      Alergias: {x.allergies}
-                    </p>
-                  ) : null}
-                </Card>
-              </button>
-            ))}
           </div>
-        </>
+          {filtered.length ? <VeterinaryPetDirectoryList actionContent={(pet) => <PetActionsMenu canEdit={canEditPets} canManageLifecycle={canManagePetLifecycle} isOpen={openPetActionsId === pet.id} onDeactivate={askDeactivate} onDelete={askPermanentDelete} onEdit={(item) => { setEditingPet(item); setModal("pet"); }} onOpenChange={setOpenPetActionsId} onRestore={restorePet} pet={pet} />} onOpen={openRecord} pets={filtered} /> : <EmptyState description="Prueba con otro nombre, propietario, alerta o estado." icon="pets" title="No hay mascotas para mostrar" />}
+        </section>
       ) : null}
       {!loading && mode === "appointments" && !dashboard ? (
         <div className="grid gap-3">
@@ -1200,8 +1156,10 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
         </div>
       ) : null}
       {modal === "pet" ? (
-        <PetForm close={() => setModal("")} done={done} />
+        <PetForm close={() => { setModal(""); setEditingPet(null); }} done={done} pet={editingPet} />
       ) : null}
+      {canManagePetLifecycle && modal === "deactivate" && selected ? <Modal onClose={() => setModal("")} title="Desactivar mascota"><div className="grid gap-4 p-5"><p>La ficha de <b>{selected.name}</b> se conservará junto con sus citas, vacunas e historia clínica. No se eliminarán datos de atención.</p>{petActionError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{petActionError}</p> : null}<div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="pets" onClick={async () => { try { setPetActionError(""); await api.deactivatePet(selected.id); setModal(""); await load(); } catch (requestError) { setPetActionError(requestError.message || "No se pudo desactivar la mascota."); } }}>Desactivar</Button></div></div></Modal> : null}
+      {canManagePetLifecycle && modal === "permanent-delete" && selected ? <Modal onClose={() => setModal("")} title="Eliminar mascota definitivamente"><div className="grid gap-4 p-5"><p>Se eliminará definitivamente la ficha de <b>{selected.name}</b>. Solo se permite si no tiene citas, atenciones, vacunas, consumos, comprobantes ni archivos adjuntos.</p><p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">Esta acción no se puede deshacer. Si la mascota ya tiene atención registrada, usa Desactivar.</p>{petActionError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{petActionError}</p> : null}<div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="delete_forever" onClick={async () => { try { setPetActionError(""); await api.permanentlyDeletePet(selected.id); setSelected(null); setRecord(null); setModal(""); await load(); } catch (requestError) { setPetActionError(requestError.message || "No se pudo eliminar la mascota."); } }} type="button" variant="danger">Eliminar definitivamente</Button></div></div></Modal> : null}
       {modal === "appointment" ? (
         <AppointmentForm
           close={() => setModal("")}
@@ -1222,10 +1180,10 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
         />
       ) : null}
       {modal === "attention" && selected ? (
-        <AttentionForm
+        <VeterinaryAttentionForm
           appointments={appointments}
-          close={() => setModal("record")}
-          done={done}
+          onClose={() => setModal("record")}
+          onSaved={done}
           pet={selected}
           professionals={professionals}
         />

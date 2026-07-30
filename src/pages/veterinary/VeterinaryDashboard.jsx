@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Card from "../../components/atoms/Card";
 import HorizontalScroller from "../../components/atoms/HorizontalScroller";
 import EmptyState from "../../components/molecules/EmptyState";
+import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useAuth } from "../../context/authStore";
@@ -25,28 +26,34 @@ const flowStatuses = [
 
 const quickActions = [
   {
-    description: "Consulta disponibilidad y organiza la atención del día.",
-    icon: "calendar_month",
-    label: "Calendario",
-    to: "/dashboard/appointments",
-  },
-  {
-    description: "Abre expedientes, vacunas, archivos y antecedentes.",
+    description: "Crea una ficha con propietario, alertas, antecedentes y datos clínicos.",
     icon: "pets",
-    label: "Mascotas",
+    label: "Registrar mascota",
     to: "/dashboard/pets",
   },
   {
-    description: "Revisa ventas y documentos emitidos por el negocio.",
-    icon: "receipt_long",
-    label: "Comprobantes",
-    to: "/dashboard/invoices",
+    description: "Consulta disponibilidad y programa a la mascota con el profesional.",
+    icon: "event_available",
+    label: "Agendar cita",
+    to: "/dashboard/appointments",
   },
   {
-    description: "Gestiona funciones, horarios y asistencia del personal.",
-    icon: "groups",
-    label: "Equipo",
-    to: "/dashboard/team",
+    description: "Abre una cita para registrar evolución, insumos y cobro pendiente.",
+    icon: "clinical_notes",
+    label: "Atender mascota",
+    to: "/dashboard/appointments",
+  },
+  {
+    description: "Controla existencias y productos usados o vendidos en atención.",
+    icon: "inventory_2",
+    label: "Inventario",
+    to: "/dashboard/inventory",
+  },
+  {
+    description: "Revisa importes pendientes y emite el comprobante de atención.",
+    icon: "receipt_long",
+    label: "Cobrar atención",
+    to: "/dashboard/invoices",
   },
 ];
 
@@ -92,14 +99,14 @@ function Metric({ icon, label, note, value }) {
   );
 }
 
-function ViewTabs({ admin, onChange, value }) {
+function ViewTabs({ admin, onActions, onChange, value }) {
   const tabs = [
     ["flow", "pets", "Operación"],
     ["agenda", "event_available", "Agenda"],
     ...(admin ? [["followup", "monitor_heart", "Seguimiento"]] : []),
   ];
   return (
-    <div className={`mx-auto mt-3 grid w-full max-w-3xl ${admin ? "grid-cols-3" : "grid-cols-2"} rounded-2xl border border-outline-variant bg-white p-1`}>
+    <div className={`mx-auto mt-3 grid w-full max-w-4xl ${admin ? "grid-cols-4" : "grid-cols-3"} rounded-2xl border border-outline-variant bg-white p-1`}>
       {tabs.map(([key, icon, label]) => (
         <button
           className={`flex min-h-10 items-center justify-center gap-1 rounded-xl px-2 text-sm font-bold transition ${value === key ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container-low"}`}
@@ -111,6 +118,14 @@ function ViewTabs({ admin, onChange, value }) {
           <span className="hidden xs:inline sm:inline">{label}</span>
         </button>
       ))}
+      <button
+        className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl px-2 text-sm font-bold text-primary transition hover:bg-primary-fixed"
+        onClick={onActions}
+        type="button"
+      >
+        <span className="material-symbols-outlined text-lg">apps</span>
+        <span className="hidden sm:inline">Acciones</span>
+      </button>
     </div>
   );
 }
@@ -140,6 +155,7 @@ async function upcomingVaccines(pets, from, until) {
 }
 
 export default function VeterinaryDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { config } = useAppConfig();
   const admin = ["admin", "admin_owner"].includes(user.role);
@@ -149,6 +165,7 @@ export default function VeterinaryDashboard() {
   );
   const [summary, setSummary] = useState({});
   const [appointments, setAppointments] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
   const [billing, setBilling] = useState([]);
   const [vaccines, setVaccines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,6 +173,7 @@ export default function VeterinaryDashboard() {
   const [error, setError] = useState("");
   const [view, setView] = useState("flow");
   const [activeStatus, setActiveStatus] = useState("scheduled");
+  const [quickOpen, setQuickOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [paymentRecord, setPaymentRecord] = useState(null);
 
@@ -165,16 +183,18 @@ export default function VeterinaryDashboard() {
     try {
       const start = new Date(`${today}T00:00:00-05:00`).toISOString();
       const end = new Date(`${today}T23:59:59-05:00`).toISOString();
-      const [summaryData, petItems, appointmentItems, billingItems] =
+      const [summaryData, petItems, appointmentItems, billingItems, professionalItems] =
         await Promise.all([
           api.getVeterinarySummary(),
           api.getPets(),
           api.getVeterinaryAppointments(start, end),
           admin ? api.getVeterinaryBilling("pending") : Promise.resolve([]),
+          api.getVeterinaryProfessionals(),
         ]);
       setSummary(summaryData);
       setAppointments(appointmentItems);
       setBilling(billingItems);
+      setProfessionals(professionalItems);
       setLoading(false);
       setVaccinesLoading(true);
       setVaccines(await upcomingVaccines(petItems, today, until));
@@ -231,13 +251,16 @@ export default function VeterinaryDashboard() {
   return (
     <DashboardShell
       action={
-        <Link
-          className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 font-bold text-white shadow-md"
-          to="/dashboard/appointments"
-        >
-          <span className="material-symbols-outlined">event_available</span>
-          Agendar cita
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link className="flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-4 font-bold text-primary shadow-sm transition hover:border-primary hover:bg-primary-fixed" to="/dashboard/pets">
+            <span className="material-symbols-outlined">pets</span>
+            Registrar mascota
+          </Link>
+          <Link className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 font-bold text-white shadow-md" to="/dashboard/appointments">
+            <span className="material-symbols-outlined">event_available</span>
+            Agendar cita
+          </Link>
+        </div>
       }
       subtitle="Controla agenda, atención, prevención y cobros desde un solo flujo."
       title={`Panel veterinario · ${config?.business?.name || ""}`}
@@ -292,7 +315,7 @@ export default function VeterinaryDashboard() {
         ))}
       </HorizontalScroller>
 
-      <ViewTabs admin={admin} onChange={setView} value={view} />
+      <ViewTabs admin={admin} onActions={() => setQuickOpen(true)} onChange={setView} value={view} />
 
       {loading ? <Card className="mt-3 h-56 animate-pulse" /> : null}
 
@@ -560,12 +583,12 @@ export default function VeterinaryDashboard() {
       ) : null}
 
       <section className="mt-3">
-        <h2 className="mb-2 text-sm font-bold">Accesos rápidos</h2>
-        <HorizontalScroller label="Accesos rápidos veterinarios">
+        <h2 className="mb-2 text-sm font-bold">Acciones</h2>
+        <HorizontalScroller label="Acciones veterinarias">
           {quickActions.map((action) => (
             <Link
               className="group flex w-[74vw] max-w-72 shrink-0 snap-start items-center gap-3 rounded-2xl border border-outline-variant bg-white p-3 transition hover:border-primary hover:shadow-md"
-              key={action.to}
+              key={action.label}
               to={action.to}
             >
               <span className="material-symbols-outlined grid size-12 shrink-0 place-items-center rounded-xl bg-primary-fixed text-2xl text-primary">
@@ -585,9 +608,44 @@ export default function VeterinaryDashboard() {
         </HorizontalScroller>
       </section>
 
+      {quickOpen ? (
+        <Modal dialogClassName="sm:max-w-4xl" onClose={() => setQuickOpen(false)} title="Acciones veterinarias">
+          <div className="grid gap-4 p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-bold">¿Qué necesitas hacer?</p>
+                <p className="text-sm text-on-surface-variant">Elige el siguiente paso del flujo sin buscarlo en el menú lateral.</p>
+              </div>
+              <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-primary">{quickActions.length} acciones</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {quickActions.map((action) => (
+                <button
+                  className="group flex min-h-32 items-start gap-3 rounded-xl border border-outline-variant bg-white p-4 text-left transition hover:border-primary hover:bg-primary-fixed/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  key={action.label}
+                  onClick={() => {
+                    setQuickOpen(false);
+                    navigate(action.to);
+                  }}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined grid size-11 shrink-0 place-items-center rounded-xl bg-primary-fixed text-2xl text-primary">{action.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <b className="block">{action.label}</b>
+                    <span className="mt-1 block text-sm leading-5 text-on-surface-variant">{action.description}</span>
+                  </span>
+                  <span aria-hidden="true" className="material-symbols-outlined shrink-0 text-primary transition group-hover:translate-x-1">arrow_forward</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
       {selectedAppointment ? (
         <AppointmentDetail
           appointment={selectedAppointment}
+          appointments={appointments}
           canManage={admin}
           canSeeBilling={admin}
           canStart={admin}
@@ -596,6 +654,7 @@ export default function VeterinaryDashboard() {
             setSelectedAppointment(null);
             await load();
           }}
+          professionals={professionals}
         />
       ) : null}
       {paymentRecord && admin ? (

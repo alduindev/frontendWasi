@@ -6,6 +6,7 @@ import Modal from "../../components/molecules/Modal";
 import OperatorShell from "../../components/operator/OperatorShell";
 import { useAuth } from "../../context/authStore";
 import * as api from "../../services/veterinaryService";
+import VeterinaryAttentionForm from "../veterinary/VeterinaryAttentionForm";
 import { matchesEntitySearch } from "../../utils/entitySearch";
 const field =
   "min-h-11 w-full rounded-xl border border-outline-variant px-3 outline-none focus:border-primary";
@@ -16,105 +17,6 @@ const species = {
   rabbit: "Conejo",
   other: "Otra",
 };
-function Attention({ pet, professionals, onClose, onSaved }) {
-  const save = async (event) => {
-    event.preventDefault();
-    const f = new FormData(event.currentTarget);
-    await api.createVeterinaryRecord({
-      pet_id: pet.id,
-      professional_id: f.get("professional_id") || null,
-      record_type: f.get("record_type"),
-      diagnosis: f.get("diagnosis"),
-      treatment: f.get("treatment"),
-      notes: f.get("notes"),
-      temperature: f.get("temperature") ? Number(f.get("temperature")) : null,
-      weight_kg: f.get("weight_kg") ? Number(f.get("weight_kg")) : null,
-      amount: Number(f.get("amount") || 0),
-    });
-    onSaved();
-  };
-  return (
-    <Modal onClose={onClose} title={`Atender · ${pet.name}`}>
-      <form className="grid gap-3 p-4 sm:grid-cols-2" onSubmit={save}>
-        <label>
-          Tipo
-          <select className={field} name="record_type">
-            <option value="consultation">Consulta</option>
-            <option value="emergency">Emergencia</option>
-            <option value="control">Control</option>
-            <option value="surgery">Cirugía</option>
-            <option value="laboratory">Laboratorio</option>
-            <option value="grooming">Estética</option>
-          </select>
-        </label>
-        <label>
-          Profesional
-          <select className={field} name="professional_id">
-            <option value="">Mi atención</option>
-            {professionals.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Peso kg
-          <input
-            className={field}
-            min="0"
-            name="weight_kg"
-            step="0.01"
-            type="number"
-          />
-        </label>
-        <label>
-          Temperatura °C
-          <input
-            className={field}
-            max="45"
-            min="30"
-            name="temperature"
-            step="0.1"
-            type="number"
-          />
-        </label>
-        <label className="sm:col-span-2">
-          Diagnóstico
-          <input className={field} name="diagnosis" required />
-        </label>
-        <label className="sm:col-span-2">
-          Tratamiento
-          <textarea
-            className={`${field} min-h-20 py-2`}
-            name="treatment"
-            required
-          />
-        </label>
-        <label>
-          Importe para recepción
-          <input
-            className={field}
-            min="0"
-            name="amount"
-            step="0.01"
-            type="number"
-          />
-        </label>
-        <label>
-          Notas
-          <input className={field} name="notes" />
-        </label>
-        <div className="sm:col-span-2 flex justify-end gap-2">
-          <Button onClick={onClose} type="button" variant="secondary">
-            Cancelar
-          </Button>
-          <Button type="submit">Finalizar atención</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 function Record({ data, onClose, onAttention }) {
   const [tab, setTab] = useState("history");
   return (
@@ -160,6 +62,14 @@ function Record({ data, onClose, onAttention }) {
                 <Card className="p-3" key={x.id}>
                   <b>{x.diagnosis || "Atención clínica"}</b>
                   <p className="text-sm">{x.treatment}</p>
+                  {x.supplies?.length ? (
+                    <p className="mt-2 text-xs text-primary">
+                      <b>Inventario:</b>{" "}
+                      {x.supplies
+                        .map((supply) => `${supply.quantity} × ${supply.product.name}`)
+                        .join(", ")}
+                    </p>
+                  ) : null}
                   <small>
                     {new Date(x.createdAt).toLocaleString("es-PE")} ·{" "}
                     {x.professional?.name || "Equipo veterinario"}
@@ -359,7 +269,8 @@ export default function VeterinaryOperatorDashboard() {
         />
       ) : null}
       {attention ? (
-        <Attention
+        <VeterinaryAttentionForm
+          appointments={appointments}
           onClose={() => setAttention(null)}
           onSaved={() => {
             setAttention(null);
