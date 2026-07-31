@@ -766,6 +766,11 @@ export default function VeterinaryCalendar({ operator = false }) {
     setSelectedDate(today);
   };
 
+  const openSchedule = () => {
+    if (selectedDate < today) return;
+    setModal({ type: "appointment" });
+  };
+
   const saved = async () => {
     setModal(null);
     await load();
@@ -782,7 +787,7 @@ export default function VeterinaryCalendar({ operator = false }) {
             <Button
               disabled={selectedDate < today}
               icon="event_available"
-              onClick={() => setModal({ type: "appointment" })}
+              onClick={openSchedule}
             >
               Agendar cita
             </Button>
@@ -816,7 +821,7 @@ export default function VeterinaryCalendar({ operator = false }) {
             onEvent={(appointment) =>
               setModal({ type: "detail", appointment })
             }
-            onSchedule={() => setModal({ type: "appointment" })}
+            onSchedule={openSchedule}
             past={selectedDate < today}
             renderEvent={(appointment) => {
               const meta = statusMeta[appointment.status] || statusMeta.scheduled;

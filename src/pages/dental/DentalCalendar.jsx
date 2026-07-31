@@ -961,6 +961,7 @@ export default function DentalCalendar({ operator = false }) {
       setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
   };
   const openSchedule = () => {
+    if (selected < today) return;
     setAppointmentDraft(appointmentDraftFor(selected));
     setModal({ type: "appointment" });
   };
