@@ -265,13 +265,17 @@ export default function Invoices() {
     setLoading(true);
     setError("");
     try {
-      setInvoices(await invoiceService.getInvoices());
+      setInvoices(
+        await invoiceService.getInvoices(
+          serviceMode ? { domain: dashboardKey } : undefined,
+        ),
+      );
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dashboardKey, serviceMode]);
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);

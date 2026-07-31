@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
 import Modal from "../../components/molecules/Modal";
@@ -174,11 +173,8 @@ function PaymentModal({ item, onClose, onSaved }) {
 }
 
 export default function DentalBillingQueue({ operator = false }) {
-  const [searchParams] = useSearchParams();
   const [filter, setFilter] = useState("pending"),
-    [section, setSection] = useState(() =>
-      searchParams.get("section") === "receipts" ? "receipts" : "charges",
-    ),
+    [section, setSection] = useState("charges"),
     [rows, setRows] = useState([]),
     [invoices, setInvoices] = useState([]),
     [report, setReport] = useState(null),

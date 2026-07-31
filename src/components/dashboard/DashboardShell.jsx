@@ -458,7 +458,7 @@ export default function DashboardShell({
   const dentalItems = useMemo(() => {
     if (config?.template?.dashboardKey !== 'dental') return hospitalityItems
     const financeIndex = hospitalityItems.findIndex(item => item.routeKey === 'dental-billing')
-    const receipts = { icon: 'receipt_long', label: 'Comprobantes', routeKey: 'dental-receipts', to: '/dashboard/dental-billing?section=receipts' }
+    const receipts = { icon: 'receipt_long', label: 'Comprobantes', routeKey: 'dental-receipts', to: '/dashboard/invoices' }
     return financeIndex < 0 ? hospitalityItems : [...hospitalityItems.slice(0, financeIndex + 1), receipts, ...hospitalityItems.slice(financeIndex + 1)]
   }, [config, hospitalityItems])
   const allowedItems = useMemo(() => config ? dentalItems : filterNavigationByRole(dentalItems, user), [config, dentalItems, user])
