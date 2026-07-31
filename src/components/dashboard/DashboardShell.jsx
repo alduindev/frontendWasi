@@ -455,7 +455,13 @@ export default function DashboardShell({
     primary.splice(roomsIndex >= 0 ? roomsIndex + 1 : primary.length, 0, { icon: 'assignment', label: 'Servicios', routeKey: 'hotel-operations', to: '/dashboard/hotel-operations' })
     return primary
   }, [config, configuredItems])
-  const allowedItems = useMemo(() => config ? hospitalityItems : filterNavigationByRole(hospitalityItems, user), [config, hospitalityItems, user])
+  const dentalItems = useMemo(() => {
+    if (config?.template?.dashboardKey !== 'dental') return hospitalityItems
+    const financeIndex = hospitalityItems.findIndex(item => item.routeKey === 'dental-billing')
+    const receipts = { icon: 'receipt_long', label: 'Comprobantes', routeKey: 'dental-receipts', to: '/dashboard/dental-billing?section=receipts' }
+    return financeIndex < 0 ? hospitalityItems : [...hospitalityItems.slice(0, financeIndex + 1), receipts, ...hospitalityItems.slice(financeIndex + 1)]
+  }, [config, hospitalityItems])
+  const allowedItems = useMemo(() => config ? dentalItems : filterNavigationByRole(dentalItems, user), [config, dentalItems, user])
   const accountItems = useMemo(() => allowedItems.filter(item => ['profile', 'settings', 'subscription'].includes(item.routeKey)), [allowedItems])
   const visibleNavItems = useMemo(() => allowedItems.filter(item => !['profile', 'settings', 'subscription'].includes(item.routeKey) && !(config?.template?.dashboardKey === 'hospitality' && item.routeKey === 'housekeeping') && !(config?.template?.dashboardKey === 'dental' && ['odontogram','treatments','dental-records','dental-catalog'].includes(item.routeKey))), [allowedItems, config])
   const { products } = useInventory()

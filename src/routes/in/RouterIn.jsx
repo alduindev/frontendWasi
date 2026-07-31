@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../../context/authStore";
 import Alerts from "../../pages/in/Alerts";
 import History from "../../pages/in/History";
@@ -192,6 +192,7 @@ function HospitalityOnly({ children }) {
 
 function DynamicModule() {
   const { config } = useAppConfig();
+  const location = useLocation();
   const { moduleKey } = useParams();
   const module = config?.modules?.find((x) => x.frontendKey === moduleKey);
   if (!module || !config?.navigation?.some((x) => x.frontendKey === moduleKey))
@@ -199,7 +200,7 @@ function DynamicModule() {
   if (moduleKey === "housekeeping") return <HousekeepingAdmin />;
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "dental") return <DentalCalendar />;
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "health") return <MedicalCalendar />;
-  if (moduleKey === "dental-billing" && config?.template?.dashboardKey === "dental") return <DentalBillingQueue />;
+  if (moduleKey === "dental-billing" && config?.template?.dashboardKey === "dental") return <DentalBillingQueue key={location.search} />;
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "veterinary") return <VeterinaryCalendar />;
   if (config?.template?.dashboardKey === "veterinary" && ["pets","invoices"].includes(moduleKey)) return <VeterinaryWorkspace />;
   if (module?.code?.startsWith("hospitality.")) return <HospitalityWorkspace />;
