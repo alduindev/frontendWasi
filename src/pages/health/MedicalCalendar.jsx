@@ -229,7 +229,7 @@ export function MedicalAppointmentWizard({
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-outline-variant bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <Button disabled={saving} onClick={() => step === 0 ? close() : setStep((current) => current - 1)} type="button" variant="secondary">{step === 0 ? "Cancelar" : "Anterior"}</Button>
-          <Button disabled={saving || !patients.length || !services.length || !professionals.length} icon={step === 2 ? "event_available" : "arrow_forward"} type="submit">{saving ? "Agendando..." : step === 2 ? "Confirmar cita" : "Continuar"}</Button>
+          <Button disabled={saving || (step === 0 && !selectedPatient)} icon={step === 2 ? "event_available" : "arrow_forward"} type="submit">{saving ? "Agendando..." : step === 2 ? "Confirmar cita" : "Continuar"}</Button>
         </div>
       </form>
     </Modal>

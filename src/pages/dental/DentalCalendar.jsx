@@ -491,12 +491,7 @@ function AppointmentForm({
             {step === 0 ? "Cancelar" : "Anterior"}
           </Button>
           <Button
-            disabled={
-              saving ||
-              !patients.length ||
-              !procedures.length ||
-              !professionals.length
-            }
+            disabled={saving || (step === 0 && !selectedPatient)}
             icon={step === 2 ? "event_available" : "arrow_forward"}
             type="submit"
           >
