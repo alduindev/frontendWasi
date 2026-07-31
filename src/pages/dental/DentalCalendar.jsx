@@ -532,9 +532,10 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const meta = statusMeta[appointment.status] || statusMeta.scheduled;
   const admin = ["admin", "admin_owner"].includes(user.role);
+  const dentistOperator = user.role === "operator" && config?.user?.functions?.some((item) => item.code === "dentist");
   const editAllowed =
-    canEdit ??
-    (admin || (config?.capabilities || []).includes("appointments.status"));
+    !dentistOperator && (canEdit ??
+    (admin || (config?.capabilities || []).includes("appointments.status")));
   const canRemind =
     admin || (config?.capabilities || []).includes("appointments.create");
   const saved = onSaved || onClose;
@@ -596,6 +597,8 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved }) {
     return (
       <OdontogramModal
         admin={admin}
+        canEditRecords={!dentistOperator && (admin || config?.capabilities?.includes("dental.records.edit"))}
+        canEditTreatments={!dentistOperator && (admin || config?.capabilities?.includes("dental.treatments.edit"))}
         chart={chart}
         close={onClose}
         exporting={exporting}
@@ -895,8 +898,9 @@ export default function DentalCalendar({ operator = false }) {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const dentistOperator = operator && config?.user?.functions?.some((item) => item.code === "dentist");
   const canSchedule =
-    !operator || (config?.capabilities || []).includes("appointments.create");
+    !dentistOperator && (!operator || (config?.capabilities || []).includes("appointments.create"));
   const load = useCallback(async () => {
     setLoading(true);
     setError("");

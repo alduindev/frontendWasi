@@ -22,6 +22,7 @@ export const createVeterinaryAppointment=data=>apiRequest('/veterinary/appointme
 export const updateVeterinaryAppointment=(id,status)=>apiRequest(`/veterinary/appointments/${id}`,json('PATCH',{status}))
 export const prepareVeterinaryAppointmentWhatsApp=(id,message='')=>apiRequest(`/veterinary/appointments/${id}/whatsapp-reminder`,json('POST',{message}))
 export const createVeterinaryRecord=data=>apiRequest('/veterinary/records',json('POST',data))
+export const updateVeterinaryRecord=(id,data)=>apiRequest(`/veterinary/records/${id}`,json('PATCH',data))
 export const updateVeterinaryPayment=(id,payment='paid')=>apiRequest(`/veterinary/records/${id}/payment`,json('PATCH',typeof payment==='string'?{payment_status:payment}:payment))
 export const getVeterinaryBilling=(status='pending')=>apiRequest(`/veterinary/billing?status=${status}`)
 export const createVeterinaryVaccine=data=>apiRequest('/veterinary/vaccines',json('POST',data))

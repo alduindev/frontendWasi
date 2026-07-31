@@ -611,8 +611,59 @@ function VeterinaryReports({ pet }) {
     </div>
   );
 }
-function PetRecord({ data, close, onAttention, onVaccine }) {
+function VeterinaryRecordEditForm({ close, done, record }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const save = async (event) => {
+    event.preventDefault();
+    const values = submitData(event);
+    setSaving(true);
+    setError("");
+    try {
+      await api.updateVeterinaryRecord(record.id, {
+        recordType: values.recordType,
+        diagnosis: values.diagnosis,
+        treatment: values.treatment,
+        notes: values.notes,
+        temperature: values.temperature ? Number(values.temperature) : null,
+        weightKg: values.weightKg ? Number(values.weightKg) : null,
+      });
+      done();
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo actualizar la atención");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Modal onClose={close} title="Editar atención clínica">
+      <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={save}>
+        <label className="text-sm font-bold">
+          Tipo de atención
+          <select className={`${field} mt-1`} defaultValue={record.recordType} name="recordType">
+            <option value="consultation">Consulta</option>
+            <option value="emergency">Emergencia</option>
+            <option value="surgery">Cirugía</option>
+            <option value="control">Control</option>
+            <option value="laboratory">Laboratorio</option>
+            <option value="grooming">Grooming</option>
+          </select>
+        </label>
+        <label className="text-sm font-bold">Temperatura<input className={`${field} mt-1`} defaultValue={record.temperature ?? ""} max="45" min="30" name="temperature" step="0.1" type="number" /></label>
+        <label className="text-sm font-bold sm:col-span-2">Diagnóstico<input className={`${field} mt-1`} defaultValue={record.diagnosis} name="diagnosis" /></label>
+        <label className="text-sm font-bold sm:col-span-2">Tratamiento<textarea className={`${field} mt-1 min-h-24 py-2`} defaultValue={record.treatment} name="treatment" /></label>
+        <label className="text-sm font-bold">Peso (kg)<input className={`${field} mt-1`} defaultValue={record.weightKg ?? ""} max="999" min="0" name="weightKg" step="0.01" type="number" /></label>
+        <label className="text-sm font-bold sm:col-span-2">Notas<textarea className={`${field} mt-1 min-h-24 py-2`} defaultValue={record.notes} name="notes" /></label>
+        {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2" role="alert">{error}</p> : null}
+        <div className="flex justify-end gap-2 sm:col-span-2"><Button onClick={close} type="button" variant="outlined">Cancelar</Button><Button disabled={saving} icon="save" type="submit">{saving ? "Guardando..." : "Guardar cambios"}</Button></div>
+      </form>
+    </Modal>
+  );
+}
+
+function PetRecord({ data, close, onAttention, onReload, onVaccine, canEdit = false }) {
   const [tab, setTab] = useState("summary");
+  const [editingRecord, setEditingRecord] = useState(null);
   const p = data.pet;
   const tabs = [
     ["summary", "person", "Resumen"],
@@ -623,6 +674,7 @@ function PetRecord({ data, close, onAttention, onVaccine }) {
     ["reports", "picture_as_pdf", "Reportes"],
   ];
   return (
+    <>
     <Modal
       contentClassName="min-h-0 overflow-hidden"
       dialogClassName="sm:max-w-6xl"
@@ -720,11 +772,12 @@ function PetRecord({ data, close, onAttention, onVaccine }) {
                         {x.professional?.name || "Equipo veterinario"}
                       </small>
                     </div>
-                    <div className="text-right">
+                    <div className="flex shrink-0 flex-col items-end gap-2 text-right">
                       <b>{money(x.amount)}</b>
                       <p className="text-xs">
                         {x.paymentStatus === "paid" ? "Pagado" : "Por cobrar"}
                       </p>
+                      {canEdit ? <Button icon="edit" onClick={() => setEditingRecord(x)} size="small" variant="outlined">Editar</Button> : null}
                     </div>
                   </div>
                 </Card>
@@ -781,6 +834,8 @@ function PetRecord({ data, close, onAttention, onVaccine }) {
         </div>
       </div>
     </Modal>
+    {editingRecord ? <VeterinaryRecordEditForm close={() => setEditingRecord(null)} done={async () => { setEditingRecord(null); await onReload(); }} record={editingRecord} /> : null}
+    </>
   );
 }
 
@@ -1170,12 +1225,16 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
       ) : null}
       {modal === "record" && record ? (
         <PetRecord
+          canEdit={canEditPets}
           close={() => {
             setModal("");
             setRecord(null);
           }}
           data={record}
           onAttention={() => setModal("attention")}
+          onReload={async () => {
+            if (selected) setRecord(await api.getPetRecord(selected.id));
+          }}
           onVaccine={() => setModal("vaccine")}
         />
       ) : null}

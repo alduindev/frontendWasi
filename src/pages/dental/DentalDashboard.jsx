@@ -694,6 +694,8 @@ export default function DentalDashboard() {
       {recordPatient && !recordLoading && !recordError ? (
         <OdontogramModal
           admin={owner}
+          canEditRecords={owner || config?.capabilities?.includes("dental.records.edit")}
+          canEditTreatments={owner || config?.capabilities?.includes("dental.treatments.edit")}
           chart={recordChart}
           close={() => {
             setRecordPatient(null);

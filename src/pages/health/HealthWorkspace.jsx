@@ -240,16 +240,19 @@ export default function HealthWorkspace({ operator = false }) {
   };
   const admin = ["admin", "admin_owner"].includes(user.role);
   const capabilities = new Set(config?.capabilities || []);
-  const canEditPatient = admin || capabilities.has("patients.edit");
+  const dentistOperator = operator && !admin && config?.user?.functions?.some((item) => item.code === "dentist");
+  const canEditPatient = !dentistOperator && (admin || capabilities.has("patients.edit"));
   const canManagePatientLifecycle = admin;
   const patientAttachmentType =
     config?.template?.dashboardKey === "dental"
       ? "dental_patient"
       : "health_patient";
   const canAttention =
-    admin || config?.capabilities?.includes("dental.records.edit");
+    !dentistOperator && (admin || config?.capabilities?.includes("dental.records.edit"));
   const canEditOdontogram =
-    admin || config?.capabilities?.includes("dental.odontogram.edit");
+    !dentistOperator && (admin || config?.capabilities?.includes("dental.odontogram.edit"));
+  const canCreateAppointment =
+    !dentistOperator && (admin || capabilities.has("appointments.create"));
   const reloadChart = async () => {
     try {
       setChart(await api.getDentalChart(selected.id));
@@ -300,7 +303,7 @@ export default function HealthWorkspace({ operator = false }) {
   return (
     <Shell
       action={
-        (!isPatients || canEditPatient) ? <Button
+        (isPatients ? canEditPatient : canCreateAppointment) ? <Button
           icon="add"
           onClick={() => setModal(isPatients ? "patient" : "appointment")}
         >
@@ -441,6 +444,8 @@ export default function HealthWorkspace({ operator = false }) {
         <OdontogramModal
           admin={admin}
           attachmentEntityType={patientAttachmentType}
+          canEditRecords={canAttention}
+          canEditTreatments={!dentistOperator && (admin || capabilities.has("dental.treatments.edit"))}
           chart={chart}
           close={() => setModal("")}
           exporting={exporting}

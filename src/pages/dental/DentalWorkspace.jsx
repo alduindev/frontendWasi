@@ -265,10 +265,190 @@ export function ChartForm({ patientId, tooth, close, done }) {
   );
 }
 
+function localDateTimeValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function DentalHistoryEditForm({ close, done, entry }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const { item, type } = entry;
+  const titles = {
+    clinical: "Editar evolución clínica",
+    treatment: "Editar tratamiento",
+    prescription: "Editar receta",
+    document: "Editar documento",
+  };
+  const submit = async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    setError("");
+    try {
+      if (type === "clinical") {
+        await api.updateDentalClinicalEntry(item.id, {
+          entryType: form.get("entryType"),
+          title: form.get("title"),
+          content: form.get("content"),
+          professionalName: form.get("professionalName"),
+          vitalSigns: {
+            temperature: form.get("temperature"),
+            bloodPressure: form.get("bloodPressure"),
+            heartRate: form.get("heartRate"),
+          },
+        });
+      } else if (type === "treatment") {
+        await api.updateDentalTreatment(item.id, {
+          toothNumber: form.get("toothNumber") ? Number(form.get("toothNumber")) : null,
+          procedure: form.get("procedure"),
+          diagnosis: form.get("diagnosis"),
+          professionalName: form.get("professionalName"),
+          estimatedCost: Number(form.get("estimatedCost") || 0),
+          scheduledAt: form.get("scheduledAt") || null,
+          status: form.get("status"),
+          notes: form.get("notes"),
+        });
+      } else if (type === "prescription") {
+        await api.updateDentalPrescription(item.id, {
+          medication: form.get("medication"),
+          dose: form.get("dose"),
+          frequency: form.get("frequency"),
+          duration: form.get("duration"),
+          instructions: form.get("instructions"),
+          professionalName: form.get("professionalName"),
+        });
+      } else {
+        await api.updateDentalDocument(item.id, {
+          documentType: form.get("documentType"),
+          name: form.get("name"),
+          url: form.get("url"),
+          notes: form.get("notes"),
+        });
+      }
+      done();
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo guardar el cambio");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Modal onClose={close} title={titles[type]}>
+      <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={submit}>
+        {type === "clinical" ? (
+          <>
+            <label className="text-sm font-medium">
+              Tipo
+              <select className={`${fieldClass} mt-1`} defaultValue={item.entryType} name="entryType">
+                <option value="history">Antecedente</option>
+                <option value="evolution">Evolución</option>
+                <option value="examination">Examen</option>
+                <option value="consent">Consentimiento</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium">
+              Profesional
+              <input className={`${fieldClass} mt-1`} defaultValue={item.professionalName} name="professionalName" />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Título
+              <input className={`${fieldClass} mt-1`} defaultValue={item.title} name="title" required />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Evolución
+              <textarea className={`${fieldClass} mt-1 min-h-28 py-2`} defaultValue={item.content} name="content" required />
+            </label>
+            <div className="grid gap-3 sm:col-span-2 sm:grid-cols-3">
+              <label className="text-sm font-medium">Temperatura<input className={`${fieldClass} mt-1`} defaultValue={item.vitalSigns?.temperature || ""} name="temperature" /></label>
+              <label className="text-sm font-medium">Presión arterial<input className={`${fieldClass} mt-1`} defaultValue={item.vitalSigns?.bloodPressure || ""} name="bloodPressure" /></label>
+              <label className="text-sm font-medium">Frecuencia cardiaca<input className={`${fieldClass} mt-1`} defaultValue={item.vitalSigns?.heartRate || ""} name="heartRate" /></label>
+            </div>
+          </>
+        ) : null}
+        {type === "treatment" ? (
+          <>
+            <label className="text-sm font-medium">
+              Procedimiento
+              <input className={`${fieldClass} mt-1`} defaultValue={item.procedure} name="procedure" required />
+            </label>
+            <label className="text-sm font-medium">
+              Estado
+              <select className={`${fieldClass} mt-1`} defaultValue={item.status} name="status">
+                {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-medium">
+              Pieza dental
+              <input className={`${fieldClass} mt-1`} defaultValue={item.toothNumber || ""} max="85" min="11" name="toothNumber" type="number" />
+            </label>
+            <label className="text-sm font-medium">
+              Costo estimado
+              <input className={`${fieldClass} mt-1`} defaultValue={item.estimatedCost || 0} min="0" name="estimatedCost" step="0.01" type="number" />
+            </label>
+            <label className="text-sm font-medium">
+              Diagnóstico
+              <input className={`${fieldClass} mt-1`} defaultValue={item.diagnosis} name="diagnosis" />
+            </label>
+            <label className="text-sm font-medium">
+              Profesional
+              <input className={`${fieldClass} mt-1`} defaultValue={item.professionalName} name="professionalName" />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Fecha programada
+              <input className={`${fieldClass} mt-1`} defaultValue={localDateTimeValue(item.scheduledAt)} name="scheduledAt" type="datetime-local" />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Notas
+              <textarea className={`${fieldClass} mt-1 min-h-24 py-2`} defaultValue={item.notes} name="notes" />
+            </label>
+          </>
+        ) : null}
+        {type === "prescription" ? (
+          <>
+            <label className="text-sm font-medium sm:col-span-2">Medicamento<input className={`${fieldClass} mt-1`} defaultValue={item.medication} name="medication" required /></label>
+            <label className="text-sm font-medium">Dosis<input className={`${fieldClass} mt-1`} defaultValue={item.dose} name="dose" /></label>
+            <label className="text-sm font-medium">Frecuencia<input className={`${fieldClass} mt-1`} defaultValue={item.frequency} name="frequency" /></label>
+            <label className="text-sm font-medium">Duración<input className={`${fieldClass} mt-1`} defaultValue={item.duration} name="duration" /></label>
+            <label className="text-sm font-medium">Profesional<input className={`${fieldClass} mt-1`} defaultValue={item.professionalName} name="professionalName" /></label>
+            <label className="text-sm font-medium sm:col-span-2">Indicaciones<textarea className={`${fieldClass} mt-1 min-h-24 py-2`} defaultValue={item.instructions} name="instructions" /></label>
+          </>
+        ) : null}
+        {type === "document" ? (
+          <>
+            <label className="text-sm font-medium">
+              Tipo
+              <select className={`${fieldClass} mt-1`} defaultValue={item.documentType} name="documentType">
+                <option value="radiograph">Radiografía</option>
+                <option value="photo">Fotografía</option>
+                <option value="consent">Consentimiento</option>
+                <option value="laboratory">Laboratorio</option>
+                <option value="other">Otro</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium">Nombre<input className={`${fieldClass} mt-1`} defaultValue={item.name} name="name" required /></label>
+            <label className="text-sm font-medium sm:col-span-2">Enlace<input className={`${fieldClass} mt-1`} defaultValue={item.url} name="url" required type="url" /></label>
+            <label className="text-sm font-medium sm:col-span-2">Notas<textarea className={`${fieldClass} mt-1 min-h-24 py-2`} defaultValue={item.notes} name="notes" /></label>
+          </>
+        ) : null}
+        {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2" role="alert">{error}</p> : null}
+        <div className="flex justify-end gap-2 sm:col-span-2">
+          <Button onClick={close} type="button" variant="secondary">Cancelar</Button>
+          <Button disabled={saving} icon="save" type="submit">{saving ? "Guardando…" : "Guardar cambios"}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function OdontogramModal({
   admin,
   attachmentEntityType = "dental_patient",
   chart,
+  canEditRecords = admin,
+  canEditTreatments = admin,
   close,
   exporting,
   onExport,
@@ -278,6 +458,8 @@ export function OdontogramModal({
 }) {
   const [record, setRecord] = useState({ appointments: [], clinical: [], consumptions: [], documents: [], prescriptions: [], treatments: [] });
   const [recordLoading, setRecordLoading] = useState(true);
+  const [recordVersion, setRecordVersion] = useState(0);
+  const [editingEntry, setEditingEntry] = useState(null);
   const [activeTab, setActiveTab] = useState("summary");
   const [odontogramView, setOdontogramView] = useState("teeth");
   const [quadrantIndex, setQuadrantIndex] = useState(0);
@@ -304,7 +486,7 @@ export function OdontogramModal({
       });
     }).finally(() => { if (active) setRecordLoading(false); });
     return () => { active = false; };
-  }, [patient.id]);
+  }, [patient.id, recordVersion]);
   useEffect(() => {
     if (!admin || !exportPreview) return undefined;
     let active = true;
@@ -339,6 +521,7 @@ export function OdontogramModal({
   }, [chart]);
 
   return (
+    <>
     <Modal
       contentClassName="min-h-0 flex-1 overflow-hidden"
       fixedHeight
@@ -417,12 +600,12 @@ export function OdontogramModal({
 
         {activeTab === "history" && !recordLoading && (record.appointments.length || record.clinical.length || record.treatments.length || record.prescriptions.length || record.documents.length) ? <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-outline-variant p-4"><h3 className="font-bold">Historial clínico integrado</h3><p className="mb-3 text-sm text-on-surface-variant">Citas, evoluciones, tratamientos, recetas y documentos en una sola ficha.</p><div className="grid gap-2 pr-1 sm:grid-cols-2">{[
           ...record.appointments.map((x) => ({ id: `a-${x.id}`, icon: "event", title: x.reason, detail: `${new Date(x.startsAt).toLocaleString("es-PE")} · ${x.professionalName || "Sin asignar"}` })),
-          ...record.clinical.map((x) => ({ id: `c-${x.id}`, icon: "clinical_notes", title: x.title, detail: x.content })),
-          ...record.treatments.map((x) => ({ id: `t-${x.id}`, icon: "medical_services", title: x.procedure, detail: `${statusLabels[x.status] || x.status}${x.toothNumber ? ` · Pieza ${x.toothNumber}` : ""}` })),
-          ...record.prescriptions.map((x) => ({ id: `p-${x.id}`, icon: "medication", title: x.medication, detail: `${x.dose || ""} ${x.frequency || ""}`.trim() || "Sin indicaciones" })),
-          ...record.documents.map((x) => ({ id: `d-${x.id}`, icon: "description", title: x.name, detail: x.documentType })),
+          ...record.clinical.map((x) => ({ id: `c-${x.id}`, icon: "clinical_notes", title: x.title, detail: x.content, editable: canEditRecords, type: "clinical", item: x })),
+          ...record.treatments.map((x) => ({ id: `t-${x.id}`, icon: "medical_services", title: x.procedure, detail: `${statusLabels[x.status] || x.status}${x.toothNumber ? ` · Pieza ${x.toothNumber}` : ""}`, editable: canEditTreatments, type: "treatment", item: x })),
+          ...record.prescriptions.map((x) => ({ id: `p-${x.id}`, icon: "medication", title: x.medication, detail: `${x.dose || ""} ${x.frequency || ""}`.trim() || "Sin indicaciones", editable: canEditRecords, type: "prescription", item: x })),
+          ...record.documents.map((x) => ({ id: `d-${x.id}`, icon: "description", title: x.name, detail: x.documentType, editable: canEditRecords, type: "document", item: x })),
           ...record.consumptions.map((x) => ({ id: `s-${x.id}`, icon: "vaccines", title: `${x.quantity} × ${x.product.name}`, detail: `Insumo utilizado · ${x.recordedBy}` })),
-        ].map((item) => <article className="flex gap-3 rounded-xl bg-surface-container-low p-3" key={item.id}><span className="material-symbols-outlined text-primary">{item.icon}</span><div className="min-w-0"><b className="block truncate text-sm">{item.title}</b><p className="line-clamp-2 text-xs text-on-surface-variant">{item.detail}</p></div></article>)}</div></section> : null}
+        ].map((item) => <article className="flex gap-3 rounded-xl bg-surface-container-low p-3" key={item.id}><span className="material-symbols-outlined text-primary">{item.icon}</span><div className="min-w-0 flex-1"><b className="block truncate text-sm">{item.title}</b><p className="line-clamp-2 text-xs text-on-surface-variant">{item.detail}</p></div>{item.editable ? <Button icon="edit" onClick={() => setEditingEntry({ type: item.type, item: item.item })} size="small" variant="outlined">Editar</Button> : null}</article>)}</div></section> : null}
 
         {activeTab === "files" ? <div className="min-h-0 flex-1 overflow-y-auto pb-2"><EntityAttachments entityId={patient.id} entityType={attachmentEntityType} legacyItems={attachmentEntityType === "dental_patient" ? record.documents : []} title="Archivos del paciente" /></div> : null}
 
@@ -599,6 +782,8 @@ export function OdontogramModal({
         </div>
       </div>
     </Modal>
+    {editingEntry ? <DentalHistoryEditForm close={() => setEditingEntry(null)} done={() => { setEditingEntry(null); setRecordVersion((version) => version + 1); }} entry={editingEntry} /> : null}
+    </>
   );
 }
 
@@ -926,10 +1111,15 @@ export default function DentalWorkspace({ operator = false }) {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState("");
   const [attentionId, setAttentionId] = useState("");
+  const functions = new Set(config?.user?.functions?.map((item) => item.code) || []);
   const isChart = moduleKey === "odontogram",
     admin = ["admin", "admin_owner"].includes(user.role),
     patient = patients.find((x) => x.id === patientId),
-    canAttention = admin || config?.capabilities?.includes("dental.records.edit");
+    dentistOperator = operator && !admin && functions.has("dentist"),
+    canEditRecords = !dentistOperator && (admin || config?.capabilities?.includes("dental.records.edit")),
+    canEditOdontogram = !dentistOperator && (admin || config?.capabilities?.includes("dental.odontogram.edit")),
+    canEditTreatments = !dentistOperator && (admin || config?.capabilities?.includes("dental.treatments.edit")),
+    canAttention = canEditRecords;
 
   const loadPatients = useCallback(async () => {
     setPatientsLoading(true);
@@ -1022,6 +1212,8 @@ export default function DentalWorkspace({ operator = false }) {
         {modal === "odontogram" && patient ? (
           <OdontogramModal
             admin={admin}
+            canEditRecords={canEditRecords}
+            canEditTreatments={canEditTreatments}
             chart={chart}
             close={() => setModal("")}
             exporting={exporting}
@@ -1037,10 +1229,10 @@ export default function DentalWorkspace({ operator = false }) {
               }
             }}
             onAttention={canAttention ? beginAttention : null}
-            onTooth={(tooth) => {
+            onTooth={canEditOdontogram ? (tooth) => {
               setSelectedTooth(tooth);
               setModal("chart");
-            }}
+            } : null}
             patient={patient}
           />
         ) : null}
@@ -1060,15 +1252,13 @@ export default function DentalWorkspace({ operator = false }) {
     <Shell
       title="Planes de tratamiento"
       subtitle="Expediente odontológico conectado con pacientes y agenda."
-      action={
-        <Button
-          disabled={!patientId}
-          icon="add"
-          onClick={() => setModal("treatment")}
-        >
-          Nuevo tratamiento
-        </Button>
-      }
+      action={canEditTreatments ? <Button
+        disabled={!patientId}
+        icon="add"
+        onClick={() => setModal("treatment")}
+      >
+        Nuevo tratamiento
+      </Button> : null}
     >
       <Toast message={toast} />
       <Card className="mb-5 p-4">
@@ -1146,6 +1336,7 @@ export default function DentalWorkspace({ operator = false }) {
                   </div>
                   <select
                     className={`${fieldClass} w-auto ${statusStyles[x.status] || ""}`}
+                    disabled={!canEditTreatments}
                     value={x.status}
                     onChange={async (e) => {
                       await api.updateDentalTreatment(x.id, {

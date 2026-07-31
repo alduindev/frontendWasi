@@ -15,6 +15,11 @@ import { formatCurrency } from "../../data/dashboard";
 import { useInventory } from "../../hooks/useInventory";
 import { useToast } from "../../hooks/useToast";
 import * as invoiceService from "../../services/invoiceService";
+import * as healthService from "../../services/healthService";
+import {
+  createMedicalPatient,
+  getMedicalPatients,
+} from "../../services/medicalService";
 import { getMyBusiness } from "../../services/businessService";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { matchesEntitySearch } from "../../utils/entitySearch";
@@ -58,11 +63,167 @@ const hasPermission = (user, required) =>
         required.startsWith(permission.slice(0, -1))),
   );
 
-function SaleForm({ onClose, onIssued, products }) {
+function customerName(customer) {
+  return `${customer.firstName || ""} ${customer.lastName || ""}`.trim();
+}
+
+function ClinicalCustomerSearch({
+  canCreate,
+  dashboardKey,
+  onClear,
+  onNew,
+  onSelect,
+  selected,
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const term = query.trim();
+    let active = true;
+    if (term.length < 2) {
+      return undefined;
+    }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const patients = dashboardKey === "dental"
+          ? await healthService.getPatients(term)
+          : await getMedicalPatients({ search: term });
+        if (active) setResults(patients);
+      } catch (requestError) {
+        if (active) {
+          setResults([]);
+          setError(requestError.message || "No se pudo buscar pacientes");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [dashboardKey, query]);
+  const choose = (patient) => {
+    onSelect(patient);
+    setQuery("");
+    setOpen(false);
+  };
+  return (
+    <div className="grid gap-2 rounded-xl bg-surface-container-low p-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-bold">Buscar paciente</p>
+          <p className="text-xs text-on-surface-variant">Busca por nombre o DNI para completar el cliente.</p>
+        </div>
+        {canCreate ? <Button icon="person_add" onClick={onNew} size="small" type="button" variant="secondary">Paciente nuevo</Button> : null}
+      </div>
+      <div className="relative">
+        <Input
+          aria-label="Buscar paciente por nombre o DNI"
+          autoComplete="off"
+          label="Nombre o DNI"
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Ej. 12345678 o Ana Pérez"
+          value={query}
+        />
+        {open && query.trim().length >= 2 ? (
+          <div className="absolute left-0 right-0 top-full z-30 mt-1 grid max-h-56 gap-1 overflow-y-auto rounded-xl border border-outline-variant bg-white p-2 shadow-xl">
+            {loading ? <p className="p-3 text-sm text-on-surface-variant">Buscando...</p> : null}
+            {!loading && !error && results.map((patient) => (
+              <button className="flex items-start gap-2 rounded-lg p-2 text-left hover:bg-primary-fixed" key={patient.id} onClick={() => choose(patient)} type="button">
+                <span className="material-symbols-outlined text-primary">person</span>
+                <span className="min-w-0">
+                  <b className="block truncate text-sm">{customerName(patient)}</b>
+                  <small className="block text-on-surface-variant">{patient.documentType || "DNI"} {patient.document} · {patient.phone || "Sin teléfono"}</small>
+                </span>
+              </button>
+            ))}
+            {!loading && !error && !results.length ? <p className="p-3 text-sm text-on-surface-variant">No encontramos un paciente con esos datos.</p> : null}
+            {error ? <p className="p-3 text-sm text-error" role="alert">{error}</p> : null}
+          </div>
+        ) : null}
+      </div>
+      {selected ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-white p-2 text-sm">
+          <span className="min-w-0"><b className="block truncate">Paciente seleccionado: {customerName(selected)}</b><small className="text-on-surface-variant">{selected.documentType || "DNI"} {selected.document}</small></span>
+          <button aria-label="Quitar paciente seleccionado" className="material-symbols-outlined grid size-8 shrink-0 place-items-center rounded-full text-on-surface-variant hover:bg-surface-container-low hover:text-primary" onClick={onClear} type="button">close</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NewClinicalCustomerForm({ dashboardKey, onClose, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const payload = {
+        firstName: form.get("firstName"),
+        lastName: form.get("lastName"),
+        documentType: "DNI",
+        document: form.get("document"),
+        phone: form.get("phone"),
+        email: form.get("email"),
+        address: form.get("address"),
+        notes: form.get("notes"),
+        sex: "unspecified",
+        birthDate: null,
+      };
+      const patient = dashboardKey === "dental"
+        ? await healthService.createPatient(payload)
+        : await createMedicalPatient(payload);
+      onSaved(patient);
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo registrar al paciente");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Modal onClose={onClose} title="Registrar paciente nuevo">
+      <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={submit}>
+        <Input label="Nombres" name="firstName" required />
+        <Input label="Apellidos" name="lastName" required />
+        <Input inputMode="numeric" label="DNI" maxLength={8} name="document" onInput={digitsOnly} pattern="[0-9]{8}" required />
+        <Input label="Teléfono" name="phone" />
+        <Input label="Correo" name="email" type="email" />
+        <Input label="Dirección" name="address" />
+        <Input className="sm:col-span-2" label="Observaciones" name="notes" />
+        {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2" role="alert">{error}</p> : null}
+        <div className="flex justify-end gap-2 sm:col-span-2">
+          <Button onClick={onClose} type="button" variant="secondary">Cancelar</Button>
+          <Button disabled={saving} icon="person_add" type="submit">{saving ? "Registrando..." : "Registrar paciente"}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function SaleForm({ canCreatePatients = false, dashboardKey, onClose, onIssued, products }) {
   const [documentType, setDocumentType] = useState("boleta");
   const [quantities, setQuantities] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerNameValue, setCustomerNameValue] = useState("");
+  const [customerDocument, setCustomerDocument] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [newCustomerOpen, setNewCustomerOpen] = useState(false);
+  const clinicalCustomerMode = dashboardKey === "dental" || dashboardKey === "health";
   const selected = useMemo(
     () => products.filter((product) => Number(quantities[product.id]) > 0),
     [products, quantities],
@@ -80,9 +241,9 @@ function SaleForm({ onClose, onIssued, products }) {
     try {
       const invoice = await invoiceService.issueInvoice({
         documentType,
-        customerName: form.get("customerName"),
-        customerDocument: form.get("customerDocument"),
-        customerAddress: form.get("customerAddress"),
+        customerName: customerNameValue,
+        customerDocument,
+        customerAddress,
         notes: form.get("notes"),
         lines: selected.map((product) => ({
           productId: product.id,
@@ -96,8 +257,25 @@ function SaleForm({ onClose, onIssued, products }) {
       setSaving(false);
     }
   };
+  const selectCustomer = (patient) => {
+    setSelectedCustomer(patient);
+    setCustomerNameValue(customerName(patient));
+    setCustomerDocument(patient.document || "");
+    setCustomerAddress(patient.address || "");
+  };
+  const clearCustomer = () => {
+    setSelectedCustomer(null);
+    setCustomerNameValue("");
+    setCustomerDocument("");
+    setCustomerAddress("");
+  };
+  const saveNewCustomer = (patient) => {
+    selectCustomer(patient);
+    setNewCustomerOpen(false);
+  };
   return (
-    <Modal onClose={onClose} title="Registrar venta">
+    <>
+      <Modal onClose={onClose} title="Registrar venta">
       <form
         className="grid max-h-[82vh] gap-5 overflow-y-auto p-5"
         onSubmit={submit}
@@ -110,32 +288,37 @@ function SaleForm({ onClose, onIssued, products }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
             label="Comprobante"
-            onChange={(event) => setDocumentType(event.target.value)}
+            onChange={(event) => {
+              const nextType = event.target.value;
+              setDocumentType(nextType);
+              if (nextType === "factura" && customerDocument.length !== 11) setCustomerDocument("");
+            }}
             value={documentType}
           >
             <option value="boleta">Boleta</option>
             <option value="factura">Factura</option>
           </Select>
-          <Input
-            inputMode="numeric"
-            label={
-              documentType === "factura"
-                ? "RUC (11 dígitos)"
-                : "DNI (opcional, 8 dígitos)"
-            }
-            maxLength={documentType === "factura" ? 11 : 8}
-            minLength={documentType === "factura" ? 11 : undefined}
-            name="customerDocument"
-            onInput={digitsOnly}
-            pattern={documentType === "factura" ? "[0-9]{11}" : "[0-9]{8}"}
-            required={documentType === "factura"}
-          />
-          <Input label="Cliente" maxLength="180" name="customerName" required />
+          {clinicalCustomerMode ? <ClinicalCustomerSearch canCreate={canCreatePatients} dashboardKey={dashboardKey} onClear={clearCustomer} onNew={() => setNewCustomerOpen(true)} onSelect={selectCustomer} selected={selectedCustomer} /> : null}
+          <Input label="Cliente" maxLength="180" name="customerName" onChange={(event) => { setCustomerNameValue(event.target.value); if (selectedCustomer) setSelectedCustomer(null); }} required value={customerNameValue} />
           <Input
             label="Dirección"
             maxLength="240"
             name="customerAddress"
+            onChange={(event) => setCustomerAddress(event.target.value)}
             required={documentType === "factura"}
+            value={customerAddress}
+          />
+          <Input
+            inputMode="numeric"
+            label={documentType === "factura" ? "RUC (11 dígitos)" : "DNI (opcional, 8 dígitos)"}
+            maxLength={documentType === "factura" ? 11 : 8}
+            minLength={documentType === "factura" ? 11 : undefined}
+            name="customerDocument"
+            onChange={(event) => { setCustomerDocument(event.target.value); if (selectedCustomer) setSelectedCustomer(null); }}
+            onInput={digitsOnly}
+            pattern={documentType === "factura" ? "[0-9]{11}" : "[0-9]{8}"}
+            required={documentType === "factura"}
+            value={customerDocument}
           />
         </div>
         <section>
@@ -194,7 +377,9 @@ function SaleForm({ onClose, onIssued, products }) {
           </div>
         </div>
       </form>
-    </Modal>
+      </Modal>
+      {newCustomerOpen ? <NewClinicalCustomerForm dashboardKey={dashboardKey} onClose={() => setNewCustomerOpen(false)} onSaved={saveNewCustomer} /> : null}
+    </>
   );
 }
 
@@ -253,6 +438,11 @@ export default function Invoices() {
     "hospitality",
     "health",
   ].includes(dashboardKey);
+  const canCreatePatients =
+    ["admin", "admin_owner"].includes(user?.role) ||
+    config?.capabilities?.includes("patients.edit") ||
+    hasPermission(user, "health.patients.edit") ||
+    hasPermission(user, "patients.edit");
   const [invoices, setInvoices] = useState([]);
   const [business, setBusiness] = useState(config?.business || null);
   const [loading, setLoading] = useState(true);
@@ -478,6 +668,8 @@ export default function Invoices() {
       ) : null}
       {creating ? (
         <SaleForm
+          canCreatePatients={canCreatePatients}
+          dashboardKey={dashboardKey}
           onClose={() => setCreating(false)}
           onIssued={issued}
           products={inventory.products}

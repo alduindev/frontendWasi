@@ -7,6 +7,7 @@ import DashboardShell from "../../components/organisms/DashboardShell";
 import * as api from "../../services/healthService";
 import OperatorShell from "../../components/operator/OperatorShell";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
+import { useAppConfig } from "../../context/appConfigStore";
 const cls = "min-h-11 rounded-xl border border-outline-variant bg-surface px-3";
 const titles = {
   "dental-records": "Historia clínica dental",
@@ -16,6 +17,9 @@ const titles = {
 };
 export default function DentalOperations({ operator = false }) {
   const { moduleKey } = useParams();
+  const { config } = useAppConfig();
+  const dentistOperator = operator && config?.user?.functions?.some((item) => item.code === "dentist");
+  const canWrite = !dentistOperator;
   const [patients, setPatients] = useState([]);
   const [patientId, setPatientId] = useState("");
   const [rows, setRows] = useState([]);
@@ -106,7 +110,7 @@ export default function DentalOperations({ operator = false }) {
       title={titles[moduleKey]}
       subtitle="Operación odontológica conectada al expediente."
       action={
-        moduleKey === "dental-reports" ? null : (
+        moduleKey === "dental-reports" || !canWrite ? null : (
           <Button
             disabled={moduleKey !== "dental-catalog" && !patientId}
             onClick={() => setModal(primary)}
@@ -137,7 +141,7 @@ export default function DentalOperations({ operator = false }) {
           />
         </Card>
       ) : null}
-      {moduleKey === "dental-records" ? (
+      {moduleKey === "dental-records" && canWrite ? (
         <div className="mb-4 flex gap-2">
           <Button onClick={() => setModal("entry")}>Evolución</Button>
           <Button onClick={() => setModal("prescription")}>Receta</Button>
