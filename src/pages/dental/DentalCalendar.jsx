@@ -5,7 +5,6 @@ import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
-import HorizontalScroller from "../../components/atoms/HorizontalScroller";
 import DynamicForm from "../../forms/engine/DynamicForm";
 import patientTemplate from "../../forms/templates/health/patient.template";
 import { useAppConfig } from "../../context/appConfigStore";
@@ -793,23 +792,24 @@ function DayAgenda({ date, events, onEvent, onSchedule, past, canSchedule }) {
           min programados
         </p>
       </div>
-      <div className="border-b border-outline-variant px-2 pt-2">
-        <HorizontalScroller className="gap-1 pb-2" label="Estados de la agenda">
-          {groups.map((item) => (
-            <button
-              className={`min-w-[76px] snap-start rounded-xl p-2 text-center ${active === item.value ? "bg-primary text-white shadow-md" : "bg-surface-container-low text-on-surface-variant hover:bg-primary-fixed"}`}
-              key={item.value}
-              onClick={() => setActive(item.value)}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-lg">
-                {item.icon}
-              </span>
-              <b className="block text-lg leading-5">{item.events.length}</b>
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          ))}
-        </HorizontalScroller>
+      <div className="grid grid-cols-3 gap-1 border-b border-outline-variant p-2">
+        {groups.map((item) => (
+          <button
+            aria-pressed={active === item.value}
+            className={`grid min-w-0 place-items-center gap-0.5 rounded-xl p-2 text-center transition ${active === item.value ? "bg-primary text-white shadow-md" : "bg-surface-container-low text-on-surface-variant hover:bg-primary-fixed"}`}
+            key={item.value}
+            onClick={() => setActive(item.value)}
+            type="button"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">
+              {item.icon}
+            </span>
+            <b className="text-base leading-none">{item.events.length}</b>
+            <span className="w-full truncate text-[10px] leading-tight" title={item.label}>
+              {item.label}
+            </span>
+          </button>
+        ))}
       </div>
       <div className="min-h-[360px] max-h-[52vh] overflow-y-auto p-3">
         <div className="mb-2 flex justify-between">
@@ -870,18 +870,8 @@ function DayAgenda({ date, events, onEvent, onSchedule, past, canSchedule }) {
           </div>
         ) : null}
       </div>
-      {canSchedule ? (
-        <div className="border-t border-outline-variant p-3">
-          <Button
-            className="w-full"
-            disabled={past}
-            icon="event_available"
-            onClick={onSchedule}
-          >
-            {past ? "Fecha histórica" : "Agendar para este día"}
-          </Button>
-        </div>
-      ) : null}
+      {canSchedule && !past ? <div className="border-t border-outline-variant p-3"><Button className="w-full" icon="event_available" onClick={onSchedule}>Agendar para este día</Button></div> : null}
+      {past ? <div className="flex items-center gap-2 border-t border-outline-variant bg-surface-container-low p-3 text-sm text-on-surface-variant"><span aria-hidden="true" className="material-symbols-outlined text-primary">history</span><span><b className="text-on-surface">Día histórico.</b> Puedes revisar las citas y atenciones realizadas, pero no agendar una nueva.</span></div> : null}
     </Card>
   );
 }
@@ -973,7 +963,7 @@ export default function DentalCalendar({ operator = false }) {
   return (
     <Shell
       action={
-        <div className="flex gap-2">
+        <div className="flex min-w-0 flex-wrap justify-end gap-2">
           <Button
             icon="today"
             onClick={() => {
@@ -989,14 +979,15 @@ export default function DentalCalendar({ operator = false }) {
               disabled={selected < today}
               icon="event_available"
               onClick={openSchedule}
+              title={selected < today ? "No se pueden agendar citas en un día pasado" : undefined}
             >
               Agendar cita
             </Button>
           ) : null}
         </div>
       }
-      subtitle="Selecciona un día, revisa las atenciones y agenda pacientes sin salir del calendario."
-      title="Calendario odontológico"
+      subtitle="Agenda odontológica por servicio, profesional, estado y expediente clínico."
+      title="Agenda dental"
     >
       {error ? (
         <div className="mb-4">
@@ -1008,8 +999,23 @@ export default function DentalCalendar({ operator = false }) {
           />
         </div>
       ) : null}
-      <div className="grid items-start gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="xl:sticky xl:top-20">
+      <div className="mb-3 flex flex-wrap gap-2">
+        {filters.map((item) => (
+          <button
+            className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-bold transition ${filter === item.value ? "border-primary bg-primary text-white" : "border-outline-variant bg-white text-on-surface-variant hover:border-primary hover:bg-primary-fixed"}`}
+            key={item.value}
+            onClick={() => setFilter(item.value)}
+            type="button"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">
+              {item.icon}
+            </span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
+        <aside className="xl:order-2 xl:sticky xl:top-20">
           <DayAgenda
             canSchedule={canSchedule}
             date={selected}
@@ -1019,95 +1025,70 @@ export default function DentalCalendar({ operator = false }) {
             past={selected < today}
           />
         </aside>
-        <Card className="overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-outline-variant p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-1">
-              <button
-                aria-label="Mes anterior"
-                className="material-symbols-outlined rounded-full p-2 hover:bg-primary-fixed"
-                onClick={() => move(-1)}
-                type="button"
-              >
-                chevron_left
-              </button>
-              <h2 className="min-w-44 text-center text-lg font-bold capitalize">
+        <Card className="min-w-0 overflow-hidden xl:order-1">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-outline-variant p-3">
+            <button
+              aria-label="Mes anterior"
+              className="grid size-10 place-items-center rounded-xl border border-outline-variant bg-white text-primary transition hover:bg-primary-fixed"
+              onClick={() => move(-1)}
+              type="button"
+            >
+              <span aria-hidden="true" className="material-symbols-outlined">chevron_left</span>
+            </button>
+            <h2 className="truncate text-center font-heading text-base font-bold capitalize sm:text-lg">
                 {monthTitle(cursor)}
-              </h2>
-              <button
-                aria-label="Mes siguiente"
-                className="material-symbols-outlined rounded-full p-2 hover:bg-primary-fixed"
-                onClick={() => move(1)}
-                type="button"
-              >
-                chevron_right
-              </button>
-            </div>
-            <div className="flex gap-1 overflow-x-auto">
-              {filters.map((item) => (
-                <button
-                  className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-bold ${filter === item.value ? "bg-primary text-white" : "bg-surface-container-low text-on-surface-variant"}`}
-                  key={item.value}
-                  onClick={() => setFilter(item.value)}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-base">
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </button>
-              ))}
-            </div>
+            </h2>
+            <button
+              aria-label="Mes siguiente"
+              className="grid size-10 place-items-center rounded-xl border border-outline-variant bg-white text-primary transition hover:bg-primary-fixed"
+              onClick={() => move(1)}
+              type="button"
+            >
+              <span aria-hidden="true" className="material-symbols-outlined">chevron_right</span>
+            </button>
           </div>
           {loading ? (
             <div className="h-[32rem] animate-pulse bg-surface-container-low" />
           ) : (
             <>
-              <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container-low">
+              <div className="grid min-w-0 grid-cols-7 border-b border-outline-variant bg-surface-container-low text-center text-[10px] font-bold text-on-surface-variant sm:text-[11px]">
                 {weekdays.map((day) => (
-                  <div
-                    className="p-2 text-center text-[10px] font-bold text-on-surface-variant"
-                    key={day}
-                  >
+                  <span className="min-w-0 truncate p-2" key={day}>
                     {day}
-                  </div>
+                  </span>
                 ))}
               </div>
-              <div className="grid grid-cols-7">
+              <div className="grid min-w-0 grid-cols-7">
                 {cells.map((cell) => {
                   const key = iso(cell.date),
                     events = grouped[key] || [];
+                  const selectedDay = key === selected;
+                  const past = key < today;
                   return (
                     <button
-                      className={`min-h-20 border-b border-r border-outline-variant p-1.5 text-left transition hover:bg-primary-fixed/40 sm:min-h-24 ${!cell.current ? "bg-surface-container-low/50 text-outline" : ""} ${key === today ? "ring-2 ring-inset ring-primary" : ""} ${key === selected ? "bg-primary-fixed" : ""}`}
+                      aria-label={`${dayTitle(key)}${past ? ", fecha histórica" : ""}`}
+                      aria-pressed={selectedDay}
+                      className={`relative min-h-[76px] min-w-0 overflow-hidden border-b border-r border-outline-variant p-1.5 text-left transition sm:min-h-[108px] ${cell.current ? past ? "bg-surface-container-low/70 text-on-surface-variant" : "bg-white" : "bg-surface-container-low text-on-surface-variant"} ${selectedDay ? "ring-2 ring-inset ring-primary" : "hover:bg-primary-fixed/30"}`}
                       key={key}
                       onClick={() => selectDay(cell.date)}
                       type="button"
                     >
-                      <span
-                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${key === selected ? "bg-primary text-white" : ""}`}
-                      >
-                        {cell.date.getDate()}
+                      <span className="flex items-center gap-1">
+                        <span className={`grid size-6 place-items-center rounded-full text-xs font-bold ${key === today ? "bg-primary text-white" : ""}`}>{cell.date.getDate()}</span>
+                        {past && cell.current ? <span aria-hidden="true" className="material-symbols-outlined text-sm text-on-surface-variant">history</span> : null}
                       </span>
-                      <div className="mt-1 grid gap-0.5">
+                      <div className="mt-1 grid min-w-0 gap-1">
                         {events.slice(0, 3).map((item) => (
                           <span
-                            className="flex items-center gap-1 truncate text-[9px]"
+                            className={`min-w-0 truncate rounded px-1 py-1 text-[9px] font-bold sm:px-1.5 sm:text-[10px] ${(statusMeta[item.status] || statusMeta.scheduled).tone}`}
                             key={item.id}
+                            title={`${new Date(item.startsAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })} · ${item.patient.firstName}`}
                           >
-                            <span
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${(statusMeta[item.status] || statusMeta.scheduled).dot}`}
-                            />
-                            <span className="truncate">
-                              {item.patient.firstName} ·{" "}
-                              {new Date(item.startsAt).toLocaleTimeString(
-                                "es-PE",
-                                { hour: "2-digit", minute: "2-digit" },
-                              )}
-                            </span>
+                            {new Date(item.startsAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })} <span className="hidden sm:inline">{item.patient.firstName}</span>
                           </span>
                         ))}
                         {events.length > 3 ? (
-                          <span className="text-[9px] font-bold text-primary">
+                          <span className="truncate text-[10px] font-bold text-primary">
                             +{events.length - 3} más
                           </span>
                         ) : null}
