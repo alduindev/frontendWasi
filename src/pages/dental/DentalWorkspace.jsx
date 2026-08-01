@@ -17,10 +17,26 @@ import { matchesEntitySearch } from "../../utils/entitySearch";
 // Cuadrantes en orden de lectura clínica: superior derecha → superior izquierda
 // luego inferior izquierda → inferior derecha (cruz odontológica estándar)
 const QUADRANTS = [
-  { key: "ur", label: "Superior derecha", teeth: [18, 17, 16, 15, 14, 13, 12, 11] },
-  { key: "ul", label: "Superior izquierda", teeth: [21, 22, 23, 24, 25, 26, 27, 28] },
-  { key: "ll", label: "Inferior izquierda", teeth: [38, 37, 36, 35, 34, 33, 32, 31] },
-  { key: "lr", label: "Inferior derecha", teeth: [48, 47, 46, 45, 44, 43, 42, 41] },
+  {
+    key: "ur",
+    label: "Superior derecha",
+    teeth: [18, 17, 16, 15, 14, 13, 12, 11],
+  },
+  {
+    key: "ul",
+    label: "Superior izquierda",
+    teeth: [21, 22, 23, 24, 25, 26, 27, 28],
+  },
+  {
+    key: "ll",
+    label: "Inferior izquierda",
+    teeth: [38, 37, 36, 35, 34, 33, 32, 31],
+  },
+  {
+    key: "lr",
+    label: "Inferior derecha",
+    teeth: [48, 47, 46, 45, 44, 43, 42, 41],
+  },
 ];
 
 const conditionLabels = {
@@ -161,7 +177,9 @@ function Toast({ message }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex justify-center px-4">
       <div className="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
-        <span className="material-symbols-outlined text-base">check_circle</span>
+        <span className="material-symbols-outlined text-base">
+          check_circle
+        </span>
         {message}
       </div>
     </div>
@@ -251,7 +269,14 @@ export function ChartForm({ patientId, tooth, close, done }) {
             placeholder="Detalles clínicos relevantes para el seguimiento"
           />
         </label>
-        {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2" role="alert">{error}</p> : null}
+        {error ? (
+          <p
+            className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
         <div className="flex items-center justify-end gap-2 sm:col-span-2">
           <Button onClick={close} type="button" variant="secondary">
             Cancelar
@@ -302,7 +327,9 @@ function DentalHistoryEditForm({ close, done, entry }) {
         });
       } else if (type === "treatment") {
         await api.updateDentalTreatment(item.id, {
-          toothNumber: form.get("toothNumber") ? Number(form.get("toothNumber")) : null,
+          toothNumber: form.get("toothNumber")
+            ? Number(form.get("toothNumber"))
+            : null,
           procedure: form.get("procedure"),
           diagnosis: form.get("diagnosis"),
           professionalName: form.get("professionalName"),
@@ -342,7 +369,11 @@ function DentalHistoryEditForm({ close, done, entry }) {
           <>
             <label className="text-sm font-medium">
               Tipo
-              <select className={`${fieldClass} mt-1`} defaultValue={item.entryType} name="entryType">
+              <select
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.entryType}
+                name="entryType"
+              >
                 <option value="history">Antecedente</option>
                 <option value="evolution">Evolución</option>
                 <option value="examination">Examen</option>
@@ -351,20 +382,55 @@ function DentalHistoryEditForm({ close, done, entry }) {
             </label>
             <label className="text-sm font-medium">
               Profesional
-              <input className={`${fieldClass} mt-1`} defaultValue={item.professionalName} name="professionalName" />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.professionalName}
+                name="professionalName"
+              />
             </label>
             <label className="text-sm font-medium sm:col-span-2">
               Título
-              <input className={`${fieldClass} mt-1`} defaultValue={item.title} name="title" required />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.title}
+                name="title"
+                required
+              />
             </label>
             <label className="text-sm font-medium sm:col-span-2">
               Evolución
-              <textarea className={`${fieldClass} mt-1 min-h-28 py-2`} defaultValue={item.content} name="content" required />
+              <textarea
+                className={`${fieldClass} mt-1 min-h-28 py-2`}
+                defaultValue={item.content}
+                name="content"
+                required
+              />
             </label>
             <div className="grid gap-3 sm:col-span-2 sm:grid-cols-3">
-              <label className="text-sm font-medium">Temperatura<input className={`${fieldClass} mt-1`} defaultValue={item.vitalSigns?.temperature || ""} name="temperature" /></label>
-              <label className="text-sm font-medium">Presión arterial<input className={`${fieldClass} mt-1`} defaultValue={item.vitalSigns?.bloodPressure || ""} name="bloodPressure" /></label>
-              <label className="text-sm font-medium">Frecuencia cardiaca<input className={`${fieldClass} mt-1`} defaultValue={item.vitalSigns?.heartRate || ""} name="heartRate" /></label>
+              <label className="text-sm font-medium">
+                Temperatura
+                <input
+                  className={`${fieldClass} mt-1`}
+                  defaultValue={item.vitalSigns?.temperature || ""}
+                  name="temperature"
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Presión arterial
+                <input
+                  className={`${fieldClass} mt-1`}
+                  defaultValue={item.vitalSigns?.bloodPressure || ""}
+                  name="bloodPressure"
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Frecuencia cardiaca
+                <input
+                  className={`${fieldClass} mt-1`}
+                  defaultValue={item.vitalSigns?.heartRate || ""}
+                  name="heartRate"
+                />
+              </label>
             </div>
           </>
         ) : null}
@@ -372,55 +438,146 @@ function DentalHistoryEditForm({ close, done, entry }) {
           <>
             <label className="text-sm font-medium">
               Procedimiento
-              <input className={`${fieldClass} mt-1`} defaultValue={item.procedure} name="procedure" required />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.procedure}
+                name="procedure"
+                required
+              />
             </label>
             <label className="text-sm font-medium">
               Estado
-              <select className={`${fieldClass} mt-1`} defaultValue={item.status} name="status">
-                {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              <select
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.status}
+                name="status"
+              >
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="text-sm font-medium">
               Pieza dental
-              <input className={`${fieldClass} mt-1`} defaultValue={item.toothNumber || ""} max="85" min="11" name="toothNumber" type="number" />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.toothNumber || ""}
+                max="85"
+                min="11"
+                name="toothNumber"
+                type="number"
+              />
             </label>
             <label className="text-sm font-medium">
               Costo estimado
-              <input className={`${fieldClass} mt-1`} defaultValue={item.estimatedCost || 0} min="0" name="estimatedCost" step="0.01" type="number" />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.estimatedCost || 0}
+                min="0"
+                name="estimatedCost"
+                step="0.01"
+                type="number"
+              />
             </label>
             <label className="text-sm font-medium">
               Diagnóstico
-              <input className={`${fieldClass} mt-1`} defaultValue={item.diagnosis} name="diagnosis" />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.diagnosis}
+                name="diagnosis"
+              />
             </label>
             <label className="text-sm font-medium">
               Profesional
-              <input className={`${fieldClass} mt-1`} defaultValue={item.professionalName} name="professionalName" />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.professionalName}
+                name="professionalName"
+              />
             </label>
             <label className="text-sm font-medium sm:col-span-2">
               Fecha programada
-              <input className={`${fieldClass} mt-1`} defaultValue={localDateTimeValue(item.scheduledAt)} name="scheduledAt" type="datetime-local" />
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={localDateTimeValue(item.scheduledAt)}
+                name="scheduledAt"
+                type="datetime-local"
+              />
             </label>
             <label className="text-sm font-medium sm:col-span-2">
               Notas
-              <textarea className={`${fieldClass} mt-1 min-h-24 py-2`} defaultValue={item.notes} name="notes" />
+              <textarea
+                className={`${fieldClass} mt-1 min-h-24 py-2`}
+                defaultValue={item.notes}
+                name="notes"
+              />
             </label>
           </>
         ) : null}
         {type === "prescription" ? (
           <>
-            <label className="text-sm font-medium sm:col-span-2">Medicamento<input className={`${fieldClass} mt-1`} defaultValue={item.medication} name="medication" required /></label>
-            <label className="text-sm font-medium">Dosis<input className={`${fieldClass} mt-1`} defaultValue={item.dose} name="dose" /></label>
-            <label className="text-sm font-medium">Frecuencia<input className={`${fieldClass} mt-1`} defaultValue={item.frequency} name="frequency" /></label>
-            <label className="text-sm font-medium">Duración<input className={`${fieldClass} mt-1`} defaultValue={item.duration} name="duration" /></label>
-            <label className="text-sm font-medium">Profesional<input className={`${fieldClass} mt-1`} defaultValue={item.professionalName} name="professionalName" /></label>
-            <label className="text-sm font-medium sm:col-span-2">Indicaciones<textarea className={`${fieldClass} mt-1 min-h-24 py-2`} defaultValue={item.instructions} name="instructions" /></label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Medicamento
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.medication}
+                name="medication"
+                required
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Dosis
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.dose}
+                name="dose"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Frecuencia
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.frequency}
+                name="frequency"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Duración
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.duration}
+                name="duration"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Profesional
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.professionalName}
+                name="professionalName"
+              />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Indicaciones
+              <textarea
+                className={`${fieldClass} mt-1 min-h-24 py-2`}
+                defaultValue={item.instructions}
+                name="instructions"
+              />
+            </label>
           </>
         ) : null}
         {type === "document" ? (
           <>
             <label className="text-sm font-medium">
               Tipo
-              <select className={`${fieldClass} mt-1`} defaultValue={item.documentType} name="documentType">
+              <select
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.documentType}
+                name="documentType"
+              >
                 <option value="radiograph">Radiografía</option>
                 <option value="photo">Fotografía</option>
                 <option value="consent">Consentimiento</option>
@@ -428,15 +585,50 @@ function DentalHistoryEditForm({ close, done, entry }) {
                 <option value="other">Otro</option>
               </select>
             </label>
-            <label className="text-sm font-medium">Nombre<input className={`${fieldClass} mt-1`} defaultValue={item.name} name="name" required /></label>
-            <label className="text-sm font-medium sm:col-span-2">Enlace<input className={`${fieldClass} mt-1`} defaultValue={item.url} name="url" required type="url" /></label>
-            <label className="text-sm font-medium sm:col-span-2">Notas<textarea className={`${fieldClass} mt-1 min-h-24 py-2`} defaultValue={item.notes} name="notes" /></label>
+            <label className="text-sm font-medium">
+              Nombre
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.name}
+                name="name"
+                required
+              />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Enlace
+              <input
+                className={`${fieldClass} mt-1`}
+                defaultValue={item.url}
+                name="url"
+                required
+                type="url"
+              />
+            </label>
+            <label className="text-sm font-medium sm:col-span-2">
+              Notas
+              <textarea
+                className={`${fieldClass} mt-1 min-h-24 py-2`}
+                defaultValue={item.notes}
+                name="notes"
+              />
+            </label>
           </>
         ) : null}
-        {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2" role="alert">{error}</p> : null}
+        {error ? (
+          <p
+            className="rounded-xl bg-error-container p-3 text-sm text-error sm:col-span-2"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
         <div className="flex justify-end gap-2 sm:col-span-2">
-          <Button onClick={close} type="button" variant="secondary">Cancelar</Button>
-          <Button disabled={saving} icon="save" type="submit">{saving ? "Guardando…" : "Guardar cambios"}</Button>
+          <Button onClick={close} type="button" variant="secondary">
+            Cancelar
+          </Button>
+          <Button disabled={saving} icon="save" type="submit">
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </Button>
         </div>
       </form>
     </Modal>
@@ -456,7 +648,14 @@ export function OdontogramModal({
   onTooth,
   patient,
 }) {
-  const [record, setRecord] = useState({ appointments: [], clinical: [], consumptions: [], documents: [], prescriptions: [], treatments: [] });
+  const [record, setRecord] = useState({
+    appointments: [],
+    clinical: [],
+    consumptions: [],
+    documents: [],
+    prescriptions: [],
+    treatments: [],
+  });
   const [recordLoading, setRecordLoading] = useState(true);
   const [recordVersion, setRecordVersion] = useState(0);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -467,7 +666,14 @@ export function OdontogramModal({
   const [exportError, setExportError] = useState("");
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
-  const download = async (format) => { setExportError(""); try { await onExport(format); } catch (error) { setExportError(error.message || "No se pudo generar el archivo"); } };
+  const download = async (format) => {
+    setExportError("");
+    try {
+      await onExport(format);
+    } catch (error) {
+      setExportError(error.message || "No se pudo generar el archivo");
+    }
+  };
   useEffect(() => {
     let active = true;
     Promise.allSettled([
@@ -477,15 +683,28 @@ export function OdontogramModal({
       api.getDentalPrescriptions(patient.id),
       api.getDentalTreatments(patient.id),
       api.getDentalConsumptions(patient.id),
-    ]).then((results) => {
-      if (!active) return;
-      const value = (index) => results[index].status === "fulfilled" ? results[index].value : [];
-      setRecord({
-        appointments: value(0).filter((item) => item.patient?.id === patient.id),
-        clinical: value(1), documents: value(2), prescriptions: value(3), treatments: value(4), consumptions: value(5),
+    ])
+      .then((results) => {
+        if (!active) return;
+        const value = (index) =>
+          results[index].status === "fulfilled" ? results[index].value : [];
+        setRecord({
+          appointments: value(0).filter(
+            (item) => item.patient?.id === patient.id,
+          ),
+          clinical: value(1),
+          documents: value(2),
+          prescriptions: value(3),
+          treatments: value(4),
+          consumptions: value(5),
+        });
+      })
+      .finally(() => {
+        if (active) setRecordLoading(false);
       });
-    }).finally(() => { if (active) setRecordLoading(false); });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [patient.id, recordVersion]);
   useEffect(() => {
     if (!admin || !exportPreview) return undefined;
@@ -497,15 +716,20 @@ export function OdontogramModal({
         setExportError("");
       }
     });
-    api.previewDentalChartPdf(patient.id).then((blob) => {
-      if (!active) return;
-      objectUrl = URL.createObjectURL(blob);
-      setPdfPreviewUrl(objectUrl);
-    }).catch((error) => {
-      if (active) setExportError(error.message || "No se pudo generar la vista previa");
-    }).finally(() => {
-      if (active) setPreviewLoading(false);
-    });
+    api
+      .previewDentalChartPdf(patient.id)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPdfPreviewUrl(objectUrl);
+      })
+      .catch((error) => {
+        if (active)
+          setExportError(error.message || "No se pudo generar la vista previa");
+      })
+      .finally(() => {
+        if (active) setPreviewLoading(false);
+      });
     return () => {
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -522,267 +746,675 @@ export function OdontogramModal({
 
   return (
     <>
-    <Modal
-      contentClassName="min-h-0 flex-1 overflow-hidden"
-      fixedHeight
-      onClose={close}
-      title={`Odontograma · ${patient.firstName} ${patient.lastName}`}
-    >
-      <div className="flex h-full min-h-0 flex-col p-3 sm:p-5">
-        <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-container-low p-3 sm:mb-4 sm:gap-3">
-          <div className="flex items-center gap-3">
-            <span
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${avatarTone(patient.document || patient.id)}`}
-            >
-              {initials(patient.firstName, patient.lastName)}
-            </span>
-            <div>
-              <b>
-                {patient.documentType} {patient.document}
-              </b>
-              <p className="text-sm text-on-surface-variant">
-                {patient.phone || "Sin teléfono"} ·{" "}
-                {chart.length
-                  ? `${chart.length} hallazgo${chart.length === 1 ? "" : "s"}`
-                  : "Sin hallazgos registrados"}
-              </p>
-            </div>
-          </div>
-          {admin ? (
-            <div className="flex gap-2">
-              <Button
-                disabled={exporting}
-                icon="preview"
-                onClick={() => { setActiveTab("report"); setExportPreview(true); }}
-                variant="secondary"
-              >
-                Vista previa del PDF
-              </Button>
-            </div>
-          ) : null}
-          {onAttention ? <Button icon="medical_services" onClick={onAttention}>Registrar atención</Button> : null}
-        </div>
-
-        <div aria-label="Secciones del expediente" className="mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-2xl border border-outline-variant bg-white p-1.5 sm:mb-5" role="tablist">
-          {[
-            ["summary", "account_circle", "Resumen"],
-            ["odontogram", "dentistry", "Odontograma"],
-            ["history", "clinical_notes", "Historial"],
-            ["files", "folder", "Archivos"],
-            ...(admin ? [["report", "picture_as_pdf", "Reporte PDF"]] : []),
-          ].map(([id, icon, label]) => <button aria-selected={activeTab===id} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold transition ${activeTab===id ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-primary-fixed hover:text-primary"}`} key={id} onClick={() => { setActiveTab(id); setExportPreview(id==="report"); }} role="tab" type="button"><span className="material-symbols-outlined text-lg">{icon}</span>{label}</button>)}
-        </div>
-
-        {admin && exportPreview ? <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-outline-variant bg-white"><div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-low p-3 sm:gap-3 sm:p-4"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-widest text-primary sm:text-xs">Vista previa del informe clínico integral</p><h3 className="truncate text-base font-bold sm:text-lg">Expediente de {patient.firstName} {patient.lastName}</h3><p className="truncate text-[10px] text-on-surface-variant sm:text-xs">{patient.documentType} {patient.document} · Odontograma, historia, atenciones, productos y pagos</p></div><Button disabled={exporting||previewLoading} icon="picture_as_pdf" onClick={() => download("pdf")} variant="secondary">{exporting ? "Generando…" : "Descargar PDF"}</Button></div>{exportError?<p className="m-3 shrink-0 rounded-xl bg-error-container p-3 text-sm text-error">{exportError}</p>:null}{previewLoading?<div className="grid min-h-0 flex-1 place-items-center bg-surface-container-low"><span className="text-sm text-on-surface-variant">Generando vista previa…</span></div>:pdfPreviewUrl?<iframe className="min-h-0 flex-1 w-full bg-surface-container-low" src={pdfPreviewUrl} title={`Vista previa del expediente clínico de ${patient.firstName} ${patient.lastName}`}/>:null}</section>:null}
-
-        <section className={`${activeTab === "summary" ? "grid" : "hidden"} min-h-0 flex-1 gap-3 overflow-y-auto pb-2 lg:grid-cols-3`}>
-          <Card className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-primary">Ficha del paciente</p>
-            <dl className="mt-3 grid gap-2 text-sm">
-              <div><dt className="text-xs text-on-surface-variant">Contacto</dt><dd>{patient.phone || "Sin teléfono"} · {patient.email || "Sin correo"}</dd></div>
-              <div><dt className="text-xs text-on-surface-variant">Fecha de nacimiento</dt><dd>{patient.birthDate ? new Date(`${patient.birthDate}T00:00:00`).toLocaleDateString("es-PE") : "No registrada"}</dd></div>
-              <div><dt className="text-xs text-on-surface-variant">Dirección</dt><dd>{patient.address || "No registrada"}</dd></div>
-            </dl>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-primary">Alertas clínicas</p>
-            <div className="mt-3 grid gap-2 text-sm">
-              <p className={patient.allergies ? "rounded-xl bg-error-container p-2" : "text-on-surface-variant"}><b>Alergias:</b> {patient.allergies || "Sin alergias registradas"}</p>
-              <p><b>Condiciones:</b> {patient.chronicConditions || "Sin condiciones crónicas registradas"}</p>
-              <p><b>Tipo de sangre:</b> {patient.bloodType || "No registrado"}</p>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-primary">Resumen conectado</p>
-            {recordLoading ? <div className="mt-3 h-20 animate-pulse rounded-xl bg-surface-container-low" /> : <div className="mt-3 grid grid-cols-2 gap-2 text-center"><div className="rounded-xl bg-primary-fixed p-2"><b className="block text-xl">{record.appointments.length}</b><span className="text-xs">Citas</span></div><div className="rounded-xl bg-primary-fixed p-2"><b className="block text-xl">{record.treatments.length}</b><span className="text-xs">Tratamientos</span></div><div className="rounded-xl bg-surface-container-low p-2"><b className="block text-xl">{record.clinical.length}</b><span className="text-xs">Evoluciones</span></div><div className="rounded-xl bg-surface-container-low p-2"><b className="block text-xl">{record.documents.length + record.prescriptions.length}</b><span className="text-xs">Docs./recetas</span></div></div>}
-          </Card>
-        </section>
-
-        {activeTab === "history" && !recordLoading && (record.appointments.length || record.clinical.length || record.treatments.length || record.prescriptions.length || record.documents.length) ? <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-outline-variant p-4"><h3 className="font-bold">Historial clínico integrado</h3><p className="mb-3 text-sm text-on-surface-variant">Citas, evoluciones, tratamientos, recetas y documentos en una sola ficha.</p><div className="grid gap-2 pr-1 sm:grid-cols-2">{[
-          ...record.appointments.map((x) => ({ id: `a-${x.id}`, icon: "event", title: x.reason, detail: `${new Date(x.startsAt).toLocaleString("es-PE")} · ${x.professionalName || "Sin asignar"}` })),
-          ...record.clinical.map((x) => ({ id: `c-${x.id}`, icon: "clinical_notes", title: x.title, detail: x.content, editable: canEditRecords, type: "clinical", item: x })),
-          ...record.treatments.map((x) => ({ id: `t-${x.id}`, icon: "medical_services", title: x.procedure, detail: `${statusLabels[x.status] || x.status}${x.toothNumber ? ` · Pieza ${x.toothNumber}` : ""}`, editable: canEditTreatments, type: "treatment", item: x })),
-          ...record.prescriptions.map((x) => ({ id: `p-${x.id}`, icon: "medication", title: x.medication, detail: `${x.dose || ""} ${x.frequency || ""}`.trim() || "Sin indicaciones", editable: canEditRecords, type: "prescription", item: x })),
-          ...record.documents.map((x) => ({ id: `d-${x.id}`, icon: "description", title: x.name, detail: x.documentType, editable: canEditRecords, type: "document", item: x })),
-          ...record.consumptions.map((x) => ({ id: `s-${x.id}`, icon: "vaccines", title: `${x.quantity} × ${x.product.name}`, detail: `Insumo utilizado · ${x.recordedBy}` })),
-        ].map((item) => <article className="flex gap-3 rounded-xl bg-surface-container-low p-3" key={item.id}><span className="material-symbols-outlined text-primary">{item.icon}</span><div className="min-w-0 flex-1"><b className="block truncate text-sm">{item.title}</b><p className="line-clamp-2 text-xs text-on-surface-variant">{item.detail}</p></div>{item.editable ? <Button icon="edit" onClick={() => setEditingEntry({ type: item.type, item: item.item })} size="small" variant="outlined">Editar</Button> : null}</article>)}</div></section> : null}
-
-        {activeTab === "files" ? <div className="min-h-0 flex-1 overflow-y-auto pb-2"><EntityAttachments entityId={patient.id} entityType={attachmentEntityType} legacyItems={attachmentEntityType === "dental_patient" ? record.documents : []} title="Archivos del paciente" /></div> : null}
-
-        <div className={activeTab === "odontogram" ? "min-h-0 flex-1 overflow-y-auto pb-2" : "hidden"}>
-        <div className="mb-2 flex items-center justify-between gap-2"><h3 className="font-bold">Odontograma actual</h3><div className="grid grid-cols-2 rounded-xl border border-outline-variant bg-white p-1"><button className={`rounded-lg px-3 py-1.5 text-xs font-bold ${odontogramView==="teeth"?"bg-primary text-white":"text-on-surface-variant"}`} onClick={()=>setOdontogramView("teeth")} type="button">Piezas</button><button className={`rounded-lg px-3 py-1.5 text-xs font-bold ${odontogramView==="findings"?"bg-primary text-white":"text-on-surface-variant"}`} onClick={()=>setOdontogramView("findings")} type="button">Hallazgos ({chart.length})</button></div></div>
-
-        {Object.keys(summary).length ? (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {Object.entries(summary).map(([cond, count]) => (
+      <Modal
+        contentClassName="min-h-0 flex-1 overflow-hidden"
+        fixedHeight
+        onClose={close}
+        title={`Odontograma · ${patient.firstName} ${patient.lastName}`}
+      >
+        <div className="flex h-full min-h-0 flex-col p-3 sm:p-5">
+          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-container-low p-3 sm:mb-4 sm:gap-3">
+            <div className="flex items-center gap-3">
               <span
-                className="flex items-center gap-1.5 rounded-full border border-outline-variant px-2.5 py-1 text-xs font-medium"
-                key={cond}
+                className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${avatarTone(patient.document || patient.id)}`}
               >
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ background: conditionColors[cond] }}
-                />
-                {conditionLabels[cond]} · {count}
+                {initials(patient.firstName, patient.lastName)}
               </span>
-            ))}
-          </div>
-        ) : null}
-
-        {odontogramView==="teeth"?<><div className="mb-2 flex items-center justify-between rounded-xl bg-surface-container-low p-2"><button aria-label="Cuadrante anterior" className="material-symbols-outlined grid size-9 place-items-center rounded-full bg-white shadow-sm disabled:opacity-30" disabled={quadrantIndex===0} onClick={()=>setQuadrantIndex(index=>Math.max(0,index-1))} type="button">chevron_left</button><div className="flex min-w-0 flex-1 justify-center gap-1">{QUADRANTS.map((quadrant,index)=><button aria-label={quadrant.label} className={`h-2.5 rounded-full transition-all ${index===quadrantIndex?'w-8 bg-primary':'w-2.5 bg-outline-variant'}`} key={quadrant.key} onClick={()=>setQuadrantIndex(index)} type="button"/>)}</div><span className="min-w-20 text-center text-xs font-bold">{quadrantIndex+1} / {QUADRANTS.length}</span><button aria-label="Cuadrante siguiente" className="material-symbols-outlined grid size-9 place-items-center rounded-full bg-white shadow-sm disabled:opacity-30" disabled={quadrantIndex===QUADRANTS.length-1} onClick={()=>setQuadrantIndex(index=>Math.min(QUADRANTS.length-1,index+1))} type="button">chevron_right</button></div><div className="mb-3 rounded-2xl border border-outline-variant p-3 sm:p-4">
-          {[QUADRANTS[quadrantIndex]].map((q) => (
-            <div key={q.key}>
-              <p className="mb-3 text-center text-xs font-bold uppercase tracking-wide text-primary">
-                {q.label}
-              </p>
-              <div className="grid grid-cols-8 gap-1.5">
-                {q.teeth.map((tooth) => {
-                  const entry = chart.find((x) => x.toothNumber === tooth);
-                  return (
-                    <button
-                      className={`group relative rounded-xl border p-1.5 transition disabled:cursor-default ${onTooth ? "hover:border-primary hover:shadow-sm" : ""} ${
-                        entry
-                          ? "border-primary/60 bg-primary-fixed"
-                          : "border-outline-variant bg-white"
-                      }`}
-                      key={tooth}
-                      disabled={!onTooth}
-                      onClick={() => onTooth?.(tooth)}
-                      title={
-                        entry
-                          ? `Pieza ${tooth} · ${conditionLabels[entry.condition]}`
-                          : `Pieza ${tooth} · Sano`
-                      }
-                      type="button"
-                    >
-                      <ToothSvg condition={entry?.condition} number={tooth} />
-                      <b className="mt-1 block text-[11px] leading-none">
-                        {tooth}
-                      </b>
-                    </button>
-                  );
-                })}
+              <div>
+                <b>
+                  {patient.documentType} {patient.document}
+                </b>
+                <p className="text-sm text-on-surface-variant">
+                  {patient.phone || "Sin teléfono"} ·{" "}
+                  {chart.length
+                    ? `${chart.length} hallazgo${chart.length === 1 ? "" : "s"}`
+                    : "Sin hallazgos registrados"}
+                </p>
               </div>
             </div>
-          ))}
-        </div><ConditionLegend /></>:null}
-
-        {odontogramView==="findings"?<div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-outline-variant">
-          <div className="grid gap-2 p-2 sm:hidden">
-            {chart
-              .slice()
-              .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-              .map((x) => (
-                <button
-                  className={`rounded-2xl border border-outline-variant p-3 text-left ${onTooth ? "hover:border-primary hover:bg-primary-fixed/30" : ""}`}
-                  disabled={!onTooth}
-                  key={x.id}
-                  onClick={() => onTooth?.(x.toothNumber)}
-                  type="button"
+            {admin ? (
+              <div className="flex gap-2">
+                <Button
+                  disabled={exporting}
+                  icon="preview"
+                  onClick={() => {
+                    setActiveTab("report");
+                    setExportPreview(true);
+                  }}
+                  variant="secondary"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="flex items-center gap-2 font-bold">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: conditionColors[x.condition] }}
-                      />
-                      Pieza {x.toothNumber}
-                    </span>
-                    <span className="rounded-full bg-surface-container-low px-2 py-1 text-xs font-bold">
-                      {conditionLabels[x.condition]}
-                    </span>
-                  </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                    <div>
-                      <dt className="font-bold uppercase text-on-surface-variant">Superficie</dt>
-                      <dd className="mt-0.5">{x.surface}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-bold uppercase text-on-surface-variant">Actualizado</dt>
-                      <dd className="mt-0.5">{new Date(x.updatedAt).toLocaleDateString("es-PE")}</dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="font-bold uppercase text-on-surface-variant">Odontólogo</dt>
-                      <dd className="mt-0.5">{x.recordedBy || "—"}</dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="font-bold uppercase text-on-surface-variant">Observaciones</dt>
-                      <dd className="mt-0.5 break-words">{x.notes || "—"}</dd>
-                    </div>
-                  </dl>
-                </button>
-              ))}
-            {!chart.length ? (
-              <p className="p-5 text-center text-sm text-on-surface-variant">
-                Sin hallazgos. Pulsa una pieza del odontograma para registrar el primer estado.
-              </p>
+                  Vista previa del PDF
+                </Button>
+              </div>
+            ) : null}
+            {onAttention ? (
+              <Button icon="medical_services" onClick={onAttention}>
+                Registrar atención
+              </Button>
             ) : null}
           </div>
-          <div className="hidden sm:block">
-          <table className="w-full min-w-[680px] border-collapse text-left text-sm">
-            <thead className="bg-surface-container-low">
-              <tr>
-                {[
-                  "Pieza",
-                  "Superficie",
-                  "Estado",
-                  "Odontólogo",
-                  "Observaciones",
-                  "Actualizado",
-                ].map((x) => (
-                  <th className="border-b border-r p-3" key={x}>
-                    {x}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {chart
-                .slice()
-                .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-                .map((x) => (
-                  <tr
-                    className={onTooth ? "cursor-pointer hover:bg-primary-fixed/30" : ""}
-                    key={x.id}
-                    onClick={() => onTooth?.(x.toothNumber)}
-                  >
-                    <td className="border-r p-3 font-bold">{x.toothNumber}</td>
-                    <td className="border-r p-3">{x.surface}</td>
-                    <td className="border-r p-3">
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ background: conditionColors[x.condition] }}
-                        />
-                        {conditionLabels[x.condition]}
-                      </span>
-                    </td>
-                    <td className="border-r p-3">{x.recordedBy || "—"}</td>
-                    <td className="border-r p-3">{x.notes || "—"}</td>
-                    <td className="p-3">
-                      {new Date(x.updatedAt).toLocaleDateString("es-PE")}
-                    </td>
-                  </tr>
-                ))}
-              {!chart.length ? (
-                <tr>
-                  <td
-                    className="p-6 text-center text-on-surface-variant"
-                    colSpan="6"
-                  >
-                    Sin hallazgos. Pulsa una pieza del odontograma para
-                    registrar el primer estado.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+
+          <div
+            aria-label="Secciones del expediente"
+            className="mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-2xl border border-outline-variant bg-white p-1.5 sm:mb-5"
+            role="tablist"
+          >
+            {[
+              ["summary", "account_circle", "Resumen"],
+              ["odontogram", "dentistry", "Odontograma"],
+              ["history", "clinical_notes", "Historial"],
+              ["files", "folder", "Archivos"],
+              ...(admin ? [["report", "picture_as_pdf", "Reporte PDF"]] : []),
+            ].map(([id, icon, label]) => (
+              <button
+                aria-selected={activeTab === id}
+                className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold transition ${activeTab === id ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-primary-fixed hover:text-primary"}`}
+                key={id}
+                onClick={() => {
+                  setActiveTab(id);
+                  setExportPreview(id === "report");
+                }}
+                role="tab"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {icon}
+                </span>
+                {label}
+              </button>
+            ))}
           </div>
-        </div>:null}
+
+          {admin && exportPreview ? (
+            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-outline-variant bg-white">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-low p-3 sm:gap-3 sm:p-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary sm:text-xs">
+                    Vista previa del informe clínico integral
+                  </p>
+                  <h3 className="truncate text-base font-bold sm:text-lg">
+                    Expediente de {patient.firstName} {patient.lastName}
+                  </h3>
+                  <p className="truncate text-[10px] text-on-surface-variant sm:text-xs">
+                    {patient.documentType} {patient.document} · Odontograma,
+                    historia, atenciones, productos y pagos
+                  </p>
+                </div>
+                <Button
+                  disabled={exporting || previewLoading}
+                  icon="picture_as_pdf"
+                  onClick={() => download("pdf")}
+                  variant="secondary"
+                >
+                  {exporting ? "Generando…" : "Descargar PDF"}
+                </Button>
+              </div>
+              {exportError ? (
+                <p className="m-3 shrink-0 rounded-xl bg-error-container p-3 text-sm text-error">
+                  {exportError}
+                </p>
+              ) : null}
+              {previewLoading ? (
+                <div className="grid min-h-0 flex-1 place-items-center bg-surface-container-low">
+                  <span className="text-sm text-on-surface-variant">
+                    Generando vista previa…
+                  </span>
+                </div>
+              ) : pdfPreviewUrl ? (
+                <iframe
+                  className="min-h-0 flex-1 w-full bg-surface-container-low"
+                  src={pdfPreviewUrl}
+                  title={`Vista previa del expediente clínico de ${patient.firstName} ${patient.lastName}`}
+                />
+              ) : null}
+            </section>
+          ) : null}
+
+          <section
+            className={`${activeTab === "summary" ? "grid" : "hidden"} min-h-0 flex-1 gap-3 overflow-y-auto pb-2 lg:grid-cols-3`}
+          >
+            <Card className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                Ficha del paciente
+              </p>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-on-surface-variant">
+                    Nombre completo
+                  </dt>
+                  <dd>
+                    {patient.firstName || ""} {patient.lastName || ""}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">
+                    Documento
+                  </dt>
+                  <dd>
+                    {patient.documentType || "Documento"} {patient.document || "No registrado"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">Edad</dt>
+                  <dd>{patient.age != null ? `${patient.age} años` : "No registrada"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">Sexo</dt>
+                  <dd>
+                    {patient.sex === "female"
+                      ? "Femenino"
+                      : patient.sex === "male"
+                        ? "Masculino"
+                        : "No registrado"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">Contacto</dt>
+                  <dd>
+                    {patient.phone || "Sin teléfono"} ·{" "}
+                    {patient.email || "Sin correo"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">
+                    Fecha de nacimiento
+                  </dt>
+                  <dd>
+                    {patient.birthDate
+                      ? new Date(
+                          `${patient.birthDate}T00:00:00`,
+                        ).toLocaleDateString("es-PE")
+                      : "No registrada"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">
+                    Dirección
+                  </dt>
+                  <dd>{patient.address || "No registrada"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">Distrito</dt>
+                  <dd>{patient.district || "No registrado"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-on-surface-variant">Ocupación</dt>
+                  <dd>{patient.occupation || "No registrada"}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-xs text-on-surface-variant">
+                    Contacto de emergencia
+                  </dt>
+                  <dd>
+                    {patient.emergencyContact || "Sin contacto registrado"} ·{" "}
+                    {patient.emergencyPhone || "Sin teléfono"}
+                  </dd>
+                </div>
+              </dl>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                Alertas clínicas
+              </p>
+              <div className="mt-3 grid gap-2 text-sm">
+                <p
+                  className={
+                    patient.allergies
+                      ? "rounded-xl bg-error-container p-2"
+                      : "text-on-surface-variant"
+                  }
+                >
+                  <b>Alergias:</b>{" "}
+                  {patient.allergies || "Sin alergias registradas"}
+                </p>
+                <p>
+                  <b>Condiciones:</b>{" "}
+                  {patient.chronicConditions ||
+                    "Sin condiciones crónicas registradas"}
+                </p>
+                <p>
+                  <b>Tipo de sangre:</b> {patient.bloodType || "No registrado"}
+                </p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                Resumen conectado
+              </p>
+              {recordLoading ? (
+                <div className="mt-3 h-20 animate-pulse rounded-xl bg-surface-container-low" />
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded-xl bg-primary-fixed p-2">
+                    <b className="block text-xl">
+                      {record.appointments.length}
+                    </b>
+                    <span className="text-xs">Citas</span>
+                  </div>
+                  <div className="rounded-xl bg-primary-fixed p-2">
+                    <b className="block text-xl">{record.treatments.length}</b>
+                    <span className="text-xs">Tratamientos</span>
+                  </div>
+                  <div className="rounded-xl bg-surface-container-low p-2">
+                    <b className="block text-xl">{record.clinical.length}</b>
+                    <span className="text-xs">Evoluciones</span>
+                  </div>
+                  <div className="rounded-xl bg-surface-container-low p-2">
+                    <b className="block text-xl">
+                      {record.documents.length + record.prescriptions.length}
+                    </b>
+                    <span className="text-xs">Docs./recetas</span>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </section>
+
+          {activeTab === "history" &&
+          !recordLoading &&
+          (record.appointments.length ||
+            record.clinical.length ||
+            record.treatments.length ||
+            record.prescriptions.length ||
+            record.documents.length) ? (
+            <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-outline-variant p-4">
+              <h3 className="font-bold">Historial clínico integrado</h3>
+              <p className="mb-3 text-sm text-on-surface-variant">
+                Citas, evoluciones, tratamientos, recetas y documentos en una
+                sola ficha.
+              </p>
+              <div className="grid gap-2 pr-1 sm:grid-cols-2">
+                {[
+                  ...record.appointments.map((x) => ({
+                    id: `a-${x.id}`,
+                    icon: "event",
+                    title: x.reason,
+                    detail: `${new Date(x.startsAt).toLocaleString("es-PE")} · ${x.professionalName || "Sin asignar"}`,
+                  })),
+                  ...record.clinical.map((x) => ({
+                    id: `c-${x.id}`,
+                    icon: "clinical_notes",
+                    title: x.title,
+                    detail: x.content,
+                    editable: canEditRecords,
+                    type: "clinical",
+                    item: x,
+                  })),
+                  ...record.treatments.map((x) => ({
+                    id: `t-${x.id}`,
+                    icon: "medical_services",
+                    title: x.procedure,
+                    detail: `${statusLabels[x.status] || x.status}${x.toothNumber ? ` · Pieza ${x.toothNumber}` : ""}`,
+                    editable: canEditTreatments,
+                    type: "treatment",
+                    item: x,
+                  })),
+                  ...record.prescriptions.map((x) => ({
+                    id: `p-${x.id}`,
+                    icon: "medication",
+                    title: x.medication,
+                    detail:
+                      `${x.dose || ""} ${x.frequency || ""}`.trim() ||
+                      "Sin indicaciones",
+                    editable: canEditRecords,
+                    type: "prescription",
+                    item: x,
+                  })),
+                  ...record.documents.map((x) => ({
+                    id: `d-${x.id}`,
+                    icon: "description",
+                    title: x.name,
+                    detail: x.documentType,
+                    editable: canEditRecords,
+                    type: "document",
+                    item: x,
+                  })),
+                  ...record.consumptions.map((x) => ({
+                    id: `s-${x.id}`,
+                    icon: "vaccines",
+                    title: `${x.quantity} × ${x.product.name}`,
+                    detail: `Insumo utilizado · ${x.recordedBy}`,
+                  })),
+                ].map((item) => (
+                  <article
+                    className="flex gap-3 rounded-xl bg-surface-container-low p-3"
+                    key={item.id}
+                  >
+                    <span className="material-symbols-outlined text-primary">
+                      {item.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <b className="block truncate text-sm">{item.title}</b>
+                      <p className="line-clamp-2 text-xs text-on-surface-variant">
+                        {item.detail}
+                      </p>
+                    </div>
+                    {item.editable ? (
+                      <Button
+                        icon="edit"
+                        onClick={() =>
+                          setEditingEntry({ type: item.type, item: item.item })
+                        }
+                        size="small"
+                        variant="outlined"
+                      >
+                        Editar
+                      </Button>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {activeTab === "files" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+              <EntityAttachments
+                entityId={patient.id}
+                entityType={attachmentEntityType}
+                legacyItems={
+                  attachmentEntityType === "dental_patient"
+                    ? record.documents
+                    : []
+                }
+                title="Archivos del paciente"
+              />
+            </div>
+          ) : null}
+
+          <div
+            className={
+              activeTab === "odontogram"
+                ? "min-h-0 flex-1 overflow-y-auto pb-2"
+                : "hidden"
+            }
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="font-bold">Odontograma actual</h3>
+              <div className="grid grid-cols-2 rounded-xl border border-outline-variant bg-white p-1">
+                <button
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold ${odontogramView === "teeth" ? "bg-primary text-white" : "text-on-surface-variant"}`}
+                  onClick={() => setOdontogramView("teeth")}
+                  type="button"
+                >
+                  Piezas
+                </button>
+                <button
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold ${odontogramView === "findings" ? "bg-primary text-white" : "text-on-surface-variant"}`}
+                  onClick={() => setOdontogramView("findings")}
+                  type="button"
+                >
+                  Hallazgos ({chart.length})
+                </button>
+              </div>
+            </div>
+
+            {Object.keys(summary).length ? (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {Object.entries(summary).map(([cond, count]) => (
+                  <span
+                    className="flex items-center gap-1.5 rounded-full border border-outline-variant px-2.5 py-1 text-xs font-medium"
+                    key={cond}
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ background: conditionColors[cond] }}
+                    />
+                    {conditionLabels[cond]} · {count}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {odontogramView === "teeth" ? (
+              <>
+                <div className="mb-2 flex items-center justify-between rounded-xl bg-surface-container-low p-2">
+                  <button
+                    aria-label="Cuadrante anterior"
+                    className="material-symbols-outlined grid size-9 place-items-center rounded-full bg-white shadow-sm disabled:opacity-30"
+                    disabled={quadrantIndex === 0}
+                    onClick={() =>
+                      setQuadrantIndex((index) => Math.max(0, index - 1))
+                    }
+                    type="button"
+                  >
+                    chevron_left
+                  </button>
+                  <div className="flex min-w-0 flex-1 justify-center gap-1">
+                    {QUADRANTS.map((quadrant, index) => (
+                      <button
+                        aria-label={quadrant.label}
+                        className={`h-2.5 rounded-full transition-all ${index === quadrantIndex ? "w-8 bg-primary" : "w-2.5 bg-outline-variant"}`}
+                        key={quadrant.key}
+                        onClick={() => setQuadrantIndex(index)}
+                        type="button"
+                      />
+                    ))}
+                  </div>
+                  <span className="min-w-20 text-center text-xs font-bold">
+                    {quadrantIndex + 1} / {QUADRANTS.length}
+                  </span>
+                  <button
+                    aria-label="Cuadrante siguiente"
+                    className="material-symbols-outlined grid size-9 place-items-center rounded-full bg-white shadow-sm disabled:opacity-30"
+                    disabled={quadrantIndex === QUADRANTS.length - 1}
+                    onClick={() =>
+                      setQuadrantIndex((index) =>
+                        Math.min(QUADRANTS.length - 1, index + 1),
+                      )
+                    }
+                    type="button"
+                  >
+                    chevron_right
+                  </button>
+                </div>
+                <div className="mb-3 rounded-2xl border border-outline-variant p-3 sm:p-4">
+                  {[QUADRANTS[quadrantIndex]].map((q) => (
+                    <div key={q.key}>
+                      <p className="mb-3 text-center text-xs font-bold uppercase tracking-wide text-primary">
+                        {q.label}
+                      </p>
+                      <div className="grid grid-cols-8 gap-1.5">
+                        {q.teeth.map((tooth) => {
+                          const entry = chart.find(
+                            (x) => x.toothNumber === tooth,
+                          );
+                          return (
+                            <button
+                              className={`group relative rounded-xl border p-1.5 transition disabled:cursor-default ${onTooth ? "hover:border-primary hover:shadow-sm" : ""} ${
+                                entry
+                                  ? "border-primary/60 bg-primary-fixed"
+                                  : "border-outline-variant bg-white"
+                              }`}
+                              key={tooth}
+                              disabled={!onTooth}
+                              onClick={() => onTooth?.(tooth)}
+                              title={
+                                entry
+                                  ? `Pieza ${tooth} · ${conditionLabels[entry.condition]}`
+                                  : `Pieza ${tooth} · Sano`
+                              }
+                              type="button"
+                            >
+                              <ToothSvg
+                                condition={entry?.condition}
+                                number={tooth}
+                              />
+                              <b className="mt-1 block text-[11px] leading-none">
+                                {tooth}
+                              </b>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <ConditionLegend />
+              </>
+            ) : null}
+
+            {odontogramView === "findings" ? (
+              <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-outline-variant">
+                <div className="grid gap-2 p-2 sm:hidden">
+                  {chart
+                    .slice()
+                    .sort(
+                      (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
+                    )
+                    .map((x) => (
+                      <button
+                        className={`rounded-2xl border border-outline-variant p-3 text-left ${onTooth ? "hover:border-primary hover:bg-primary-fixed/30" : ""}`}
+                        disabled={!onTooth}
+                        key={x.id}
+                        onClick={() => onTooth?.(x.toothNumber)}
+                        type="button"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="flex items-center gap-2 font-bold">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{
+                                background: conditionColors[x.condition],
+                              }}
+                            />
+                            Pieza {x.toothNumber}
+                          </span>
+                          <span className="rounded-full bg-surface-container-low px-2 py-1 text-xs font-bold">
+                            {conditionLabels[x.condition]}
+                          </span>
+                        </div>
+                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                          <div>
+                            <dt className="font-bold uppercase text-on-surface-variant">
+                              Superficie
+                            </dt>
+                            <dd className="mt-0.5">{x.surface}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-bold uppercase text-on-surface-variant">
+                              Actualizado
+                            </dt>
+                            <dd className="mt-0.5">
+                              {new Date(x.updatedAt).toLocaleDateString(
+                                "es-PE",
+                              )}
+                            </dd>
+                          </div>
+                          <div className="col-span-2">
+                            <dt className="font-bold uppercase text-on-surface-variant">
+                              Odontólogo
+                            </dt>
+                            <dd className="mt-0.5">{x.recordedBy || "—"}</dd>
+                          </div>
+                          <div className="col-span-2">
+                            <dt className="font-bold uppercase text-on-surface-variant">
+                              Observaciones
+                            </dt>
+                            <dd className="mt-0.5 break-words">
+                              {x.notes || "—"}
+                            </dd>
+                          </div>
+                        </dl>
+                      </button>
+                    ))}
+                  {!chart.length ? (
+                    <p className="p-5 text-center text-sm text-on-surface-variant">
+                      Sin hallazgos. Pulsa una pieza del odontograma para
+                      registrar el primer estado.
+                    </p>
+                  ) : null}
+                </div>
+                <div className="hidden sm:block">
+                  <table className="w-full min-w-[680px] border-collapse text-left text-sm">
+                    <thead className="bg-surface-container-low">
+                      <tr>
+                        {[
+                          "Pieza",
+                          "Superficie",
+                          "Estado",
+                          "Odontólogo",
+                          "Observaciones",
+                          "Actualizado",
+                        ].map((x) => (
+                          <th className="border-b border-r p-3" key={x}>
+                            {x}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chart
+                        .slice()
+                        .sort(
+                          (a, b) =>
+                            new Date(b.updatedAt) - new Date(a.updatedAt),
+                        )
+                        .map((x) => (
+                          <tr
+                            className={
+                              onTooth
+                                ? "cursor-pointer hover:bg-primary-fixed/30"
+                                : ""
+                            }
+                            key={x.id}
+                            onClick={() => onTooth?.(x.toothNumber)}
+                          >
+                            <td className="border-r p-3 font-bold">
+                              {x.toothNumber}
+                            </td>
+                            <td className="border-r p-3">{x.surface}</td>
+                            <td className="border-r p-3">
+                              <span className="flex items-center gap-1.5">
+                                <span
+                                  className="h-2 w-2 rounded-full"
+                                  style={{
+                                    background: conditionColors[x.condition],
+                                  }}
+                                />
+                                {conditionLabels[x.condition]}
+                              </span>
+                            </td>
+                            <td className="border-r p-3">
+                              {x.recordedBy || "—"}
+                            </td>
+                            <td className="border-r p-3">{x.notes || "—"}</td>
+                            <td className="p-3">
+                              {new Date(x.updatedAt).toLocaleDateString(
+                                "es-PE",
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      {!chart.length ? (
+                        <tr>
+                          <td
+                            className="p-6 text-center text-on-surface-variant"
+                            colSpan="6"
+                          >
+                            Sin hallazgos. Pulsa una pieza del odontograma para
+                            registrar el primer estado.
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </Modal>
-    {editingEntry ? <DentalHistoryEditForm close={() => setEditingEntry(null)} done={() => { setEditingEntry(null); setRecordVersion((version) => version + 1); }} entry={editingEntry} /> : null}
+      </Modal>
+      {editingEntry ? (
+        <DentalHistoryEditForm
+          close={() => setEditingEntry(null)}
+          done={() => {
+            setEditingEntry(null);
+            setRecordVersion((version) => version + 1);
+          }}
+          entry={editingEntry}
+        />
+      ) : null}
     </>
   );
 }
@@ -926,12 +1558,8 @@ function PatientTable({ loading, onOpen, patients }) {
                     <td className="border-b border-r p-3">
                       {x.documentType} {x.document}
                     </td>
-                    <td className="border-b border-r p-3">
-                      {x.phone || "—"}
-                    </td>
-                    <td className="border-b border-r p-3">
-                      {x.email || "—"}
-                    </td>
+                    <td className="border-b border-r p-3">{x.phone || "—"}</td>
+                    <td className="border-b border-r p-3">{x.email || "—"}</td>
                     <td className="border-b border-r p-3">
                       <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800">
                         {x.status === "active" ? "Activo" : x.status}
@@ -968,9 +1596,7 @@ function TreatmentForm({ patientId, close, done }) {
     try {
       await api.createDentalTreatment({
         patientId,
-        toothNumber: f.get("toothNumber")
-          ? Number(f.get("toothNumber"))
-          : null,
+        toothNumber: f.get("toothNumber") ? Number(f.get("toothNumber")) : null,
         procedure: f.get("procedure"),
         diagnosis: f.get("diagnosis"),
         professionalName: f.get("professionalName"),
@@ -1111,14 +1737,22 @@ export default function DentalWorkspace({ operator = false }) {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState("");
   const [attentionId, setAttentionId] = useState("");
-  const functions = new Set(config?.user?.functions?.map((item) => item.code) || []);
+  const functions = new Set(
+    config?.user?.functions?.map((item) => item.code) || [],
+  );
   const isChart = moduleKey === "odontogram",
     admin = ["admin", "admin_owner"].includes(user.role),
     patient = patients.find((x) => x.id === patientId),
     dentistOperator = operator && !admin && functions.has("dentist"),
-    canEditRecords = !dentistOperator && (admin || config?.capabilities?.includes("dental.records.edit")),
-    canEditOdontogram = !dentistOperator && (admin || config?.capabilities?.includes("dental.odontogram.edit")),
-    canEditTreatments = !dentistOperator && (admin || config?.capabilities?.includes("dental.treatments.edit")),
+    canEditRecords =
+      !dentistOperator &&
+      (admin || config?.capabilities?.includes("dental.records.edit")),
+    canEditOdontogram =
+      !dentistOperator &&
+      (admin || config?.capabilities?.includes("dental.odontogram.edit")),
+    canEditTreatments =
+      !dentistOperator &&
+      (admin || config?.capabilities?.includes("dental.treatments.edit")),
     canAttention = canEditRecords;
 
   const loadPatients = useCallback(async () => {
@@ -1167,7 +1801,10 @@ export default function DentalWorkspace({ operator = false }) {
 
   const beginAttention = async () => {
     try {
-      const attention = await api.startDentalAttention({ patientId, reason: "Atención clínica" });
+      const attention = await api.startDentalAttention({
+        patientId,
+        reason: "Atención clínica",
+      });
       setAttentionId(attention.id);
       setModal("attention");
     } catch (e) {
@@ -1229,10 +1866,14 @@ export default function DentalWorkspace({ operator = false }) {
               }
             }}
             onAttention={canAttention ? beginAttention : null}
-            onTooth={canEditOdontogram ? (tooth) => {
-              setSelectedTooth(tooth);
-              setModal("chart");
-            } : null}
+            onTooth={
+              canEditOdontogram
+                ? (tooth) => {
+                    setSelectedTooth(tooth);
+                    setModal("chart");
+                  }
+                : null
+            }
             patient={patient}
           />
         ) : null}
@@ -1244,7 +1885,19 @@ export default function DentalWorkspace({ operator = false }) {
             tooth={selectedTooth}
           />
         ) : null}
-        {modal === "attention" && patient ? <DentalAttentionForm attentionId={attentionId} onClose={() => setModal("odontogram")} onSaved={() => { setAttentionId(""); setModal("odontogram"); loadDental(); setToast("Atención registrada"); }} patient={patient}/> : null}
+        {modal === "attention" && patient ? (
+          <DentalAttentionForm
+            attentionId={attentionId}
+            onClose={() => setModal("odontogram")}
+            onSaved={() => {
+              setAttentionId("");
+              setModal("odontogram");
+              loadDental();
+              setToast("Atención registrada");
+            }}
+            patient={patient}
+          />
+        ) : null}
       </Shell>
     );
 
@@ -1252,13 +1905,17 @@ export default function DentalWorkspace({ operator = false }) {
     <Shell
       title="Planes de tratamiento"
       subtitle="Expediente odontológico conectado con pacientes y agenda."
-      action={canEditTreatments ? <Button
-        disabled={!patientId}
-        icon="add"
-        onClick={() => setModal("treatment")}
-      >
-        Nuevo tratamiento
-      </Button> : null}
+      action={
+        canEditTreatments ? (
+          <Button
+            disabled={!patientId}
+            icon="add"
+            onClick={() => setModal("treatment")}
+          >
+            Nuevo tratamiento
+          </Button>
+        ) : null
+      }
     >
       <Toast message={toast} />
       <Card className="mb-5 p-4">

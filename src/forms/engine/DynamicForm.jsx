@@ -53,6 +53,19 @@ function validationErrors(requestError, template) {
 }
 
 function Field({ field, fieldError, setValue, value, values }) {
+  if (field.type === "heading")
+    return (
+      <div className="border-b border-outline-variant pb-2">
+        <h3 className="font-heading text-base font-bold text-on-surface">
+          {field.title}
+        </h3>
+        {field.description ? (
+          <p className="mt-1 text-sm font-normal text-on-surface-variant">
+            {field.description}
+          </p>
+        ) : null}
+      </div>
+    );
   const numeric =
     field.numeric ||
     (field.numericWhen &&
@@ -71,7 +84,9 @@ function Field({ field, fieldError, setValue, value, values }) {
       setValue(
         field.name,
         field.type === "number"
-          ? Number(raw)
+          ? raw === ""
+            ? ""
+            : Number(raw)
           : field.type === "checkbox"
             ? event.target.checked
             : raw,
@@ -97,7 +112,7 @@ function Field({ field, fieldError, setValue, value, values }) {
           className={`min-h-11 rounded-xl border bg-white px-3 font-normal outline-none focus:ring-2 ${fieldError ? "border-error focus:border-error focus:ring-error/20" : "border-outline-variant focus:border-primary focus:ring-primary/20"}`}
         >
           {field.options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option disabled={option.disabled} key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
@@ -109,6 +124,40 @@ function Field({ field, fieldError, setValue, value, values }) {
         ) : null}
       </label>
     );
+  if (field.type === "radio")
+    return (
+      <fieldset className="grid gap-1.5 text-sm font-bold text-on-surface-variant">
+        <legend>
+          {field.label}
+          {field.required ? " *" : ""}
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {field.options.map((option) => (
+            <label
+              className={`flex min-h-11 items-center gap-3 rounded-xl border p-3 font-normal ${fieldError ? "border-error" : "border-outline-variant"}`}
+              key={option.value}
+            >
+              <input
+                aria-describedby={errorId}
+                aria-invalid={fieldError ? true : undefined}
+                checked={value === option.value}
+                name={field.name}
+                onChange={() => setValue(field.name, option.value)}
+                required={field.required}
+                type="radio"
+                value={option.value}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+        {fieldError ? (
+          <small className="font-normal text-error" id={errorId} role="alert">
+            {fieldError}
+          </small>
+        ) : null}
+      </fieldset>
+    );
   if (field.type === "textarea")
     return (
       <label className="grid gap-1.5 text-sm font-bold text-on-surface-variant">
@@ -117,6 +166,7 @@ function Field({ field, fieldError, setValue, value, values }) {
         <textarea
           {...common}
           className={`min-h-24 rounded-xl border p-3 font-normal outline-none focus:ring-2 ${fieldError ? "border-error focus:border-error focus:ring-error/20" : "border-outline-variant focus:border-primary focus:ring-primary/20"}`}
+          maxLength={field.nonNumericMaxLength}
           placeholder={field.placeholder}
         />
         {fieldError ? (
@@ -171,7 +221,9 @@ export default function DynamicForm({
 }) {
   const [values, setValues] = useState(() => ({
     ...template.defaults,
-    ...initialValues,
+    ...(template.fromInitialValues
+      ? template.fromInitialValues(initialValues)
+      : initialValues),
   }));
   const [sectionIndex, setSectionIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -187,13 +239,24 @@ export default function DynamicForm({
       delete next[key];
       return next;
     });
-    setValues((current) => ({ ...current, [key]: value }));
+    setValues((current) => {
+      const next = { ...current, [key]: value };
+      const derived = template.deriveValues?.(key, value, next) || {};
+      return { ...next, ...derived };
+    });
   };
   const validateSection = () => {
     const missing = section.fields.find(
-      (field) =>
-        field.required &&
-        (values[field.name] === "" || values[field.name] == null),
+      (field) => {
+        const value = values[field.name];
+        const emptyString = typeof value === "string" && value.trim() === "";
+        return (
+          field.required &&
+          (emptyString ||
+            value == null ||
+            field.invalidValues?.includes(value))
+        );
+      },
     );
     if (missing) {
         setFieldErrors((current) => ({
@@ -205,14 +268,20 @@ export default function DynamicForm({
     }
     return true;
   };
-  const next = () => {
-    if (validateSection()) {
-      setError("");
-      setSectionIndex((current) => current + 1);
-    }
+  const next = (event) => {
+    event?.preventDefault();
+    if (!validateSection()) return;
+    setError("");
+    setSectionIndex((current) =>
+      Math.min(current + 1, template.sections.length - 1),
+    );
   };
   const submit = async (event) => {
     event.preventDefault();
+    if (!last) {
+      next(event);
+      return;
+    }
     if (!validateSection()) return;
     setSaving(true);
     setError("");
@@ -277,14 +346,18 @@ export default function DynamicForm({
         ) : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {section.fields.map((field) => (
-            <Field
-              field={field}
-              fieldError={fieldErrors[field.name]}
+            <div
+              className={field.fullWidth ? "sm:col-span-2 lg:col-span-3" : ""}
               key={field.name}
-              setValue={setValue}
-              value={values[field.name]}
-              values={values}
-            />
+            >
+              <Field
+                field={field}
+                fieldError={fieldErrors[field.name]}
+                setValue={setValue}
+                value={values[field.name]}
+                values={values}
+              />
+            </div>
           ))}
         </div>
       </fieldset>

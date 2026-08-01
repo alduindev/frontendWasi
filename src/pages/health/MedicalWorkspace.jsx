@@ -12,6 +12,8 @@ import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 import Tooltip from "../../components/ui/Tooltip";
+import DynamicForm from "../../forms/engine/DynamicForm";
+import medicalPatientTemplate from "../../forms/templates/health/medicalPatient.template";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
@@ -210,63 +212,20 @@ function datesForView(view, referenceDate) {
 }
 
 export function MedicalPatientForm({ close, onSaved, patient }) {
-  const [saving, setSaving] = useState(false);
-  const submit = async (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const data = Object.fromEntries(form.entries());
-    setSaving(true);
-    try {
-      const saved = patient
-        ? await updateMedicalPatient(patient.id, data)
-        : await createMedicalPatient(data);
-      onSaved(saved);
-    } finally {
-      setSaving(false);
-    }
-  };
   return (
     <Modal onClose={close} title={patient ? "Editar paciente" : "Registrar paciente"}>
-      <form className="grid gap-3 p-5 sm:grid-cols-2" onSubmit={submit}>
-        <label className="text-sm font-bold">
-          Nombres
-          <input className={`${field} mt-1`} defaultValue={patient?.firstName || ""} name="firstName" required />
-        </label>
-        <label className="text-sm font-bold">
-          Apellidos
-          <input className={`${field} mt-1`} defaultValue={patient?.lastName || ""} name="lastName" required />
-        </label>
-        <label className="text-sm font-bold">
-          Documento
-          <input className={`${field} mt-1`} defaultValue={patient?.document || ""} name="document" required />
-        </label>
-        <label className="text-sm font-bold">
-          Teléfono
-          <input className={`${field} mt-1`} defaultValue={patient?.phone || ""} name="phone" />
-        </label>
-        <label className="text-sm font-bold">
-          Correo
-          <input className={`${field} mt-1`} defaultValue={patient?.email || ""} name="email" type="email" />
-        </label>
-        <label className="text-sm font-bold">
-          Fecha de nacimiento
-          <input className={`${field} mt-1`} defaultValue={patient?.birthDate || ""} name="birthDate" type="date" />
-        </label>
-        <label className="text-sm font-bold sm:col-span-2">
-          Alergias relevantes
-          <textarea className={`${field} mt-1 min-h-20 py-2`} defaultValue={patient?.allergies || ""} name="allergies" />
-        </label>
-        <label className="text-sm font-bold sm:col-span-2">
-          Antecedentes y observaciones
-          <textarea className={`${field} mt-1 min-h-20 py-2`} defaultValue={patient?.notes || ""} name="notes" />
-        </label>
-        <div className="flex justify-end gap-2 sm:col-span-2">
-          <Button onClick={close} type="button" variant="outlined">Cancelar</Button>
-          <Button disabled={saving} icon="save" type="submit">
-            {patient ? "Guardar cambios" : "Registrar paciente"}
-          </Button>
-        </div>
-      </form>
+      <DynamicForm
+        initialValues={patient || {}}
+        onCancel={close}
+        onSubmit={async (values) => {
+          const saved = patient
+            ? await updateMedicalPatient(patient.id, values)
+            : await createMedicalPatient(values);
+          onSaved(saved);
+        }}
+        submitLabel={patient ? "Guardar cambios" : "Registrar paciente"}
+        template={medicalPatientTemplate}
+      />
     </Modal>
   );
 }

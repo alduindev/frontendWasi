@@ -1,38 +1,13 @@
 import { registerFormTemplate } from "../../engine/templateRegistry";
-
-function dateFromAge(value) {
-  const age = Number(value);
-  if (!Number.isInteger(age) || age < 0 || age > 120) return "";
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - age);
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
-function ageFromDate(value) {
-  if (!value) return "";
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return "";
-  const today = new Date();
-  let age = today.getFullYear() - year;
-  const birthdayPassed =
-    today.getMonth() + 1 > month ||
-    (today.getMonth() + 1 === month && today.getDate() >= day);
-  if (!birthdayPassed) age -= 1;
-  return age >= 0 && age <= 120 ? String(age) : "";
-}
+import patientTemplate from "./patient.template";
 
 const text = (value) => value || "";
 
 export default registerFormTemplate({
-  key: "health.patient",
-  title: { create: "Registrar paciente", edit: "Editar paciente" },
+  ...patientTemplate,
+  key: "medical.patient",
   defaults: {
-    documentType: "DNI",
-    sex: "",
+    ...patientTemplate.defaults,
     diabetes: false,
     hypertension: false,
     coagulopathies: false,
@@ -41,11 +16,7 @@ export default registerFormTemplate({
     oralHygiene: "",
   },
   fromInitialValues: (initialValues) => ({
-    ...initialValues,
-    age: initialValues.age ?? ageFromDate(initialValues.birthDate),
-    sex: ["female", "male"].includes(initialValues.sex)
-      ? initialValues.sex
-      : "",
+    ...patientTemplate.fromInitialValues(initialValues),
     consultationReason: text(initialValues.consultationReason),
     currentIllnessHistory: text(initialValues.currentIllnessHistory),
     personalHistoryOther:
@@ -64,32 +35,11 @@ export default registerFormTemplate({
     intraoralSoftTissuesExam: text(initialValues.intraoralSoftTissuesExam),
     oralHygiene: text(initialValues.oralHygiene),
   }),
-  deriveValues: (fieldName, value) => {
-    if (fieldName === "age") return { birthDate: dateFromAge(value) };
-    if (fieldName === "birthDate") return { age: ageFromDate(value) };
-    return {};
-  },
   toPayload: (values) => ({
-    firstName: values.firstName,
-    lastName: values.lastName,
-    documentType: values.documentType,
-    document: values.document,
-    age: values.age === "" ? null : Number(values.age),
-    birthDate: values.birthDate || null,
-    sex: values.sex,
-    phone: values.phone,
-    district: values.district,
-    occupation: values.occupation,
-    emergencyPhone: values.emergencyPhone,
-    email: values.email || "",
-    address: values.address || "",
-    emergencyContact: values.emergencyContact || "",
-    bloodType: values.bloodType,
-    allergies: text(values.allergies),
-    chronicConditions: text(values.personalHistoryOther),
-    insuranceProvider: values.insuranceProvider,
-    insuranceNumber: values.insuranceNumber,
-    notes: values.notes,
+    ...patientTemplate.toPayload({
+      ...values,
+      chronicConditions: text(values.personalHistoryOther),
+    }),
     consultationReason: text(values.consultationReason),
     currentIllnessHistory: text(values.currentIllnessHistory),
     diabetes: Boolean(values.diabetes),
@@ -107,80 +57,7 @@ export default registerFormTemplate({
     oralHygiene: text(values.oralHygiene),
   }),
   sections: [
-    {
-      id: "filiation",
-      title: "Filiación",
-      icon: "person",
-      fields: [
-        { name: "firstName", label: "Nombres", required: true },
-        { name: "lastName", label: "Apellidos", required: true },
-        {
-          name: "documentType",
-          label: "Tipo de documento",
-          type: "catalog",
-          catalog: "document-types",
-          required: true,
-        },
-        {
-          name: "document",
-          label: "Número de documento",
-          required: true,
-          minLength: 8,
-          maxLength: 8,
-          nonNumericMaxLength: 24,
-          pattern: "\\d{8}",
-          numericWhen: { field: "documentType", values: ["DNI", "dni"] },
-          help: "Para DNI ingresa exactamente 8 números.",
-        },
-        {
-          name: "age",
-          label: "Edad",
-          type: "number",
-          required: true,
-          min: 0,
-          max: 120,
-          step: 1,
-        },
-        {
-          name: "sex",
-          label: "Sexo",
-          type: "radio",
-          required: true,
-          options: [
-            { value: "female", label: "Femenino" },
-            { value: "male", label: "Masculino" },
-          ],
-        },
-        {
-          name: "birthDate",
-          label: "Fecha de nacimiento",
-          type: "date",
-          required: true,
-        },
-        { name: "phone", label: "Celular", type: "tel", required: true },
-        {
-          name: "email",
-          label: "Correo electrónico",
-          type: "email",
-          required: true,
-        },
-        {
-          name: "address",
-          label: "Dirección",
-          required: true,
-          nonNumericMaxLength: 240,
-        },
-        { name: "district", label: "Distrito", required: true },
-        { name: "occupation", label: "Ocupación", required: true },
-        {
-          name: "emergencyPhone",
-          label: "Número de emergencia",
-          type: "tel",
-          required: true,
-        },
-        { name: "emergencyContact", label: "Contacto de emergencia" },
-      ],
-    },
+    patientTemplate.sections[0],
     {
       id: "anamnesis",
       title: "Anamnesis",
