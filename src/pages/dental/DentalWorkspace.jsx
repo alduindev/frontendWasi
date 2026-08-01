@@ -64,6 +64,11 @@ const statusStyles = {
   completed: "bg-emerald-50 text-emerald-800",
   cancelled: "bg-rose-50 text-rose-700",
 };
+const oralHygieneLabels = {
+  good: "Buena",
+  regular: "Regular",
+  poor: "Malo",
+};
 const conditionColors = {
   healthy: "#ffffff",
   caries: "#ef4444",
@@ -84,6 +89,10 @@ const currency = new Intl.NumberFormat("es-PE", {
 
 function initials(a = "", b = "") {
   return `${a[0] || ""}${b[0] || ""}`.toUpperCase() || "?";
+}
+
+function registeredValue(value, empty = "No registrado") {
+  return typeof value === "string" && value.trim() ? value : empty;
 }
 
 function avatarTone(seed) {
@@ -1007,6 +1016,155 @@ export function OdontogramModal({
                   </div>
                 </div>
               )}
+            </Card>
+
+            <Card className="p-4 lg:col-span-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                  Anamnesis
+                </p>
+                <span className="rounded-full bg-primary-fixed px-2 py-1 text-xs font-medium text-primary">
+                  Ficha clínica del paciente
+                </span>
+              </div>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <p className="text-xs font-medium text-on-surface-variant">
+                    Motivo de consulta
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">
+                    {registeredValue(patient.consultationReason)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <p className="text-xs font-medium text-on-surface-variant">
+                    Relato de enfermedad actual
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">
+                    {registeredValue(patient.currentIllnessHistory)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-outline-variant p-3 lg:col-span-2">
+                  <p className="text-xs font-medium text-on-surface-variant">
+                    Antecedentes personales
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      ["Diabetes", patient.diabetes],
+                      ["HTA", patient.hypertension],
+                      ["Coagulopatías", patient.coagulopathies],
+                      ["Asma", patient.asthma],
+                    ].map(([label, present]) => (
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${present ? "bg-primary-fixed text-primary" : "bg-surface-container-low text-on-surface-variant"}`}
+                        key={label}
+                      >
+                        {label}: {present ? "Sí" : "No"}
+                      </span>
+                    ))}
+                  </div>
+                  <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+                    <div>
+                      <dt className="text-xs text-on-surface-variant">
+                        Alergias
+                      </dt>
+                      <dd className="mt-1 whitespace-pre-wrap">
+                        {registeredValue(
+                          patient.allergies,
+                          "Sin alergias registradas",
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-on-surface-variant">
+                        Otros antecedentes
+                      </dt>
+                      <dd className="mt-1 whitespace-pre-wrap">
+                        {registeredValue(
+                          patient.chronicConditions,
+                          "Sin otros antecedentes registrados",
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-on-surface-variant">
+                        Medicación actual
+                      </dt>
+                      <dd className="mt-1 whitespace-pre-wrap">
+                        {registeredValue(
+                          patient.currentMedication,
+                          "Sin medicación registrada",
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 lg:col-span-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                Examen clínico
+              </p>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <dt className="text-xs text-on-surface-variant">PA</dt>
+                  <dd className="mt-1 font-medium">
+                    {registeredValue(patient.bloodPressure)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <dt className="text-xs text-on-surface-variant">F.C.</dt>
+                  <dd className="mt-1 font-medium">
+                    {registeredValue(patient.heartRate)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <dt className="text-xs text-on-surface-variant">F.R.</dt>
+                  <dd className="mt-1 font-medium">
+                    {registeredValue(patient.respiratoryRate)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <dt className="text-xs text-on-surface-variant">T°</dt>
+                  <dd className="mt-1 font-medium">
+                    {registeredValue(patient.temperature)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3">
+                  <dt className="text-xs text-on-surface-variant">IHO</dt>
+                  <dd className="mt-1 font-medium">
+                    {registeredValue(patient.iho)}
+                  </dd>
+                </div>
+              </dl>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <div className="rounded-xl border border-outline-variant p-3">
+                  <p className="text-xs font-medium text-on-surface-variant">
+                    Examen extraoral
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">
+                    {registeredValue(patient.extraoralExam)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-outline-variant p-3">
+                  <p className="text-xs font-medium text-on-surface-variant">
+                    Examen intraoral (tej. blandos)
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">
+                    {registeredValue(patient.intraoralSoftTissuesExam)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-xl bg-surface-container-low p-3 text-sm">
+                <span className="text-xs text-on-surface-variant">
+                  Higiene oral
+                </span>
+                <p className="mt-1 font-medium">
+                  {oralHygieneLabels[patient.oralHygiene] ||
+                    registeredValue(patient.oralHygiene)}
+                </p>
+              </div>
             </Card>
           </section>
 
