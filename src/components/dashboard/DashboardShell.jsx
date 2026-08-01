@@ -459,13 +459,14 @@ export default function DashboardShell({
   }, [config, configuredItems])
   const dentalItems = useMemo(() => {
     if (config?.template?.dashboardKey !== 'dental') return hospitalityItems
-    const financeIndex = hospitalityItems.findIndex(item => item.routeKey === 'dental-billing')
+    const items = hospitalityItems.map(item => item.routeKey === 'dental-catalog' ? { ...item, icon: 'medical_services', label: 'Servicios' } : item)
+    const financeIndex = items.findIndex(item => item.routeKey === 'dental-billing')
     const receipts = { icon: 'receipt_long', label: 'Comprobantes', routeKey: 'dental-receipts', to: '/dashboard/invoices' }
-    return financeIndex < 0 ? hospitalityItems : [...hospitalityItems.slice(0, financeIndex + 1), receipts, ...hospitalityItems.slice(financeIndex + 1)]
+    return financeIndex < 0 ? items : [...items.slice(0, financeIndex + 1), receipts, ...items.slice(financeIndex + 1)]
   }, [config, hospitalityItems])
   const allowedItems = useMemo(() => config ? dentalItems : filterNavigationByRole(dentalItems, user), [config, dentalItems, user])
   const accountItems = useMemo(() => allowedItems.filter(item => ['profile', 'settings', 'subscription'].includes(item.routeKey)), [allowedItems])
-  const visibleNavItems = useMemo(() => allowedItems.filter(item => !['profile', 'settings', 'subscription'].includes(item.routeKey) && !(config?.template?.dashboardKey === 'hospitality' && item.routeKey === 'housekeeping') && !(config?.template?.dashboardKey === 'dental' && ['odontogram','treatments','dental-records','dental-catalog'].includes(item.routeKey))), [allowedItems, config])
+  const visibleNavItems = useMemo(() => allowedItems.filter(item => !['profile', 'settings', 'subscription'].includes(item.routeKey) && !(config?.template?.dashboardKey === 'hospitality' && item.routeKey === 'housekeeping') && !(config?.template?.dashboardKey === 'dental' && ['odontogram','treatments','dental-records'].includes(item.routeKey))), [allowedItems, config])
   const { products } = useInventory()
   const navigate = useNavigate()
   const location = useLocation()

@@ -89,6 +89,16 @@ const appointmentSteps = [
   { icon: "dentistry", label: "Atención" },
   { icon: "task_alt", label: "Confirmar" },
 ];
+const appointmentProcedureCode = (name) => {
+  const slug = String(name || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "SERVICIO";
+  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`.toUpperCase();
+  return `DENT-${slug.slice(0, Math.max(1, 34 - suffix.length))}-${suffix}`;
+};
 
 function AppointmentForm({
   draft,
@@ -98,11 +108,21 @@ function AppointmentForm({
   professionals,
   onClose,
   onNewPatient,
+  onProcedureCreated,
   onSaved,
+  canManageServices,
 }) {
   const [step, setStep] = useState(0);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [addingProcedure, setAddingProcedure] = useState(false);
+  const [creatingProcedure, setCreatingProcedure] = useState(false);
+  const [procedureDraft, setProcedureDraft] = useState({
+    category: "General",
+    durationMinutes: "30",
+    name: "",
+    price: "0",
+  });
   const selectedPatient = patients.find(
     (item) => String(item.id) === String(draft.patientId),
   );
@@ -116,6 +136,43 @@ function AppointmentForm({
   const setValue = (key, value) => {
     setFormError("");
     onDraftChange((current) => ({ ...current, [key]: value }));
+  };
+  const createProcedure = async () => {
+    const name = procedureDraft.name.trim();
+    const price = Number(procedureDraft.price);
+    const durationMinutes = Number(procedureDraft.durationMinutes);
+    if (!name) {
+      setFormError("Escribe el nombre del servicio para agregarlo.");
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0 || !Number.isFinite(durationMinutes) || durationMinutes < 5 || durationMinutes > 480) {
+      setFormError("Indica un precio válido y una duración entre 5 y 480 minutos.");
+      return;
+    }
+    setCreatingProcedure(true);
+    setFormError("");
+    try {
+      const procedure = await api.createDentalProcedure({
+        category: procedureDraft.category.trim() || "General",
+        code: appointmentProcedureCode(name),
+        durationMinutes,
+        name,
+        price,
+      });
+      onProcedureCreated?.(procedure);
+      setValue("procedureId", procedure.id);
+      setProcedureDraft({
+        category: "General",
+        durationMinutes: "30",
+        name: "",
+        price: "0",
+      });
+      setAddingProcedure(false);
+    } catch (error) {
+      setFormError(error.message);
+    } finally {
+      setCreatingProcedure(false);
+    }
   };
   const validate = (currentStep = step) => {
     if (currentStep === 0 && !selectedPatient) {
@@ -302,8 +359,19 @@ function AppointmentForm({
                 disponible.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1 text-sm font-medium">
-                  Servicio *
+                <div className="grid gap-1 text-sm font-medium">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Servicio *</span>
+                    {canManageServices ? (
+                      <button
+                        className="text-xs font-bold text-primary hover:underline"
+                        onClick={() => setAddingProcedure((current) => !current)}
+                        type="button"
+                      >
+                        {addingProcedure ? "Cancelar" : "Agregar servicio"}
+                      </button>
+                    ) : null}
+                  </div>
                   <select
                     className={cls}
                     onChange={(event) =>
@@ -320,7 +388,12 @@ function AppointmentForm({
                       </option>
                     ))}
                   </select>
-                </label>
+                  {!procedures.length ? (
+                    <p className="text-xs font-normal text-on-surface-variant">
+                      Aún no hay servicios registrados.
+                    </p>
+                  ) : null}
+                </div>
                 <label className="grid gap-1 text-sm font-medium">
                   Odontólogo *
                   <select
@@ -365,6 +438,68 @@ function AppointmentForm({
                   />
                 </label>
               </div>
+              {addingProcedure ? (
+                <div className="grid gap-3 rounded-2xl border border-primary/30 bg-primary-fixed/50 p-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <p className="font-bold text-primary">Nuevo servicio dental</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">
+                      Se guardará en Servicios y se seleccionará automáticamente para esta cita.
+                    </p>
+                  </div>
+                  <label className="grid gap-1 text-sm font-medium sm:col-span-2">
+                    Nombre del servicio *
+                    <input
+                      className={cls}
+                      maxLength={160}
+                      onChange={(event) => setProcedureDraft((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Ej. Limpieza dental"
+                      value={procedureDraft.name}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-medium">
+                    Categoría
+                    <input
+                      className={cls}
+                      maxLength={80}
+                      onChange={(event) => setProcedureDraft((current) => ({ ...current, category: event.target.value }))}
+                      placeholder="General"
+                      value={procedureDraft.category}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-medium">
+                    Precio (S/)
+                    <input
+                      className={cls}
+                      min="0"
+                      onChange={(event) => setProcedureDraft((current) => ({ ...current, price: event.target.value }))}
+                      step="0.01"
+                      type="number"
+                      value={procedureDraft.price}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-medium">
+                    Duración (minutos)
+                    <input
+                      className={cls}
+                      max="480"
+                      min="5"
+                      onChange={(event) => setProcedureDraft((current) => ({ ...current, durationMinutes: event.target.value }))}
+                      type="number"
+                      value={procedureDraft.durationMinutes}
+                    />
+                  </label>
+                  <div className="flex items-end justify-end sm:col-span-2">
+                    <Button
+                      disabled={creatingProcedure}
+                      icon="add"
+                      onClick={createProcedure}
+                      type="button"
+                    >
+                      {creatingProcedure ? "Guardando servicio..." : "Guardar y seleccionar"}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               {selectedProcedure ? (
                 <div className="grid grid-cols-3 gap-2 rounded-2xl bg-primary-fixed p-3 text-center text-sm text-primary">
                   <span>
@@ -899,6 +1034,7 @@ export default function DentalCalendar({ operator = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const dentistOperator = operator && config?.user?.functions?.some((item) => item.code === "dentist");
+  const canManageServices = ["admin", "admin_owner"].includes(config?.user?.role) || (config?.capabilities || []).includes("dental.catalog.manage");
   const canSchedule =
     !dentistOperator && (!operator || (config?.capabilities || []).includes("appointments.create"));
   const load = useCallback(async () => {
@@ -1107,10 +1243,18 @@ export default function DentalCalendar({ operator = false }) {
       </div>
       {modal?.type === "appointment" ? (
         <AppointmentForm
+          canManageServices={canManageServices}
           draft={appointmentDraft}
           onClose={closeSchedule}
           onDraftChange={setAppointmentDraft}
           onNewPatient={() => setModal({ type: "patient" })}
+          onProcedureCreated={(procedure) => {
+            setProcedures((current) =>
+              [...current, procedure].sort((left, right) =>
+                left.name.localeCompare(right.name, "es"),
+              ),
+            );
+          }}
           onSaved={() => {
             const scheduledDate = appointmentDraft.date;
             setModal(null);

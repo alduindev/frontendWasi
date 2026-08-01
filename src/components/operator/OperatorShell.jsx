@@ -113,6 +113,13 @@ const dentalNavigation = [
     to: "/pos/dental/appointments",
   },
   {
+    capability: "dental.catalog.read",
+    icon: "medical_services",
+    label: "Servicios",
+    key: "dental-catalog",
+    to: "/pos/dental/dental-catalog",
+  },
+  {
     capability: "dental.billing.read",
     icon: "payments",
     label: "Cobros",
