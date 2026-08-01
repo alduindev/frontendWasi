@@ -18,6 +18,8 @@ import BrandLogo from '../molecules/BrandLogo'
 import ConfirmDialog from '../molecules/ConfirmDialog'
 import PreferenceControls from '../molecules/PreferenceControls'
 
+const NOTIFICATION_REFRESH_INTERVAL_MS = 30_000
+
 function useClickOutside(ref, onOutsideClick, active) {
   useEffect(() => {
     if (!active) return undefined
@@ -485,11 +487,27 @@ export default function DashboardShell({
   useEffect(() => {
     if (!hospitality&&!dental) return undefined
     let active = true
-    const refresh = () => (dental?getDentalNotifications():getHospitalityNotifications()).then(data => { if (active) setHotelNotifications(data) }).catch(() => {})
-    refresh(); const timer = window.setInterval(refresh, 3000)
+    let request = null
+    const refresh = () => {
+      if (document.visibilityState === 'hidden' || request) return request
+      request = (dental?getDentalNotifications():getHospitalityNotifications())
+        .then(data => { if (active) setHotelNotifications(data) })
+        .catch(() => {})
+        .finally(() => { request = null })
+      return request
+    }
+    const refreshForChange = event => {
+      const path = event.detail?.path || ''
+      const relevant = dental
+        ? path.startsWith('/health/appointments') || path.startsWith('/health/dental')
+        : path.startsWith('/hospitality')
+      if (relevant) refresh()
+    }
+    refresh(); const timer = window.setInterval(refresh, NOTIFICATION_REFRESH_INTERVAL_MS)
     const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
     document.addEventListener('visibilitychange', onVisible)
-    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
+    window.addEventListener('wasi:data-changed', refreshForChange)
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('wasi:data-changed', refreshForChange) }
   }, [dental,hospitality])
   const alerts = useMemo(() => [
     ...(hospitality||dental ? hotelNotifications : []).map(item => ({ ...item, severity: item.notificationType?.includes('damage') ? 'error' : item.notificationType?.includes('completed') ? 'success' : 'info', to: item.route, unread: !item.readAt })),

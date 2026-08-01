@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getAppBootstrap } from '../services/bootstrapService'
 import { useAuth } from './authStore'
 import { AppConfigContext } from './appConfigStore'
@@ -9,11 +9,26 @@ export function AppConfigProvider({ children }) {
   const [config, setConfig] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const refresh = useCallback(async ({ silent = false } = {}) => {
+  const refreshInFlight = useRef(null)
+  const refresh = useCallback(({ silent = false } = {}) => {
+    if (refreshInFlight.current) return refreshInFlight.current
     if (!silent) setIsLoading(true)
-    try { const value = await getAppBootstrap(); setConfig(value); setError(''); return value }
-    catch (requestError) { if (!silent) setError(requestError.message); throw requestError }
-    finally { if (!silent) setIsLoading(false) }
+    const request = getAppBootstrap()
+      .then((value) => {
+        setConfig(value)
+        setError('')
+        return value
+      })
+      .catch((requestError) => {
+        if (!silent) setError(requestError.message)
+        throw requestError
+      })
+      .finally(() => {
+        refreshInFlight.current = null
+        if (!silent) setIsLoading(false)
+      })
+    refreshInFlight.current = request
+    return request
   }, [])
 
   useEffect(() => {
@@ -26,8 +41,8 @@ export function AppConfigProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated || user?.role === 'super_admin' || user?.mustChangePassword) return undefined
     const sync = () => { if (document.visibilityState === 'visible') refresh({ silent: true }).catch(() => {}) }
-    const id = setInterval(sync, 3000); document.addEventListener('visibilitychange', sync)
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', sync) }
+    document.addEventListener('visibilitychange', sync)
+    return () => document.removeEventListener('visibilitychange', sync)
   }, [isAuthenticated, refresh, user?.mustChangePassword, user?.role])
   useLiveRefresh(() => { if (isAuthenticated && user?.role !== 'super_admin' && !user?.mustChangePassword) refresh({ silent: true }).catch(() => {}) }, ['/users', '/business', '/platform'])
 

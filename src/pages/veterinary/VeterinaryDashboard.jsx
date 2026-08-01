@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../../components/atoms/Card";
 import HorizontalScroller from "../../components/atoms/HorizontalScroller";
@@ -7,6 +7,7 @@ import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useAuth } from "../../context/authStore";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import * as api from "../../services/veterinaryService";
 import { AppointmentDetail } from "./VeterinaryCalendar";
 import VeterinaryPaymentModal from "./VeterinaryPaymentModal";
@@ -23,6 +24,7 @@ const flowStatuses = [
   "completed",
   "no_show",
 ];
+const DASHBOARD_REFRESH_INTERVAL_MS = 60_000;
 
 const quickActions = [
   {
@@ -176,8 +178,11 @@ export default function VeterinaryDashboard() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [paymentRecord, setPaymentRecord] = useState(null);
+  const loadInFlight = useRef(false);
 
   const load = useCallback(async () => {
+    if (loadInFlight.current) return;
+    loadInFlight.current = true;
     setLoading(true);
     setError("");
     try {
@@ -203,14 +208,23 @@ export default function VeterinaryDashboard() {
     } finally {
       setLoading(false);
       setVaccinesLoading(false);
+      loadInFlight.current = false;
     }
   }, [admin, today, until]);
 
   useEffect(() => {
     queueMicrotask(load);
-    const timer = setInterval(load, 30000);
-    return () => clearInterval(timer);
+    const refresh = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    const timer = setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [load]);
+  useLiveRefresh(load, ["/veterinary"]);
 
   const grouped = useMemo(
     () =>

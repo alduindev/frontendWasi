@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
 import HorizontalScroller from "../../components/atoms/HorizontalScroller";
@@ -33,6 +33,7 @@ const states = {
   no_show: ["Inasistencias", "person_off", "slate"],
   cancelled: ["Canceladas", "event_busy", "error"],
 };
+const DASHBOARD_REFRESH_INTERVAL_MS = 60_000;
 
 const tones = {
   primary: "bg-primary-fixed text-primary",
@@ -371,11 +372,14 @@ export default function MedicalDashboard({ operator = false }) {
   const [recordError, setRecordError] = useState("");
   const [clinicalRecord, setClinicalRecord] = useState(emptyClinicalRecord);
   const today = new Date().toLocaleDateString("en-CA");
+  const loadInFlight = useRef(false);
   const [appointmentDraft, setAppointmentDraft] = useState(() =>
     appointmentDraftFor(today),
   );
 
   const load = useCallback(async () => {
+    if (loadInFlight.current) return;
+    loadInFlight.current = true;
     try {
       const [
         dashboard,
@@ -412,6 +416,8 @@ export default function MedicalDashboard({ operator = false }) {
       setError("");
     } catch (requestError) {
       setError(requestError.message);
+    } finally {
+      loadInFlight.current = false;
     }
   }, [
     canReadAppointments,
@@ -421,8 +427,15 @@ export default function MedicalDashboard({ operator = false }) {
 
   useEffect(() => {
     queueMicrotask(load);
-    const timer = setInterval(load, 15_000);
-    return () => clearInterval(timer);
+    const refresh = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    const timer = setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [load]);
   useLiveRefresh(load, ["/medical"]);
 

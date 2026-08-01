@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../../components/atoms/Card";
 import HorizontalScroller from "../../components/atoms/HorizontalScroller";
@@ -6,6 +6,7 @@ import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import * as api from "../../services/healthService";
 import { OdontogramModal } from "./DentalWorkspace";
 
@@ -21,6 +22,7 @@ const tone = {
   violet: "bg-violet-50 text-violet-900",
   emerald: "bg-emerald-50 text-emerald-900",
 };
+const DASHBOARD_REFRESH_INTERVAL_MS = 60_000;
 const time = (value) =>
   value
     ? new Date(value).toLocaleTimeString("es-PE", {
@@ -129,7 +131,10 @@ export default function DentalDashboard() {
   const [recordLoading, setRecordLoading] = useState(false);
   const [recordError, setRecordError] = useState("");
   const [recordExporting, setRecordExporting] = useState(false);
+  const loadInFlight = useRef(false);
   const load = useCallback(async () => {
+    if (loadInFlight.current) return;
+    loadInFlight.current = true;
     try {
       const [p, a, r, o] = await Promise.all([
         api.getPatients(),
@@ -144,13 +149,23 @@ export default function DentalDashboard() {
       setError("");
     } catch (e) {
       setError(e.message);
+    } finally {
+      loadInFlight.current = false;
     }
   }, [owner]);
   useEffect(() => {
     queueMicrotask(load);
-    const timer = setInterval(load, 15000);
-    return () => clearInterval(timer);
+    const refresh = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    const timer = setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [load]);
+  useLiveRefresh(load, ["/health"]);
   const today = new Date().toLocaleDateString("en-CA"),
     todayItems = useMemo(
       () =>

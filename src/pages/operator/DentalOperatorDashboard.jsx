@@ -1,18 +1,21 @@
-import {useCallback,useEffect,useMemo,useState} from 'react'
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import {Link} from 'react-router-dom'
 import Card from '../../components/atoms/Card'
 import OperatorShell from '../../components/operator/OperatorShell'
 import {useAuth} from '../../context/authStore'
 import {useAppConfig} from '../../context/appConfigStore'
+import {useLiveRefresh} from '../../hooks/useLiveRefresh'
 import * as api from '../../services/healthService'
 
 const clock=value=>new Date(value).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})
+const DASHBOARD_REFRESH_INTERVAL_MS=60_000
 
 export default function DentalOperatorDashboard(){
  const{user}=useAuth();const{config}=useAppConfig();const capabilities=useMemo(()=>new Set(config?.capabilities||[]),[config]);const functions=useMemo(()=>new Set(config?.user?.functions?.map(x=>x.code)||[]),[config]);const reception=functions.has('dental-reception');const dentist=functions.has('dentist')
- const[patients,setPatients]=useState([]);const[appointments,setAppointments]=useState([]);const[treatments,setTreatments]=useState([]);const[operations,setOperations]=useState([]);const[error,setError]=useState('');const[busy,setBusy]=useState('')
- const load=useCallback(async()=>{try{const[p,a,t,o]=await Promise.all([capabilities.has('patients.read')?api.getPatients():[],capabilities.has('appointments.read')?api.getHealthAppointments():[],capabilities.has('dental.treatments.read')?api.getDentalTreatments():[],capabilities.has('appointments.read')?api.getDentalOperations():[]]);setPatients(p);setAppointments(a);setTreatments(t);setOperations(o);setError('')}catch(e){setError(e.message)}},[capabilities])
- useEffect(()=>{queueMicrotask(load);const timer=setInterval(load,15000);return()=>clearInterval(timer)},[load])
+ const[patients,setPatients]=useState([]);const[appointments,setAppointments]=useState([]);const[treatments,setTreatments]=useState([]);const[operations,setOperations]=useState([]);const[error,setError]=useState('');const[busy,setBusy]=useState('');const loadInFlight=useRef(false)
+ const load=useCallback(async()=>{if(loadInFlight.current)return;loadInFlight.current=true;try{const[p,a,t,o]=await Promise.all([capabilities.has('patients.read')?api.getPatients():[],capabilities.has('appointments.read')?api.getHealthAppointments():[],capabilities.has('dental.treatments.read')?api.getDentalTreatments():[],capabilities.has('appointments.read')?api.getDentalOperations():[]]);setPatients(p);setAppointments(a);setTreatments(t);setOperations(o);setError('')}catch(e){setError(e.message)}finally{loadInFlight.current=false}},[capabilities])
+ useEffect(()=>{queueMicrotask(load);const refresh=()=>{if(document.visibilityState==='visible')load()};const timer=setInterval(refresh,DASHBOARD_REFRESH_INTERVAL_MS);document.addEventListener('visibilitychange',refresh);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',refresh)}},[load])
+ useLiveRefresh(load,['/health'])
  const today=new Date().toLocaleDateString('en-CA'),todayItems=useMemo(()=>appointments.filter(x=>new Date(x.startsAt).toLocaleDateString('en-CA')===today).sort((a,b)=>a.startsAt.localeCompare(b.startsAt)),[appointments,today]);const checked=new Set(operations.map(x=>x.appointment?.id).filter(Boolean))
  const change=async(item,status)=>{setBusy(item.id);setError('');try{await api.updateHealthAppointment(item.id,{status});await load()}catch(e){setError(e.message)}finally{setBusy('')}}
  const checkIn=async item=>{setBusy(item.id);setError('');try{await api.checkInDentalAttention({patientId:item.patient.id,appointmentId:item.id,dentistId:item.professionalId||null,reason:item.reason});await load()}catch(e){setError(e.message)}finally{setBusy('')}}

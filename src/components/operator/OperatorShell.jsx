@@ -19,6 +19,8 @@ import {
   readDentalNotification,
 } from "../../services/healthService";
 
+const NOTIFICATION_REFRESH_INTERVAL_MS = 30_000;
+
 const navigation = [
   { icon: "home", label: "Inicio", key: "dashboard", to: "/pos" },
   {
@@ -271,22 +273,39 @@ export default function OperatorShell({ action, children, title, subtitle }) {
   useEffect(() => {
     if (!hospitality && !dental) return undefined;
     let active = true;
-    const refresh = () =>
-      (dental ? getDentalNotifications() : getHospitalityNotifications())
+    let request = null;
+    const refresh = () => {
+      if (document.visibilityState === "hidden" || request) return request;
+      request = (dental ? getDentalNotifications() : getHospitalityNotifications())
         .then((data) => {
           if (active) setNotifications(data);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          request = null;
+        });
+      return request;
+    };
+    const refreshForChange = (event) => {
+      const path = event.detail?.path || "";
+      const relevant = dental
+        ? path.startsWith("/health/appointments") ||
+          path.startsWith("/health/dental")
+        : path.startsWith("/hospitality");
+      if (relevant) refresh();
+    };
     refresh();
-    const timer = window.setInterval(refresh, 3000);
+    const timer = window.setInterval(refresh, NOTIFICATION_REFRESH_INTERVAL_MS);
     const visible = () => {
       if (document.visibilityState === "visible") refresh();
     };
     document.addEventListener("visibilitychange", visible);
+    window.addEventListener("wasi:data-changed", refreshForChange);
     return () => {
       active = false;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("wasi:data-changed", refreshForChange);
     };
   }, [dental, hospitality]);
   useEffect(() => {

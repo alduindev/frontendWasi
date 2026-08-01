@@ -38,6 +38,7 @@ function businessForm(value) {
     email: value?.email || "",
     employeeCount: value?.employeeCount || 1,
     legalName: value?.legalName || "",
+    logoUrl: value?.logoUrl || "",
     name: value?.name || "",
     phone: value?.phone || "",
     taxDocument: value?.taxDocument || "",
@@ -163,6 +164,37 @@ export default function Settings() {
   const updateBusiness = (key, value) =>
     setBusinessDraft((current) => ({ ...current, [key]: value }));
 
+  const selectBusinessLogo = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      showToast({
+        title: "Archivo no válido",
+        message: "Selecciona un logo JPG, PNG o WebP.",
+        tone: "error",
+      });
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      showToast({
+        title: "Logo demasiado grande",
+        message: "El logo debe pesar como máximo 1 MB.",
+        tone: "error",
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () =>
+      showToast({
+        title: "No se pudo leer el logo",
+        message: "Intenta nuevamente con otra imagen.",
+        tone: "error",
+      });
+    reader.onload = () => updateBusiness("logoUrl", String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);
@@ -273,6 +305,53 @@ export default function Settings() {
                         <p className="mt-1 text-sm text-on-surface-variant">
                           Esta información identifica a tu empresa en paneles,
                           documentos y comunicaciones.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-outline-variant bg-surface-container-low p-3 sm:flex-row sm:items-center">
+                      <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl border border-outline-variant bg-white text-primary">
+                        {businessDraft.logoUrl ? (
+                          <img
+                            alt={`Logo de ${businessDraft.name || "la empresa"}`}
+                            className="h-full w-full object-contain p-1"
+                            src={businessDraft.logoUrl}
+                          />
+                        ) : (
+                          <span className="material-symbols-outlined text-3xl">
+                            domain
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold">Logo del negocio</p>
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          Se mostrará en los reportes PDF del consultorio.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl bg-primary px-3 text-sm font-bold text-white transition hover:brightness-95">
+                            <span className="material-symbols-outlined text-lg">
+                              add_photo_alternate
+                            </span>
+                            {businessDraft.logoUrl ? "Cambiar logo" : "Agregar logo"}
+                            <input
+                              accept="image/jpeg,image/png,image/webp"
+                              className="sr-only"
+                              onChange={selectBusinessLogo}
+                              type="file"
+                            />
+                          </label>
+                          {businessDraft.logoUrl ? (
+                            <button
+                              className="min-h-10 rounded-xl px-3 text-sm font-bold text-error hover:bg-error-container"
+                              onClick={() => updateBusiness("logoUrl", "")}
+                              type="button"
+                            >
+                              Quitar logo
+                            </button>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-xs text-on-surface-variant">
+                          JPG, PNG o WebP · máximo 1 MB.
                         </p>
                       </div>
                     </div>
