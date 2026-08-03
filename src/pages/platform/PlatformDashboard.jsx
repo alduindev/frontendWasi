@@ -16,13 +16,14 @@ import {
 import { getPlatformBusinessTypes } from "../../services/businessTypeService";
 import { getMedicalServiceTypes } from "../../services/medicalServiceTypeService";
 import AdminPasswordResetModal from "../../components/credentials/AdminPasswordResetModal";
+import SubscriptionDiagnostics from "../../components/platform/SubscriptionDiagnostics";
 
 const nav = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard SaaS" },
   { id: "businesses", icon: "domain", label: "Empresas" },
   { id: "business-types", icon: "category", label: "Catálogo de negocios" },
   { id: "modules", icon: "extension", label: "Módulos e industrias" },
-  { id: "plans", icon: "workspace_premium", label: "Planes" },
+  { id: "plans", icon: "workspace_premium", label: "Suscripciones y planes" },
 ];
 const statusTone = {
   active: "bg-emerald-100 text-emerald-800",
@@ -354,9 +355,13 @@ export default function PlatformDashboard() {
   const plan = async (code) => {
     const businessId = detail?.business?.id;
     if (!businessId || !code) return;
-    await changeBusinessPlan(businessId, code);
-    await load();
-    await open(businessId);
+    try {
+      await changeBusinessPlan(businessId, code);
+      await load();
+      await open(businessId);
+    } catch (e) {
+      setError(e.message);
+    }
   };
   const Sidebar = () => (
     <aside
@@ -659,22 +664,34 @@ export default function PlatformDashboard() {
                       {detail.subscription.plan.name}
                     </h3>
                     <p className="text-sm text-on-surface-variant">
-                      {detail.subscription.status} ·{" "}
+                      {detail.subscription.diagnostics?.statusLabel || detail.subscription.status} ·{" "}
                       {formatCurrency(detail.subscription.plan.price)}/mes
                     </p>
                   </div>
-                  <select
-                    className="min-h-11 rounded-xl border border-outline-variant px-3"
-                    onChange={(e) => plan(e.target.value)}
-                    value={detail.subscription.plan.code}
-                  >
-                    {plans.map((x) => (
-                      <option key={x.id} value={x.code}>
-                        {x.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      className="min-h-11 rounded-xl border border-outline-variant px-3"
+                      onChange={(e) => plan(e.target.value)}
+                      value={detail.subscription.plan.code}
+                    >
+                      {plans.map((x) => (
+                        <option key={x.id} value={x.code}>
+                          {x.name}
+                        </option>
+                      ))}
+                    </select>
+                    {detail.subscription.status !== "active" ? (
+                      <button
+                        className="min-h-11 rounded-xl bg-primary px-3 text-sm font-bold text-white hover:bg-primary/90"
+                        onClick={() => plan(detail.subscription.plan.code)}
+                        type="button"
+                      >
+                        Reactivar acceso
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
+                <SubscriptionDiagnostics subscription={detail.subscription} />
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <Progress
                     current={detail.usage.users}

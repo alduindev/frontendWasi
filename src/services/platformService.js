@@ -9,6 +9,7 @@ export const resetPlatformUserPassword = (businessId, userId, reason) => apiRequ
   sensitiveResponse: true,
 })
 export const changeBusinessPlan = (id, plan) => apiRequest(`/platform/businesses/${id}/plan?plan_code=${plan}`, { method: 'POST' })
+export const updatePlatformBusinessSubscription = (id, data) => apiRequest(`/platform/businesses/${id}/subscription`, { method: 'PATCH', body: JSON.stringify(data) })
 export const changeBusinessType = (id, businessTypeId, medicalServiceIds = []) => apiRequest(`/platform/businesses/${id}/business-type`, { method: 'POST', body: JSON.stringify({ businessTypeId, medicalServiceIds }) })
 export const getPlans = () => apiRequest('/plans')
 export const getPlatformPlans = () => apiRequest('/platform/plans')

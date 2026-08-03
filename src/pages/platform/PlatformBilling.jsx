@@ -7,11 +7,14 @@ import {
   createPlatformPlan,
   getPlatformAddOns,
   getPlatformCoupons,
+  getPlatformModules,
   getPlatformPayments,
   getPlatformPlans,
   getPlatformSubscriptions,
+  updatePlatformBusinessSubscription,
   updatePlatformPlan,
 } from "../../services/platformService";
+import SubscriptionDiagnostics from "../../components/platform/SubscriptionDiagnostics";
 
 const field = "min-h-11 rounded-xl border border-outline-variant bg-white px-3";
 const money = (value, currency = "PEN") =>
@@ -31,18 +34,20 @@ const blank = {
   maxMonthlyOperations: 500,
   trialDays: 14,
   graceDays: 5,
+  includedModules: [],
   isCustom: false,
   isActive: true,
   sortOrder: 0,
   monthly: "0",
   annual: "0",
 };
-function PlanModal({ item, onClose, onSaved }) {
+function PlanModal({ item, modules, onClose, onSaved }) {
   const [v, setV] = useState(
     item
       ? {
           ...blank,
           ...item,
+          includedModules: item.includedModules || [],
           monthly:
             item.prices.find(
               (x) => x.currency === "PEN" && x.billingInterval === "monthly",
@@ -61,6 +66,13 @@ function PlanModal({ item, onClose, onSaved }) {
       ...x,
       [e.target.name]:
         e.target.type === "checkbox" ? e.target.checked : e.target.value,
+    }));
+  const toggleModule = (code) =>
+    setV((current) => ({
+      ...current,
+      includedModules: current.includedModules.includes(code)
+        ? current.includedModules.filter((itemCode) => itemCode !== code)
+        : [...current.includedModules, code],
     }));
   const submit = async (e) => {
     e.preventDefault();
@@ -149,6 +161,33 @@ function PlanModal({ item, onClose, onSaved }) {
             value={v.description}
           />
         </label>
+        <fieldset className="rounded-2xl border border-outline-variant p-4 sm:col-span-2">
+          <legend className="px-1 text-sm font-bold">Módulos incluidos</legend>
+          <p className="mb-3 text-xs text-on-surface-variant">
+            Selecciona los módulos que este plan puede usar. Sin selecciones, el plan no restringe módulos y conserva todos los habilitados para el negocio.
+          </p>
+          {modules.length ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {modules
+                .filter((module) => module.status === "active")
+                .map((module) => (
+                  <label className="flex gap-2 rounded-xl border border-outline-variant p-3 text-sm" key={module.id}>
+                    <input
+                      checked={v.includedModules.includes(module.code)}
+                      onChange={() => toggleModule(module.code)}
+                      type="checkbox"
+                    />
+                    <span>
+                      <b className="block">{module.name}</b>
+                      <code className="text-xs text-on-surface-variant">{module.code}</code>
+                    </span>
+                  </label>
+                ))}
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-variant">No hay módulos activos disponibles para asignar.</p>
+          )}
+        </fieldset>
         {[
           ["maxUsers", "Usuarios"],
           ["maxOperators", "Operarios"],
@@ -233,6 +272,177 @@ function PlanModal({ item, onClose, onSaved }) {
     </Modal>
   );
 }
+
+const toDateTimeInput = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+};
+const toApiDate = (value) => (value ? new Date(value).toISOString() : null);
+const futureDateInput = (days) =>
+  toDateTimeInput(new Date(Date.now() + days * 86_400_000).toISOString());
+const subscriptionStatuses = [
+  ["active", "Activa, sin prueba"],
+  ["trialing", "En prueba"],
+  ["grace_period", "Período de gracia"],
+  ["past_due", "Pago vencido"],
+  ["pending_payment", "Pago pendiente"],
+  ["incomplete", "Incompleta"],
+  ["suspended", "Suspendida"],
+  ["canceled", "Cancelada"],
+  ["expired", "Vencida"],
+];
+
+function SubscriptionEditorModal({ subscription, plans, onClose, onSaved }) {
+  const currentPlan = plans.find((plan) => plan.code === subscription.plan.code);
+  const initialStatus = subscription.status === "trial" ? "trialing" : subscription.status;
+  const [v, setV] = useState({
+    planCode: subscription.plan.code,
+    status: initialStatus,
+    billingInterval: subscription.billingInterval || "monthly",
+    currentPeriodStart:
+      toDateTimeInput(subscription.currentPeriodStart) || toDateTimeInput(new Date()),
+    currentPeriodEnd:
+      toDateTimeInput(subscription.currentPeriodEnd) || futureDateInput(30),
+    nextBillingAt:
+      toDateTimeInput(subscription.nextBillingAt) || futureDateInput(30),
+    trialEndsAt:
+      toDateTimeInput(subscription.trialEndsAt) ||
+      futureDateInput(Math.max(currentPlan?.trialDays || 0, 1)),
+    graceEndsAt:
+      toDateTimeInput(subscription.graceEndsAt) ||
+      futureDateInput(Math.max(currentPlan?.graceDays || 0, 1)),
+  });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const selectedPlan = plans.find((plan) => plan.code === v.planCode) || currentPlan;
+  const update = (event) =>
+    setV((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const activateWithoutTrial = () => {
+    const periodDays = v.billingInterval === "annual" ? 365 : 30;
+    setV((current) => ({
+      ...current,
+      status: "active",
+      currentPeriodStart: toDateTimeInput(new Date()),
+      currentPeriodEnd: futureDateInput(periodDays),
+      nextBillingAt: futureDateInput(periodDays),
+      trialEndsAt: "",
+      graceEndsAt: "",
+    }));
+  };
+  const submit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await updatePlatformBusinessSubscription(subscription.business.id, {
+        planCode: v.planCode,
+        status: v.status,
+        billingInterval: v.billingInterval,
+        currentPeriodStart: toApiDate(v.currentPeriodStart),
+        currentPeriodEnd: toApiDate(v.currentPeriodEnd),
+        nextBillingAt: toApiDate(v.nextBillingAt),
+        trialEndsAt: toApiDate(v.trialEndsAt),
+        graceEndsAt: toApiDate(v.graceEndsAt),
+      });
+      onSaved();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const includedModules = selectedPlan?.includedModules || [];
+  const statusMessage =
+    v.status === "active"
+      ? "Al guardar se elimina la prueba y la empresa queda operativa con los límites y módulos del plan elegido."
+      : v.status === "trialing"
+        ? "La prueba se usa solo si la eliges expresamente. Define su fecha de fin."
+        : "El estado seleccionado se aplicará de inmediato y quedará registrado en el historial.";
+  return (
+    <Modal onClose={onClose} title={`Editar suscripción · ${subscription.business.name}`}>
+      <form className="grid max-h-[80vh] gap-4 overflow-y-auto p-5 sm:grid-cols-2" onSubmit={submit}>
+        {error ? <p className="rounded-xl bg-error-container p-3 text-error sm:col-span-2">{error}</p> : null}
+        <div className="rounded-2xl bg-primary-fixed p-4 text-sm sm:col-span-2">
+          <b className="block text-primary">Control administrativo</b>
+          <p className="mt-1">{statusMessage}</p>
+          <button className="mt-3 min-h-10 rounded-xl bg-primary px-4 font-bold text-white" onClick={activateWithoutTrial} type="button">
+            Activar sin prueba desde hoy
+          </button>
+        </div>
+        <label className="grid gap-1 text-sm font-bold">
+          Plan
+          <select className={field} name="planCode" onChange={update} value={v.planCode}>
+            {plans
+              .filter((plan) => plan.isActive || plan.code === subscription.plan.code)
+              .map((plan) => <option key={plan.id} value={plan.code}>{plan.name} · {plan.code}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm font-bold">
+          Estado de suscripción
+          <select className={field} name="status" onChange={update} value={v.status}>
+            {subscriptionStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm font-bold">
+          Ciclo de cobro
+          <select className={field} name="billingInterval" onChange={update} value={v.billingInterval}>
+            <option value="monthly">Mensual</option>
+            <option value="annual">Anual</option>
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm font-bold">
+          Inicio del período
+          <input className={field} name="currentPeriodStart" onChange={update} required type="datetime-local" value={v.currentPeriodStart} />
+        </label>
+        {v.status === "trialing" ? (
+          <label className="grid gap-1 text-sm font-bold">
+            Fin de prueba
+            <input className={field} name="trialEndsAt" onChange={update} required type="datetime-local" value={v.trialEndsAt} />
+          </label>
+        ) : (
+          <label className="grid gap-1 text-sm font-bold">
+            Fin del período
+            <input className={field} name="currentPeriodEnd" onChange={update} required type="datetime-local" value={v.currentPeriodEnd} />
+          </label>
+        )}
+        {v.status !== "trialing" ? (
+          <label className="grid gap-1 text-sm font-bold">
+            Próximo cobro
+            <input className={field} name="nextBillingAt" onChange={update} type="datetime-local" value={v.nextBillingAt} />
+          </label>
+        ) : null}
+        {v.status === "grace_period" ? (
+          <label className="grid gap-1 text-sm font-bold">
+            Fin de gracia
+            <input className={field} name="graceEndsAt" onChange={update} required type="datetime-local" value={v.graceEndsAt} />
+          </label>
+        ) : null}
+        <aside className="rounded-2xl border border-outline-variant p-4 text-sm sm:col-span-2">
+          <b>Accesos y límites que se aplicarán</b>
+          <p className="mt-1 text-on-surface-variant">
+            {includedModules.length
+              ? `Módulos: ${includedModules.join(", ")}`
+              : "Módulos: todos los habilitados para este tipo de negocio."}
+          </p>
+          <p className="mt-2 text-xs text-on-surface-variant">
+            {selectedPlan?.maxUsers ?? 0} usuarios · {selectedPlan?.maxOperators ?? 0} operarios · {selectedPlan?.maxBranches ?? 0} locales · {selectedPlan?.maxProducts ?? 0} productos · {selectedPlan?.maxMonthlyOperations ?? 0} operaciones/mes
+          </p>
+        </aside>
+        <div className="sticky bottom-0 flex justify-end gap-2 bg-white py-3 sm:col-span-2">
+          <button className="min-h-11 rounded-xl border px-4 font-bold" onClick={onClose} type="button">Cancelar</button>
+          <button className="min-h-11 rounded-xl bg-primary px-5 font-bold text-white disabled:opacity-50" disabled={saving}>
+            {saving ? "Guardando..." : "Guardar suscripción"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function QuickCreate({ type, onClose, onSaved }) {
   const [error, setError] = useState("");
   const submit = async (e) => {
@@ -355,28 +565,32 @@ function QuickCreate({ type, onClose, onSaved }) {
   );
 }
 export default function PlatformBilling() {
-  const [tab, setTab] = useState("plans");
+  const [tab, setTab] = useState("subscriptions");
   const [plans, setPlans] = useState([]);
   const [addons, setAddons] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [modules, setModules] = useState([]);
   const [modal, setModal] = useState(null);
   const [error, setError] = useState("");
+  const [subscriptionQuery, setSubscriptionQuery] = useState("");
   const load = useCallback(async () => {
     try {
-      const [p, a, c, s, pay] = await Promise.all([
+      const [p, a, c, s, pay, m] = await Promise.all([
         getPlatformPlans(),
         getPlatformAddOns(),
         getPlatformCoupons(),
         getPlatformSubscriptions(),
         getPlatformPayments(),
+        getPlatformModules(),
       ]);
       setPlans(p);
       setAddons(a);
       setCoupons(c);
       setSubscriptions(s);
       setPayments(pay);
+      setModules(m);
       setError("");
     } catch (e) {
       setError(e.message);
@@ -389,6 +603,13 @@ export default function PlatformBilling() {
     setModal(null);
     load();
   };
+  const normalizedSubscriptionQuery = subscriptionQuery.trim().toLowerCase();
+  const visibleSubscriptions = subscriptions.filter((subscription) =>
+    !normalizedSubscriptionQuery ||
+    `${subscription.business.name} ${subscription.plan.name} ${subscription.status} ${subscription.diagnostics?.reasonCode || ""}`
+      .toLowerCase()
+      .includes(normalizedSubscriptionQuery),
+  );
   const tabs = [
     ["plans", "Planes"],
     ["addons", "Complementos"],
@@ -528,22 +749,60 @@ export default function PlatformBilling() {
         ) : null}
         {tab === "subscriptions" ? (
           <section className="mt-5 grid gap-3">
-            {subscriptions.map((x) => (
-              <article
-                className="flex flex-wrap justify-between gap-3 rounded-2xl border bg-white p-4"
-                key={x.id}
-              >
+            <header className="rounded-2xl border border-outline-variant bg-white p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <b>{x.business.name}</b>
-                  <p className="text-sm">
-                    {x.plan.name} · {x.billingInterval}
+                  <h2 className="font-heading text-xl font-bold">
+                    Diagnóstico global de suscripciones
+                  </h2>
+                  <p className="mt-1 text-sm text-on-surface-variant">
+                    Revisa fechas, causa de bloqueo, eventos, pagos y aplica o reactiva un plan sin salir de Plataforma.
                   </p>
                 </div>
-                <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold">
-                  {x.status}
-                </span>
-              </article>
-            ))}
+                <label className="grid gap-1 text-sm font-bold">
+                  Buscar empresa o estado
+                  <input
+                    className={field}
+                    onChange={(event) => setSubscriptionQuery(event.target.value)}
+                    placeholder="Hotel, STARTER, pago vencido..."
+                    value={subscriptionQuery}
+                  />
+                </label>
+              </div>
+              <p className="mt-3 text-sm text-on-surface-variant">
+                Mostrando {visibleSubscriptions.length} de {subscriptions.length} suscripciones.
+              </p>
+            </header>
+            {visibleSubscriptions.map((x) => (
+                <article className="rounded-2xl border bg-white p-4" key={x.id}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <b>{x.business.name}</b>
+                      <p className="text-sm text-on-surface-variant">
+                        {x.plan.name} · {x.billingInterval}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-primary">
+                      {x.diagnostics?.statusLabel || x.status}
+                    </span>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-end gap-2">
+                    <button
+                      className="min-h-11 rounded-xl bg-primary px-4 text-sm font-bold text-white"
+                      onClick={() => setModal({ type: "subscription", item: x })}
+                      type="button"
+                    >
+                      Editar suscripción
+                    </button>
+                  </div>
+                  <SubscriptionDiagnostics subscription={x} />
+                </article>
+              ))}
+            {!visibleSubscriptions.length ? (
+              <p className="rounded-2xl border border-dashed border-outline-variant p-8 text-center text-sm text-on-surface-variant">
+                No hay suscripciones que coincidan con la búsqueda.
+              </p>
+            ) : null}
           </section>
         ) : null}
         {tab === "payments" ? (
@@ -569,8 +828,17 @@ export default function PlatformBilling() {
       {modal?.type === "plan" ? (
         <PlanModal
           item={modal.item}
+          modules={modules}
           onClose={() => setModal(null)}
           onSaved={done}
+        />
+      ) : null}
+      {modal?.type === "subscription" ? (
+        <SubscriptionEditorModal
+          onClose={() => setModal(null)}
+          onSaved={done}
+          plans={plans}
+          subscription={modal.item}
         />
       ) : null}
       {["addon", "coupon"].includes(modal?.type) ? (
