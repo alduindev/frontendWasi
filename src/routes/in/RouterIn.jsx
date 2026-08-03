@@ -33,6 +33,8 @@ import DentalBillingQueue from "../../pages/dental/DentalBillingQueue";
 import VeterinaryWorkspace from "../../pages/veterinary/VeterinaryWorkspace";
 import VeterinaryCalendar from "../../pages/veterinary/VeterinaryCalendar";
 import VeterinaryDashboard from "../../pages/veterinary/VeterinaryDashboard";
+import VeterinaryServices from "../../pages/veterinary/VeterinaryServices";
+import VeterinaryBillingQueue from "../../pages/operator/VeterinaryBillingQueue";
 
 function RoleRoute({ children, routeKey }) {
   const { user } = useAuth();
@@ -209,7 +211,9 @@ function DynamicModule() {
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "health") return <MedicalCalendar />;
   if (moduleKey === "dental-billing" && config?.template?.dashboardKey === "dental") return <DentalBillingQueue />;
   if (moduleKey === "appointments" && config?.template?.dashboardKey === "veterinary") return <VeterinaryCalendar />;
-  if (config?.template?.dashboardKey === "veterinary" && ["pets","invoices"].includes(moduleKey)) return <VeterinaryWorkspace />;
+  if (moduleKey === "veterinary-billing" && config?.template?.dashboardKey === "veterinary") return <VeterinaryBillingQueue />;
+  if (moduleKey === "veterinary-services" && config?.template?.dashboardKey === "veterinary") return <VeterinaryServices />;
+  if (config?.template?.dashboardKey === "veterinary" && moduleKey === "pets") return <VeterinaryWorkspace />;
   if (module?.code?.startsWith("hospitality.")) return <HospitalityWorkspace />;
   if (config?.template?.dashboardKey === "health" && module?.code?.startsWith("health.")) return <MedicalWorkspace />;
   if (module?.code?.startsWith("health.")) return <HealthWorkspace />;

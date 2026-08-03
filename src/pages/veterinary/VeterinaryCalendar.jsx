@@ -48,6 +48,15 @@ function toUtc(date, time) {
   return new Date(`${date}T${time}:00-05:00`).toISOString();
 }
 
+function timeAfter(time, minutes) {
+  const [hour, minute] = String(time || "00:00").split(":").map(Number);
+  const total = Math.min(
+    23 * 60 + 59,
+    Math.max(0, hour * 60 + minute + Number(minutes || 0)),
+  );
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 const appointmentSteps = [
   { icon: "pets", label: "Mascota" },
   { icon: "event_available", label: "Horario" },
@@ -60,6 +69,7 @@ function AppointmentForm({
   onSaved,
   pets,
   professionals,
+  services = [],
 }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
@@ -67,6 +77,7 @@ function AppointmentForm({
   const [draft, setDraft] = useState({
     petId: "",
     professionalId: "",
+    serviceId: "",
     startsAt: "09:00",
     endsAt: "09:30",
     reason: "",
@@ -75,6 +86,9 @@ function AppointmentForm({
   const pet = pets.find((item) => String(item.id) === String(draft.petId));
   const professional = professionals.find(
     (item) => String(item.id) === String(draft.professionalId),
+  );
+  const service = services.find(
+    (item) => String(item.id) === String(draft.serviceId),
   );
   const setValue = (key, value) => {
     setError("");
@@ -117,6 +131,7 @@ function AppointmentForm({
       await api.createVeterinaryAppointment({
         pet_id: draft.petId,
         professional_id: draft.professionalId || null,
+        service_id: draft.serviceId || null,
         starts_at: toUtc(date, draft.startsAt),
         ends_at: toUtc(date, draft.endsAt),
         reason: draft.reason.trim(),
@@ -180,6 +195,45 @@ function AppointmentForm({
               <legend className="text-lg font-bold">Define el horario</legend>
               <div className="rounded-xl bg-primary-fixed p-3 text-primary"><b className="block">{dayLabel(date)}</b><span className="text-sm">Fecha elegida en el calendario</span></div>
               <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1 sm:col-span-2">Servicio
+                  <select
+                    className={field}
+                    onChange={(event) => {
+                      const nextService = services.find(
+                        (item) => String(item.id) === event.target.value,
+                      );
+                      setError("");
+                      setDraft((current) => {
+                        const currentService = services.find(
+                          (item) => String(item.id) === String(current.serviceId),
+                        );
+                        const shouldReplaceReason =
+                          !current.reason.trim() ||
+                          current.reason === currentService?.name;
+                        return {
+                          ...current,
+                          serviceId: event.target.value,
+                          reason:
+                            nextService && shouldReplaceReason
+                              ? nextService.name
+                              : current.reason,
+                          endsAt: nextService
+                            ? timeAfter(current.startsAt, nextService.durationMinutes)
+                            : current.endsAt,
+                        };
+                      });
+                    }}
+                    value={draft.serviceId}
+                  >
+                    <option value="">Servicio personalizado / sin catÃ¡logo</option>
+                    {services.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} Â· S/ {Number(item.price || 0).toFixed(2)} Â· {item.durationMinutes} min
+                      </option>
+                    ))}
+                  </select>
+                  {service ? <span className="text-xs text-on-surface-variant">La duraciÃ³n y tarifa se usarÃ¡n como base de la cita y el cobro.</span> : null}
+                </label>
                 <label className="grid gap-1">Profesional
                   <select className={field} onChange={(event) => setValue("professionalId", event.target.value)} value={draft.professionalId}>
                     <option value="">Por asignar</option>
@@ -187,7 +241,15 @@ function AppointmentForm({
                   </select>
                 </label>
                 <label className="grid gap-1">Inicio
-                  <input className={field} onChange={(event) => setValue("startsAt", event.target.value)} required type="time" value={draft.startsAt} />
+                  <input className={field} onChange={(event) => {
+                    const startsAt = event.target.value;
+                    setError("");
+                    setDraft((current) => ({
+                      ...current,
+                      startsAt,
+                      endsAt: service ? timeAfter(startsAt, service.durationMinutes) : current.endsAt,
+                    }));
+                  }} required type="time" value={draft.startsAt} />
                 </label>
                 <label className="grid gap-1">Fin
                   <input className={field} onChange={(event) => setValue("endsAt", event.target.value)} required type="time" value={draft.endsAt} />
@@ -204,6 +266,7 @@ function AppointmentForm({
               <div className="grid gap-2 rounded-2xl border border-outline-variant bg-surface-container-low p-4 text-sm">
                 <p><b>Mascota:</b> {pet?.name} · {pet?.owner?.name}</p>
                 <p><b>Profesional:</b> {professional?.name || "Por asignar"}</p>
+                <p><b>Servicio:</b> {service ? `${service.name} · S/ ${Number(service.price || 0).toFixed(2)}` : "Servicio personalizado"}</p>
                 <p><b>Horario:</b> {dayLabel(date)} · {draft.startsAt} - {draft.endsAt}</p>
                 <p><b>Motivo:</b> {draft.reason}</p>
               </div>
@@ -504,6 +567,7 @@ export function AppointmentDetail({
         appointments={appointments}
         initialAppointmentId={appointment.id}
         initialProfessionalId={appointment.professional?.id || ""}
+        initialServicePrice={appointment.service?.price}
         onClose={() => setAttentionOpen(false)}
         onSaved={onSaved}
         pet={appointment.pet}
@@ -561,6 +625,10 @@ export function AppointmentDetail({
             <Info
               label="Profesional"
               value={appointment.professional?.name || "Por asignar"}
+            />
+            <Info
+              label="Servicio"
+              value={appointment.service ? `${appointment.service.name} · S/ ${Number(appointment.service.price || 0).toFixed(2)}` : "Servicio personalizado"}
             />
             <Info
               label="Propietario"
@@ -668,6 +736,7 @@ export default function VeterinaryCalendar({ operator = false }) {
   const [appointments, setAppointments] = useState([]);
   const [pets, setPets] = useState([]);
   const [professionals, setProfessionals] = useState([]);
+  const [services, setServices] = useState([]);
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -700,15 +769,17 @@ export default function VeterinaryCalendar({ operator = false }) {
     setLoading(true);
     setError("");
     try {
-      const [appointmentItems, petItems, professionalItems] =
+      const [appointmentItems, petItems, professionalItems, serviceItems] =
         await Promise.all([
           api.getVeterinaryAppointments(range.start, range.end),
           api.getPets(),
           api.getVeterinaryProfessionals(),
+          api.getVeterinaryServices(),
         ]);
       setAppointments(appointmentItems);
       setPets(petItems);
       setProfessionals(professionalItems);
+      setServices(serviceItems);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -871,6 +942,7 @@ export default function VeterinaryCalendar({ operator = false }) {
           onSaved={saved}
           pets={pets}
           professionals={professionals}
+          services={services}
         />
       ) : null}
       {modal?.type === "detail" ? (

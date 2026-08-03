@@ -7,7 +7,7 @@ import { useLiveRefresh } from './useLiveRefresh'
 
 const inventoryResources = ['/products', '/operator/sales', '/hospitality/charges', '/hospitality/room-service', '/hospitality/work-orders']
 
-export function useInventory() {
+export function useInventory({ enabled = true } = {}) {
   const { user } = useAuth()
   const operatorView = user?.role === 'operator'
   const [products, setProducts] = useState([])
@@ -16,6 +16,7 @@ export function useInventory() {
   const [error, setError] = useState('')
 
   const refresh = useCallback(async () => {
+    if (!enabled) return
     setIsLoading(true)
     setError('')
     try {
@@ -25,12 +26,14 @@ export function useInventory() {
     } finally {
       setIsLoading(false)
     }
-  }, [operatorView])
+  }, [enabled, operatorView])
 
   useEffect(() => {
+    if (!enabled) return undefined
     queueMicrotask(refresh)
-  }, [refresh])
-  useLiveRefresh(refresh, inventoryResources)
+    return undefined
+  }, [enabled, refresh])
+  useLiveRefresh(refresh, enabled ? inventoryResources : [])
 
   const mutate = useCallback(async (operation) => {
     setError('')

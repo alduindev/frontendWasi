@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import OperatorDashboard from "../../pages/operator/OperatorDashboard";
+import Alerts from "../../pages/in/Alerts";
 import OperatorHistory from "../../pages/operator/OperatorHistory";
 import OperatorInventory from "../../pages/operator/OperatorInventory";
 import OperatorInvoices from "../../pages/operator/OperatorInvoices";
@@ -23,8 +24,10 @@ import HospitalityCashierWorkspace from "../../pages/operator/HospitalityCashier
 import VeterinaryOperatorDashboard from "../../pages/operator/VeterinaryOperatorDashboard";
 import VeterinaryCalendar from "../../pages/veterinary/VeterinaryCalendar";
 import VeterinaryBillingQueue from "../../pages/operator/VeterinaryBillingQueue";
+import VeterinaryServices from "../../pages/veterinary/VeterinaryServices";
 
 function OperatorAccess({
+  alternateCapability,
   capability,
   children,
   functionCode,
@@ -41,7 +44,10 @@ function OperatorAccess({
   const functions = config?.user?.functions || [];
   const modules = config?.modules || [];
   const capabilities = config?.capabilities || [];
-  const allowedCapability = !capability || capabilities.includes(capability);
+  const allowedCapability =
+    !capability ||
+    capabilities.includes(capability) ||
+    (alternateCapability && capabilities.includes(alternateCapability));
   const allowedFunction =
     !functionCode || functions.some((item) => item.code === functionCode);
   const allowedModule =
@@ -65,7 +71,11 @@ export default function OperatorRoutes() {
       <Route
         path="products"
         element={
-          <OperatorAccess capability="inventory.read" frontendKey="inventory">
+          <OperatorAccess
+            alternateCapability="inventory.read_safe"
+            capability="inventory.read"
+            frontendKey="inventory"
+          >
             <OperatorInventory />
           </OperatorAccess>
         }
@@ -153,7 +163,7 @@ export default function OperatorRoutes() {
       <Route
         path="dental/appointments"
         element={
-          <OperatorAccess frontendKey="appointments">
+          <OperatorAccess capability="appointments.read" frontendKey="appointments">
             <DentalCalendar operator />
           </OperatorAccess>
         }
@@ -176,6 +186,15 @@ export default function OperatorRoutes() {
           </OperatorAccess>
         }
       />
+      <Route path="alerts" element={<ClinicalAlertsAccess />} />
+      <Route
+        path="veterinary/services"
+        element={
+          <OperatorAccess capability="pets.read">
+            <VeterinaryServices operator />
+          </OperatorAccess>
+        }
+      />
       <Route
         path="veterinary/billing"
         element={
@@ -183,7 +202,7 @@ export default function OperatorRoutes() {
             capability="pets.edit"
             functionCode="veterinary-reception"
           >
-            <VeterinaryBillingQueue />
+            <VeterinaryBillingQueue operator />
           </OperatorAccess>
         }
       />
@@ -216,6 +235,31 @@ function DentalModuleAccess() {
       <DentalOperations operator />
     );
   return <OperatorAccess frontendKey={moduleKey}>{page}</OperatorAccess>;
+}
+
+function ClinicalAlertsAccess() {
+  const { config, isLoading } = useAppConfig();
+  if (isLoading)
+    return (
+      <div className="grid min-h-[50vh] place-items-center text-primary">
+        Actualizando alertas...
+      </div>
+    );
+  const dental = config?.template?.dashboardKey === "dental";
+  const veterinary = config?.template?.dashboardKey === "veterinary";
+  if (dental)
+    return (
+      <OperatorAccess capability="appointments.read">
+        <Alerts operator />
+      </OperatorAccess>
+    );
+  if (veterinary)
+    return (
+      <OperatorAccess capability="pets.read">
+        <Alerts operator />
+      </OperatorAccess>
+    );
+  return <Navigate replace to="/pos" />;
 }
 
 function MedicalModuleAccess() {

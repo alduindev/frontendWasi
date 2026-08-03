@@ -11,6 +11,7 @@ import { useResponsiveSidebar } from '../../hooks/useResponsiveSidebar'
 import { filterNavigationByRole, getRoleLabel, getUserRole } from '../../services/permissionService'
 import { getHospitalityNotifications, readHospitalityNotification } from '../../services/hospitalityService'
 import {getDentalNotifications,readDentalNotification} from '../../services/healthService'
+import { getVeterinaryAlerts } from '../../services/veterinaryService'
 import { normalizeText, productMatchesQuery } from '../../utils/productUtils'
 import Avatar from '../atoms/Avatar'
 import Badge from '../atoms/Badge'
@@ -464,7 +465,29 @@ export default function DashboardShell({
     const receipts = { icon: 'receipt_long', label: 'Comprobantes', routeKey: 'dental-receipts', to: '/dashboard/invoices' }
     return financeIndex < 0 ? items : [...items.slice(0, financeIndex + 1), receipts, ...items.slice(financeIndex + 1)]
   }, [config, hospitalityItems])
-  const allowedItems = useMemo(() => config ? dentalItems : filterNavigationByRole(dentalItems, user), [config, dentalItems, user])
+  const veterinaryItems = useMemo(() => {
+    if (config?.template?.dashboardKey !== 'veterinary') return dentalItems
+    const order = [
+      'dashboard',
+      'chat',
+      'team',
+      'history',
+      'pets',
+      'appointments',
+      'veterinary-billing',
+      'invoices',
+      'veterinary-services',
+      'inventory',
+      'alerts',
+    ]
+    const rank = new Map(order.map((key, index) => [key, index]))
+    return [...dentalItems].sort(
+      (left, right) =>
+        (rank.get(left.routeKey) ?? 100) -
+        (rank.get(right.routeKey) ?? 100),
+    )
+  }, [config, dentalItems])
+  const allowedItems = useMemo(() => config ? veterinaryItems : filterNavigationByRole(veterinaryItems, user), [config, user, veterinaryItems])
   const accountItems = useMemo(() => allowedItems.filter(item => ['profile', 'settings', 'subscription'].includes(item.routeKey)), [allowedItems])
   const visibleNavItems = useMemo(() => allowedItems.filter(item => !['profile', 'settings', 'subscription'].includes(item.routeKey) && !(config?.template?.dashboardKey === 'hospitality' && item.routeKey === 'housekeeping') && !(config?.template?.dashboardKey === 'dental' && ['odontogram','treatments','dental-records'].includes(item.routeKey))), [allowedItems, config])
   const { products } = useInventory()
@@ -485,13 +508,14 @@ export default function DashboardShell({
   const activeLabel = activeItem?.labelKey ? t(activeItem.labelKey) : resolvedTitle
   const hospitality = config?.template?.dashboardKey === 'hospitality'
   const dental = config?.template?.dashboardKey === 'dental'
+  const veterinary = config?.template?.dashboardKey === 'veterinary'
   useEffect(() => {
-    if (!hospitality&&!dental) return undefined
+    if (!hospitality&&!dental&&!veterinary) return undefined
     let active = true
     let request = null
     const refresh = () => {
       if (document.visibilityState === 'hidden' || request) return request
-      request = (dental?getDentalNotifications():getHospitalityNotifications())
+      request = (dental?getDentalNotifications():veterinary?getVeterinaryAlerts():getHospitalityNotifications())
         .then(data => { if (active) setHotelNotifications(data) })
         .catch(() => {})
         .finally(() => { request = null })
@@ -501,7 +525,9 @@ export default function DashboardShell({
       const path = event.detail?.path || ''
       const relevant = dental
         ? path.startsWith('/health/appointments') || path.startsWith('/health/dental')
-        : path.startsWith('/hospitality')
+        : veterinary
+          ? path.startsWith('/veterinary')
+          : path.startsWith('/hospitality')
       if (relevant) refresh()
     }
     refresh(); const timer = window.setInterval(refresh, NOTIFICATION_REFRESH_INTERVAL_MS)
@@ -509,11 +535,11 @@ export default function DashboardShell({
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('wasi:data-changed', refreshForChange)
     return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('wasi:data-changed', refreshForChange) }
-  }, [dental,hospitality])
+  }, [dental,hospitality,veterinary])
   const alerts = useMemo(() => [
-    ...(hospitality||dental ? hotelNotifications : []).map(item => ({ ...item, severity: item.notificationType?.includes('damage') ? 'error' : item.notificationType?.includes('completed') ? 'success' : 'info', to: item.route, unread: !item.readAt })),
+    ...(hospitality||dental||veterinary ? hotelNotifications : []).map(item => ({ ...item, severity: veterinary ? item.severity || 'info' : item.notificationType?.includes('damage') ? 'error' : item.notificationType?.includes('completed') ? 'success' : 'info', to: item.route, unread: veterinary ? true : !item.readAt })),
     ...getInventoryAlerts(products, t).map(item => ({ ...item, id: `inventory-${item.id}`, unread: true })),
-  ], [dental,hospitality, hotelNotifications, products, t])
+  ], [dental,hospitality,hotelNotifications,products,t,veterinary])
   const resolvedSearchPlaceholder = searchPlaceholder || t('header.searchPlaceholder')
   const displayedSearch = onSearch ? searchValue : globalSearch
 

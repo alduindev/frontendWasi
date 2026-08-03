@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Badge from "../../components/atoms/Badge";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
@@ -841,6 +841,8 @@ function PetRecord({ data, close, onAttention, onReload, onVaccine, canEdit = fa
 
 export default function VeterinaryWorkspace({ dashboard = false }) {
   const { moduleKey } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { config } = useAppConfig();
   const mode = dashboard
@@ -895,6 +897,28 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
+  const focusedPetId = searchParams.get("pet");
+  useEffect(() => {
+    if (!focusedPetId) return undefined;
+    const focusedPet = pets.find((pet) => pet.id === focusedPetId);
+    if (!focusedPet) return undefined;
+    let active = true;
+    api
+      .getPetRecord(focusedPetId)
+      .then((data) => {
+        if (!active) return;
+        setSelected(focusedPet);
+        setRecord(data);
+        setModal("record");
+        navigate("/dashboard/pets", { replace: true });
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.message || "No se pudo abrir el expediente de la mascota.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [focusedPetId, navigate, pets]);
   const done = async () => {
     setModal("");
     setEditingPet(null);
@@ -959,7 +983,7 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
       {canEditPets ? <Button icon="pets" onClick={() => { setEditingPet(null); setModal("pet"); }}>Registrar mascota</Button> : null}
       <Button
         icon="event_available"
-        onClick={() => setModal("appointment")}
+        onClick={() => navigate("/dashboard/appointments")}
         variant="secondary"
       >
         Agendar cita
@@ -1067,7 +1091,7 @@ export default function VeterinaryWorkspace({ dashboard = false }) {
                 </Button>
                 <Button
                   icon="calendar_month"
-                  onClick={() => setModal("appointment")}
+                  onClick={() => navigate("/dashboard/appointments")}
                   variant="secondary"
                 >
                   Nueva cita

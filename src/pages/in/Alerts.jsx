@@ -1,17 +1,69 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AlertCard from '../../components/alerts/AlertCard'
 import AlertSummary from '../../components/alerts/AlertSummary'
 import Badge from '../../components/atoms/Badge'
 import EmptyState from '../../components/molecules/EmptyState'
 import DashboardShell from '../../components/organisms/DashboardShell'
+import OperatorShell from '../../components/operator/OperatorShell'
 import { getInventoryAlerts } from '../../data/dashboard'
 import { useI18n } from '../../hooks/useI18n'
 import { useInventory } from '../../hooks/useInventory'
+import { useAppConfig } from '../../context/appConfigStore'
+import { getDentalNotifications } from '../../services/healthService'
+import { getVeterinaryAlerts } from '../../services/veterinaryService'
 
-export default function Alerts() {
+function dentalAlert(item) {
+  const notificationType = item.notificationType || ''
+  return {
+    ...item,
+    actionLabel: 'Abrir agenda',
+    context: 'Agenda dental',
+    severity: notificationType.includes('cancelled') || notificationType.includes('no_show')
+      ? 'error'
+      : notificationType.includes('confirmed') || notificationType.includes('completed')
+        ? 'success'
+        : notificationType.includes('billing')
+          ? 'info'
+          : 'warning',
+  }
+}
+
+export default function Alerts({ operator = false }) {
   const { t } = useI18n()
-  const inventory = useInventory()
+  const { config } = useAppConfig()
+  const capabilities = new Set(config?.capabilities || [])
+  const administrator = ['admin', 'admin_owner'].includes(config?.user?.role)
+  const dental = config?.template?.dashboardKey === 'dental'
+  const veterinary = config?.template?.dashboardKey === 'veterinary'
+  const canReadInventory = administrator || !operator || capabilities.has('inventory.read') || capabilities.has('inventory.read_safe')
+  const inventory = useInventory({ enabled: canReadInventory })
   const [activeFilter, setActiveFilter] = useState('all')
+  const [domainAlerts, setDomainAlerts] = useState([])
+  const [domainError, setDomainError] = useState('')
+
+  useEffect(() => {
+    const request = dental
+      ? getDentalNotifications
+      : veterinary
+        ? getVeterinaryAlerts
+        : null
+    if (!request) return undefined
+    let active = true
+    request()
+      .then((rows) => {
+        if (active) {
+          setDomainAlerts(rows)
+          setDomainError('')
+        }
+      })
+      .catch((error) => {
+        if (active) setDomainError(error.message || 'No se pudieron cargar las alertas operativas.')
+      })
+    return () => {
+      active = false
+    }
+  }, [dental, veterinary])
+
   const filters = useMemo(
     () => [
       { label: t('alerts.filters.all'), value: 'all' },
@@ -21,17 +73,35 @@ export default function Alerts() {
     ],
     [t],
   )
-  const alerts = useMemo(() => getInventoryAlerts(inventory.products, t), [inventory.products, t])
+  const operationalAlerts = useMemo(
+    () => dental ? domainAlerts.map(dentalAlert) : veterinary ? domainAlerts : [],
+    [dental, domainAlerts, veterinary],
+  )
+  const alerts = useMemo(
+    () => [
+      ...operationalAlerts,
+      ...(canReadInventory
+        ? getInventoryAlerts(inventory.products, t).map((item) => (
+            operator ? { ...item, route: '/pos/products' } : item
+          ))
+        : []),
+    ],
+    [canReadInventory, inventory.products, operationalAlerts, operator, t],
+  )
   const filteredAlerts = useMemo(
     () => (activeFilter === 'all' ? alerts : alerts.filter((alert) => alert.severity === activeFilter)),
     [activeFilter, alerts],
   )
+  const Shell = operator ? OperatorShell : DashboardShell
+  const title = dental ? 'Alertas dentales' : veterinary ? 'Alertas veterinarias' : t('alerts.pageTitle')
+  const subtitle = dental
+    ? 'Cambios de agenda, cobros pendientes e inventario que requiere atención.'
+    : veterinary
+      ? 'Agenda, vacunas próximas o vencidas e inventario veterinario que requiere atención.'
+      : t('alerts.pageSubtitle')
 
   return (
-    <DashboardShell
-      subtitle={t('alerts.pageSubtitle')}
-      title={t('alerts.pageTitle')}
-    >
+    <Shell subtitle={subtitle} title={title}>
       <div className="grid gap-5">
         <AlertSummary alerts={alerts} />
 
@@ -70,6 +140,7 @@ export default function Alerts() {
           </div>
 
           <div className="mt-5 grid gap-3">
+            {(dental || veterinary) && domainError ? <p className="rounded-xl bg-error-container p-3 text-sm text-error">{domainError}</p> : null}
             {filteredAlerts.length ? filteredAlerts.map((alert) => (
               <AlertCard alert={alert} key={alert.id} />
             )) : (
@@ -82,6 +153,6 @@ export default function Alerts() {
           </div>
         </section>
       </div>
-    </DashboardShell>
+    </Shell>
   )
 }

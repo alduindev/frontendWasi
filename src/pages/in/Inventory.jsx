@@ -36,7 +36,8 @@ export default function Inventory() {
   const { t } = useI18n()
   const { showToast } = useToast()
   const permissions = useMemo(() => getPermissions(user), [user])
-  const isMedicalInventory = config?.template?.dashboardKey === 'health'
+  const isClinicalInventory = ['health', 'veterinary'].includes(config?.template?.dashboardKey)
+  const veterinary = config?.template?.dashboardKey === 'veterinary'
   const inventory = useInventory(user?.name)
   const [searchParams] = useSearchParams()
   const [confirm, setConfirm] = useState(null)
@@ -45,10 +46,10 @@ export default function Inventory() {
   const [modalOpen, setModalOpen] = useState(false)
   const focusedProductId = searchParams.get('focus')
   const inventoryCategories = useMemo(() => {
-    const configuredCategories = isMedicalInventory ? medicalProductCategories : productCategories
+    const configuredCategories = isClinicalInventory ? medicalProductCategories : productCategories
     const existingCategories = inventory.products.map((product) => product.category).filter(Boolean)
     return [...new Set([...configuredCategories, ...existingCategories])]
-  }, [inventory.products, isMedicalInventory])
+  }, [inventory.products, isClinicalInventory])
 
   const filteredProducts = useMemo(() => {
     const effectiveFilters = focusedProductId
@@ -139,14 +140,18 @@ export default function Inventory() {
       subtitle={
         config?.template?.dashboardKey === 'hospitality'
           ? 'Productos de minibar, room service, amenities y suministros conectados al stock.'
-          : isMedicalInventory
+          : veterinary
+            ? 'Medicamentos, alimentos, insumos clínicos y productos de venta conectados a cada atención.'
+            : isClinicalInventory
             ? 'Medicamentos, insumos clínicos, material de rehabilitación y equipos conectados al stock.'
             : t('inventory.subtitle')
       }
       title={
         config?.template?.dashboardKey === 'hospitality'
           ? 'Productos y almacén'
-          : isMedicalInventory
+          : veterinary
+            ? 'Inventario veterinario'
+            : isClinicalInventory
             ? 'Inventario clínico e insumos'
             : t('inventory.title')
       }

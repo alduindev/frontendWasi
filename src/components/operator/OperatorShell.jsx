@@ -18,6 +18,7 @@ import {
   readAllDentalNotifications,
   readDentalNotification,
 } from "../../services/healthService";
+import { getVeterinaryAlerts } from "../../services/veterinaryService";
 
 const NOTIFICATION_REFRESH_INTERVAL_MS = 30_000;
 
@@ -113,6 +114,13 @@ const dentalNavigation = [
     to: "/pos/dental/appointments",
   },
   {
+    capability: "appointments.read",
+    icon: "notifications_active",
+    label: "Alertas",
+    key: "alerts",
+    to: "/pos/alerts",
+  },
+  {
     capability: "dental.catalog.read",
     icon: "medical_services",
     label: "Servicios",
@@ -159,12 +167,34 @@ const veterinaryNavigation = [
     to: "/pos/veterinary/appointments",
   },
   {
+    capability: "pets.read",
+    icon: "notifications_active",
+    label: "Alertas",
+    key: "alerts",
+    to: "/pos/alerts",
+  },
+  {
+    capability: "pets.read",
+    icon: "medical_services",
+    label: "Servicios",
+    key: "veterinary-services",
+    to: "/pos/veterinary/services",
+  },
+  {
     capability: "pets.edit",
     functionCode: "veterinary-reception",
     icon: "payments",
-    label: "Cobros",
+    label: "Caja veterinaria",
     key: "veterinary-billing",
     to: "/pos/veterinary/billing",
+  },
+  {
+    alternate: "inventory.read_safe",
+    capability: "inventory.read",
+    icon: "inventory_2",
+    label: "Inventario",
+    key: "veterinary-inventory",
+    to: "/pos/products",
   },
 ];
 
@@ -176,8 +206,8 @@ function OperatorNavigation({ collapsed = false, onNavigate }) {
   );
   const hospitality = config?.template?.dashboardKey === "hospitality";
   const dental = config?.template?.dashboardKey === "dental";
-  const medical = config?.template?.dashboardKey === "health";
   const veterinary = config?.template?.dashboardKey === "veterinary";
+  const medical = config?.template?.dashboardKey === "health";
   const dynamicItems = hospitality
     ? Object.entries(departmentNavigation)
         .filter(([code]) => functions.has(code))
@@ -267,7 +297,10 @@ export default function OperatorShell({ action, children, title, subtitle }) {
   const { config } = useAppConfig();
   const hospitality = config?.template?.dashboardKey === "hospitality";
   const dental = config?.template?.dashboardKey === "dental";
-  const unread = notifications.filter((item) => !item.readAt).length;
+  const veterinary = config?.template?.dashboardKey === "veterinary";
+  const unread = veterinary
+    ? notifications.length
+    : notifications.filter((item) => !item.readAt).length;
   const { closeMobile, collapsed, mobileOpen, openMobile, toggleCollapsed } =
     useResponsiveSidebar(`wasita:sidebar:operator:${user?.id || "user"}`);
   useEffect(() => {
@@ -278,12 +311,16 @@ export default function OperatorShell({ action, children, title, subtitle }) {
     if (mobileOpen) panelRef.current?.focus();
   }, [mobileOpen]);
   useEffect(() => {
-    if (!hospitality && !dental) return undefined;
+    if (!hospitality && !dental && !veterinary) return undefined;
     let active = true;
     let request = null;
     const refresh = () => {
       if (document.visibilityState === "hidden" || request) return request;
-      request = (dental ? getDentalNotifications() : getHospitalityNotifications())
+      request = (dental
+        ? getDentalNotifications()
+        : veterinary
+          ? getVeterinaryAlerts()
+          : getHospitalityNotifications())
         .then((data) => {
           if (active) setNotifications(data);
         })
@@ -298,7 +335,9 @@ export default function OperatorShell({ action, children, title, subtitle }) {
       const relevant = dental
         ? path.startsWith("/health/appointments") ||
           path.startsWith("/health/dental")
-        : path.startsWith("/hospitality");
+        : veterinary
+          ? path.startsWith("/veterinary")
+          : path.startsWith("/hospitality");
       if (relevant) refresh();
     };
     refresh();
@@ -314,7 +353,7 @@ export default function OperatorShell({ action, children, title, subtitle }) {
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("wasi:data-changed", refreshForChange);
     };
-  }, [dental, hospitality]);
+  }, [dental, hospitality, veterinary]);
   useEffect(() => {
     if (!notificationsOpen) return undefined;
     const close = (event) => {
@@ -344,6 +383,7 @@ export default function OperatorShell({ action, children, title, subtitle }) {
     };
   }, [accountOpen]);
   const readOne = (item) => {
+    if (veterinary) return;
     setNotifications((current) =>
       current.map((row) =>
         row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row,
@@ -355,6 +395,7 @@ export default function OperatorShell({ action, children, title, subtitle }) {
     ).catch(() => {});
   };
   const readAll = () => {
+    if (veterinary) return;
     setNotifications((current) =>
       current.map((row) => ({
         ...row,
@@ -399,7 +440,7 @@ export default function OperatorShell({ action, children, title, subtitle }) {
       {!collapsed || mobile ? (
         <div className="mt-7 overflow-hidden rounded-2xl bg-primary-fixed p-3 text-on-primary-fixed">
           <p className="text-xs font-bold uppercase tracking-wider">
-            {dental ? "Área clínica" : "Punto de venta"}
+            {dental || veterinary ? "Área clínica" : "Punto de venta"}
           </p>
           <p className="mt-1 truncate font-bold">{user.name}</p>
           <p className="truncate text-xs">{user.site}</p>
@@ -517,10 +558,12 @@ export default function OperatorShell({ action, children, title, subtitle }) {
                     <div>
                       <p className="font-bold">Notificaciones</p>
                       <p className="text-xs text-on-surface-variant">
-                        Asignaciones y cambios importantes
+                        {veterinary
+                          ? "Alertas clínicas y de agenda"
+                          : "Asignaciones y cambios importantes"}
                       </p>
                     </div>
-                    {unread ? (
+                    {!veterinary && unread ? (
                       <button
                         className="text-xs font-bold text-primary"
                         onClick={readAll}
@@ -537,14 +580,18 @@ export default function OperatorShell({ action, children, title, subtitle }) {
                           className={`block rounded-xl p-3 hover:bg-surface-container-low ${item.readAt ? "opacity-70" : "bg-primary-fixed/40"}`}
                           key={item.id}
                           onClick={() => {
-                            readOne(item);
+                            if (!veterinary) readOne(item);
                             setNotificationsOpen(false);
                           }}
                           to={item.route || "/pos"}
                         >
                           <div className="flex items-start gap-2">
                             <span className="material-symbols-outlined text-xl text-primary">
-                              {item.notificationType?.includes(
+                              {veterinary && item.context === "Vacunación"
+                                ? "vaccines"
+                                : veterinary && item.context === "Agenda"
+                                  ? "calendar_month"
+                                  : item.notificationType?.includes(
                                 "functions_added",
                               )
                                 ? "verified_user"
@@ -565,11 +612,13 @@ export default function OperatorShell({ action, children, title, subtitle }) {
                               <p className="mt-1 text-sm text-on-surface-variant">
                                 {item.message}
                               </p>
-                              <p className="mt-1 text-xs text-on-surface-variant">
-                                {new Date(item.createdAt).toLocaleString(
-                                  "es-PE",
-                                )}
-                              </p>
+                              {item.createdAt || item.dueAt ? (
+                                <p className="mt-1 text-xs text-on-surface-variant">
+                                  {new Date(
+                                    item.createdAt || item.dueAt,
+                                  ).toLocaleString("es-PE")}
+                                </p>
+                              ) : null}
                             </div>
                           </div>
                         </Link>

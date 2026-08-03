@@ -22,6 +22,7 @@ export default function VeterinaryAttentionForm({
   appointments = [],
   initialAppointmentId = "",
   initialProfessionalId = "",
+  initialServicePrice,
   onClose,
   onSaved,
   pet,
@@ -31,7 +32,11 @@ export default function VeterinaryAttentionForm({
   const [cart, setCart] = useState({});
   const [appointmentId, setAppointmentId] = useState(initialAppointmentId);
   const [professionalId, setProfessionalId] = useState(initialProfessionalId);
-  const [baseAmount, setBaseAmount] = useState("");
+  const [baseAmount, setBaseAmount] = useState(
+    initialServicePrice === undefined || initialServicePrice === null
+      ? ""
+      : String(initialServicePrice),
+  );
   const [query, setQuery] = useState("");
   const [loadingSupplies, setLoadingSupplies] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -131,6 +136,20 @@ export default function VeterinaryAttentionForm({
   return (
     <Modal dialogClassName="sm:max-w-4xl" onClose={onClose} title={`Atención · ${pet.name}`}>
       <form className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5" onSubmit={save}>
+        <section className={`grid gap-2 rounded-2xl border p-3 sm:col-span-2 ${pet.allergies || pet.conditions ? "border-error bg-error-container/30" : "border-primary/30 bg-primary-fixed"}`}>
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">pets</span>
+            <div>
+              <h3 className="font-bold">Antes de atender: ficha de {pet.name}</h3>
+              <p className="text-sm text-on-surface-variant">Verifica estos datos clínicos antes de registrar el diagnóstico o tratamiento.</p>
+            </div>
+          </div>
+          <div className="grid gap-2 text-sm sm:grid-cols-3">
+            <p><b>Alergias:</b> {pet.allergies || "No registradas"}</p>
+            <p><b>Condiciones:</b> {pet.conditions || "No registradas"}</p>
+            <p><b>Peso de ficha:</b> {pet.weightKg ? `${pet.weightKg} kg` : "No registrado"}</p>
+          </div>
+        </section>
         <label className="grid gap-1">
           Tipo
           <select className={field} name="record_type">
@@ -145,7 +164,15 @@ export default function VeterinaryAttentionForm({
           Cita vinculada
           <select
             className={field}
-            onChange={(event) => setAppointmentId(event.target.value)}
+            onChange={(event) => {
+              const nextAppointmentId = event.target.value;
+              const linkedAppointment = appointments.find(
+                (item) => String(item.id) === nextAppointmentId,
+              );
+              setAppointmentId(nextAppointmentId);
+              if (linkedAppointment?.service?.price !== undefined)
+                setBaseAmount(String(linkedAppointment.service.price));
+            }}
             value={appointmentId}
           >
             <option value="">Sin cita</option>

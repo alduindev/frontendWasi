@@ -52,10 +52,16 @@ const quickActions = [
     to: "/dashboard/inventory",
   },
   {
+    description: "Configura tarifas y duraciones para usarlas en agenda, atención y cobro.",
+    icon: "medical_services",
+    label: "Servicios veterinarios",
+    to: "/dashboard/veterinary-services",
+  },
+  {
     description: "Revisa importes pendientes y emite el comprobante de atención.",
     icon: "receipt_long",
     label: "Cobrar atención",
-    to: "/dashboard/invoices",
+    to: "/dashboard/veterinary-billing",
   },
 ];
 

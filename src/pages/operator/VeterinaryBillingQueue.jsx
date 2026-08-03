@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "../../components/atoms/Card";
 import EmptyState from "../../components/molecules/EmptyState";
+import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
 import VeterinaryPaymentModal from "../veterinary/VeterinaryPaymentModal";
 import * as api from "../../services/veterinaryService";
@@ -8,7 +9,7 @@ import { matchesEntitySearch } from "../../utils/entitySearch";
 
 const money = (value) => `S/ ${Number(value || 0).toFixed(2)}`;
 
-export default function VeterinaryBillingQueue() {
+export default function VeterinaryBillingQueue({ operator = false }) {
   const [records, setRecords] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,10 +53,11 @@ export default function VeterinaryBillingQueue() {
     0,
   );
 
+  const Shell = operator ? OperatorShell : DashboardShell;
   return (
-    <OperatorShell
+    <Shell
       subtitle="Confirma los datos del cliente, registra el método de pago y emite el comprobante."
-      title="Caja veterinaria"
+      title={operator ? "Caja veterinaria" : "Finanzas veterinarias"}
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-3">
@@ -138,6 +140,6 @@ export default function VeterinaryBillingQueue() {
           record={selected}
         />
       ) : null}
-    </OperatorShell>
+    </Shell>
   );
 }

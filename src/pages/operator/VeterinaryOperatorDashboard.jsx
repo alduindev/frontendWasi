@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
 import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import OperatorShell from "../../components/operator/OperatorShell";
+import { useAppConfig } from "../../context/appConfigStore";
 import { useAuth } from "../../context/authStore";
 import * as api from "../../services/veterinaryService";
 import VeterinaryAttentionForm from "../veterinary/VeterinaryAttentionForm";
@@ -17,7 +19,7 @@ const species = {
   rabbit: "Conejo",
   other: "Otra",
 };
-function Record({ data, onClose, onAttention }) {
+function Record({ canAttend, data, onClose, onAttention }) {
   const [tab, setTab] = useState("history");
   return (
     <Modal
@@ -38,7 +40,7 @@ function Record({ data, onClose, onAttention }) {
               {data.pet.owner.name} · {data.pet.owner.phone}
             </p>
           </div>
-          <Button onClick={onAttention}>Atender</Button>
+          {canAttend ? <Button onClick={onAttention}>Atender</Button> : null}
         </div>
         <nav className="my-3 grid grid-cols-3 rounded-xl border p-1">
           {[
@@ -105,6 +107,20 @@ function Record({ data, onClose, onAttention }) {
 }
 export default function VeterinaryOperatorDashboard() {
   const { user } = useAuth();
+  const { config } = useAppConfig();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const capabilities = useMemo(
+    () => new Set(config?.capabilities || []),
+    [config?.capabilities],
+  );
+  const functions = useMemo(
+    () => new Set(config?.user?.functions?.map((item) => item.code) || []),
+    [config?.user?.functions],
+  );
+  const canAttend =
+    capabilities.has("pets.edit") &&
+    (functions.has("veterinarian") || functions.has("veterinary-groomer"));
   const [pets, setPets] = useState([]),
     [appointments, setAppointments] = useState([]),
     [professionals, setProfessionals] = useState([]),
@@ -130,6 +146,27 @@ export default function VeterinaryOperatorDashboard() {
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
+  const focusedPetId = searchParams.get("pet");
+  useEffect(() => {
+    if (!focusedPetId) return undefined;
+    const focusedPet = pets.find((pet) => pet.id === focusedPetId);
+    if (!focusedPet) return undefined;
+    let active = true;
+    api
+      .getPetRecord(focusedPetId)
+      .then((data) => {
+        if (!active) return;
+        setSelected(focusedPet);
+        setRecord(data);
+        navigate("/pos/veterinary/pets", { replace: true });
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.message || "No se pudo abrir el expediente de la mascota.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [focusedPetId, navigate, pets]);
   const today = new Date().toLocaleDateString("en-CA");
   const todayItems = appointments.filter(
     (x) => x.startsAt?.slice(0, 10) === today,
@@ -257,18 +294,19 @@ export default function VeterinaryOperatorDashboard() {
       </div>
       {record && selected ? (
         <Record
+          canAttend={canAttend}
           data={record}
-          onAttention={() => {
+          onAttention={canAttend ? () => {
             setRecord(null);
             setAttention(selected);
-          }}
+          } : undefined}
           onClose={() => {
             setRecord(null);
             setSelected(null);
           }}
         />
       ) : null}
-      {attention ? (
+      {attention && canAttend ? (
         <VeterinaryAttentionForm
           appointments={appointments}
           onClose={() => setAttention(null)}
