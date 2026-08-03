@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -32,6 +32,25 @@ const RequiredPasswordChange = lazy(
 
 function RouteLoading() {
   return <WasitaLoadingScreen />;
+}
+
+function RouteScrollReset() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (!("scrollRestoration" in window.history)) return undefined;
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
 }
 
 function ProtectedRoute({ children, area }) {
@@ -156,6 +175,7 @@ export default function RouterMain() {
           <ToastProvider>
             <NetworkActivity />
             <BrowserRouter>
+              <RouteScrollReset />
               <OnboardingProvider>
                 <AppRoutes />
               </OnboardingProvider>
