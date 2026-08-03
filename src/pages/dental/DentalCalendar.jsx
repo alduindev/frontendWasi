@@ -5,6 +5,7 @@ import EmptyState from "../../components/molecules/EmptyState";
 import Modal from "../../components/molecules/Modal";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
+import { AgendaFilterBar } from "../../components/scheduling/MonthlyAgenda";
 import DynamicForm from "../../forms/engine/DynamicForm";
 import patientTemplate from "../../forms/templates/health/patient.template";
 import { useAppConfig } from "../../context/appConfigStore";
@@ -1139,21 +1140,7 @@ export default function DentalCalendar({ operator = false }) {
           />
         </div>
       ) : null}
-      <div className="mb-3 flex flex-wrap gap-2">
-        {filters.map((item) => (
-          <button
-            className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-bold transition ${filter === item.value ? "border-primary bg-primary text-white" : "border-outline-variant bg-white text-on-surface-variant hover:border-primary hover:bg-primary-fixed"}`}
-            key={item.value}
-            onClick={() => setFilter(item.value)}
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-outlined text-lg">
-              {item.icon}
-            </span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
+      <AgendaFilterBar filters={filters} onChange={setFilter} value={filter} />
       <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
         <aside className="xl:order-2 xl:sticky xl:top-20">
           <DayAgenda

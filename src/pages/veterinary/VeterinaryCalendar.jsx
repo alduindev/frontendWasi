@@ -8,6 +8,7 @@ import EntityAttachments from "../../components/attachments/EntityAttachments";
 import DashboardShell from "../../components/organisms/DashboardShell";
 import OperatorShell from "../../components/operator/OperatorShell";
 import {
+  AgendaFilterBar,
   DayAgendaPanel,
   MonthCalendarGrid,
 } from "../../components/scheduling/MonthlyAgenda";
@@ -850,7 +851,7 @@ export default function VeterinaryCalendar({ operator = false }) {
   return (
     <Shell
       action={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap justify-end gap-2">
           <Button icon="today" onClick={goToday} variant="secondary">
             Hoy
           </Button>
@@ -868,9 +869,9 @@ export default function VeterinaryCalendar({ operator = false }) {
       subtitle={
         operator
           ? "Revisa tus citas asignadas y abre el expediente sin salir de la agenda."
-          : "Organiza mascotas, horarios y profesionales desde un calendario conectado al expediente."
+          : "Agenda veterinaria por mascota, servicio, profesional y estado de atención."
       }
-      title="Calendario veterinario"
+      title="Agenda veterinaria"
     >
       {error ? (
         <div className="mb-4">
@@ -882,13 +883,33 @@ export default function VeterinaryCalendar({ operator = false }) {
           />
         </div>
       ) : null}
-      <div className="grid items-start gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="xl:sticky xl:top-20">
+      <AgendaFilterBar filters={filters} onChange={setFilter} value={filter} />
+      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
+        <MonthCalendarGrid
+          canViewPast={canViewPast}
+          cursor={cursor}
+          eventsByDate={eventsByDate}
+          filters={filters}
+          getEventLabel={(appointment) =>
+            `${timeInLima(appointment.startsAt)} ${appointment.pet.name}`
+          }
+          loading={loading}
+          onFilter={setFilter}
+          onMoveMonth={moveMonth}
+          onSelectDate={selectDay}
+          selectedDate={selectedDate}
+          selectedFilter={filter}
+          showFilters={false}
+          statusMeta={statusMeta}
+          today={today}
+        />
+        <aside className="xl:order-2 xl:sticky xl:top-20">
           <DayAgendaPanel
             canSchedule={canSchedule}
             date={selectedDate}
             events={selectedEvents}
             filters={filters}
+            key={selectedDate}
             onEvent={(appointment) =>
               setModal({ type: "detail", appointment })
             }
@@ -917,23 +938,6 @@ export default function VeterinaryCalendar({ operator = false }) {
             }}
           />
         </aside>
-        <MonthCalendarGrid
-          canViewPast={canViewPast}
-          cursor={cursor}
-          eventsByDate={eventsByDate}
-          filters={filters}
-          getEventLabel={(appointment) =>
-            `${appointment.pet.name} · ${timeInLima(appointment.startsAt)}`
-          }
-          loading={loading}
-          onFilter={setFilter}
-          onMoveMonth={moveMonth}
-          onSelectDate={selectDay}
-          selectedDate={selectedDate}
-          selectedFilter={filter}
-          statusMeta={statusMeta}
-          today={today}
-        />
       </div>
       {modal?.type === "appointment" ? (
         <AppointmentForm

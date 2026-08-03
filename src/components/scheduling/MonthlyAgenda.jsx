@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import Card from "../atoms/Card";
-import HorizontalScroller from "../atoms/HorizontalScroller";
 import EmptyState from "../molecules/EmptyState";
 import Button from "../atoms/Button";
 import {
@@ -11,6 +10,32 @@ import {
 } from "./calendarUtils";
 
 const weekdays = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+
+export function AgendaFilterBar({
+  className = "",
+  filters = [],
+  onChange,
+  value,
+}) {
+  return (
+    <div className={`mb-3 flex flex-wrap gap-2 ${className}`.trim()}>
+      {filters.map((item) => (
+        <button
+          aria-pressed={value === item.value}
+          className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-bold transition ${value === item.value ? "border-primary bg-primary text-white" : "border-outline-variant bg-white text-on-surface-variant hover:border-primary hover:bg-primary-fixed"}`}
+          key={item.value}
+          onClick={() => onChange(item.value)}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">
+            {item.icon}
+          </span>
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function MonthCalendarGrid({
   canViewPast = true,
@@ -24,52 +49,45 @@ export function MonthCalendarGrid({
   onSelectDate,
   selectedDate,
   selectedFilter,
+  showFilters = true,
   statusMeta,
   today,
 }) {
   const cells = useMemo(() => buildMonthCells(cursor), [cursor]);
   return (
     <Card className="min-w-0 overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-outline-variant p-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center justify-center gap-1 lg:justify-start">
-          <button
-            aria-label="Mes anterior"
-            className="material-symbols-outlined min-h-10 min-w-10 rounded-full p-2 hover:bg-primary-fixed"
-            onClick={() => onMoveMonth(-1)}
-            type="button"
-          >
-            chevron_left
-          </button>
-          <h2 className="min-w-44 text-center text-lg font-bold capitalize">
-            {monthLabel(cursor)}
-          </h2>
-          <button
-            aria-label="Mes siguiente"
-            className="material-symbols-outlined min-h-10 min-w-10 rounded-full p-2 hover:bg-primary-fixed"
-            onClick={() => onMoveMonth(1)}
-            type="button"
-          >
-            chevron_right
-          </button>
-        </div>
-        <HorizontalScroller
-          className="gap-1"
-          label="Filtros del calendario"
+      {showFilters && filters.length ? (
+        <AgendaFilterBar
+          className="m-3 mb-0"
+          filters={filters}
+          onChange={onFilter}
+          value={selectedFilter}
+        />
+      ) : null}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-outline-variant p-3">
+        <button
+          aria-label="Mes anterior"
+          className="grid size-10 place-items-center rounded-xl border border-outline-variant bg-white text-primary transition hover:bg-primary-fixed"
+          onClick={() => onMoveMonth(-1)}
+          type="button"
         >
-          {filters.map((item) => (
-            <button
-              className={`flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-3 text-xs font-bold ${selectedFilter === item.value ? "bg-primary text-white" : "bg-surface-container-low text-on-surface-variant"}`}
-              key={item.value}
-              onClick={() => onFilter(item.value)}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">
-                {item.icon}
-              </span>
-              {item.label}
-            </button>
-          ))}
-        </HorizontalScroller>
+          <span aria-hidden="true" className="material-symbols-outlined">
+            chevron_left
+          </span>
+        </button>
+        <h2 className="truncate text-center font-heading text-base font-bold capitalize sm:text-lg">
+          {monthLabel(cursor)}
+        </h2>
+        <button
+          aria-label="Mes siguiente"
+          className="grid size-10 place-items-center rounded-xl border border-outline-variant bg-white text-primary transition hover:bg-primary-fixed"
+          onClick={() => onMoveMonth(1)}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">
+            chevron_right
+          </span>
+        </button>
       </div>
       {loading ? (
         <div className="h-[32rem] animate-pulse bg-surface-container-low" />
@@ -94,31 +112,39 @@ export function MonthCalendarGrid({
               return (
                 <button
                   aria-label={`${key}, ${events.length} evento(s)`}
-                  className={`min-h-[4.75rem] border-b border-r border-outline-variant p-1 text-left transition sm:min-h-24 sm:p-1.5 ${!cell.current ? "bg-surface-container-low/50 text-outline" : ""} ${key === today ? "ring-2 ring-inset ring-primary" : ""} ${key === selectedDate ? "bg-primary-fixed" : ""} ${disabled ? "cursor-not-allowed opacity-45" : "hover:bg-primary-fixed/40"}`}
+                  className={`relative min-h-[76px] min-w-0 overflow-hidden border-b border-r border-outline-variant p-1.5 text-left transition sm:min-h-[108px] ${cell.current ? past ? "bg-surface-container-low/70 text-on-surface-variant" : "bg-white" : "bg-surface-container-low text-on-surface-variant"} ${key === selectedDate ? "ring-2 ring-inset ring-primary" : "hover:bg-primary-fixed/30"} ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
                   disabled={disabled}
                   key={key}
                   onClick={() => onSelectDate(cell.date)}
                   type="button"
                 >
-                  <span
-                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold sm:h-7 sm:w-7 sm:text-xs ${key === selectedDate ? "bg-primary text-white" : ""}`}
-                  >
-                    {cell.date.getDate()}
-                  </span>
-                  <div className="mt-1 grid gap-0.5">
-                    {events.slice(0, 3).map((event) => (
-                      <span
-                        className="flex min-w-0 items-center gap-1 truncate text-[8px] sm:text-[9px]"
-                        key={event.id}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${(statusMeta[event.status] || statusMeta.default).dot}`}
-                        />
-                        <span className="truncate">{getEventLabel(event)}</span>
+                  <span className="flex items-center gap-1">
+                    <span
+                      className={`grid size-6 place-items-center rounded-full text-xs font-bold ${key === today ? "bg-primary text-white" : ""}`}
+                    >
+                      {cell.date.getDate()}
+                    </span>
+                    {past && cell.current ? (
+                      <span aria-hidden="true" className="material-symbols-outlined text-sm text-on-surface-variant">
+                        history
                       </span>
-                    ))}
+                    ) : null}
+                  </span>
+                  <div className="mt-1 grid min-w-0 gap-1">
+                    {events.slice(0, 3).map((event) => {
+                      const meta = statusMeta?.[event.status] || statusMeta?.default;
+                      return (
+                        <span
+                          className={`min-w-0 truncate rounded px-1 py-1 text-[9px] font-bold sm:px-1.5 sm:text-[10px] ${meta?.tone || "bg-primary-fixed text-primary"}`}
+                          key={event.id}
+                          title={getEventLabel(event)}
+                        >
+                          {getEventLabel(event)}
+                        </span>
+                      );
+                    })}
                     {events.length > 3 ? (
-                      <span className="text-[8px] font-bold text-primary sm:text-[9px]">
+                      <span className="truncate text-[10px] font-bold text-primary">
                         +{events.length - 3} más
                       </span>
                     ) : null}
@@ -165,42 +191,43 @@ export function DayAgendaPanel({
           {events.length} cita(s) programada(s)
         </p>
       </div>
-      <div className="border-b border-outline-variant px-2 pt-2">
-        <HorizontalScroller className="gap-1" label="Estados de la agenda">
-          {groups.map((item) => (
-            <button
-              className={`min-w-[82px] shrink-0 snap-start rounded-xl p-2 text-center ${resolvedActive === item.value ? "bg-primary text-white shadow-md" : "bg-surface-container-low text-on-surface-variant hover:bg-primary-fixed"}`}
-              key={item.value}
-              onClick={() => setActive(item.value)}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-lg">
-                {item.icon}
-              </span>
-              <b className="block text-lg leading-5">{item.events.length}</b>
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          ))}
-        </HorizontalScroller>
+      <div className="grid grid-cols-3 gap-1 border-b border-outline-variant p-2">
+        {groups.map((item) => (
+          <button
+            aria-pressed={resolvedActive === item.value}
+            className={`grid min-w-0 place-items-center gap-0.5 rounded-xl p-2 text-center transition ${resolvedActive === item.value ? "bg-primary text-white shadow-md" : "bg-surface-container-low text-on-surface-variant hover:bg-primary-fixed"}`}
+            key={item.value}
+            onClick={() => setActive(item.value)}
+            type="button"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">
+              {item.icon}
+            </span>
+            <b className="text-base leading-none">{item.events.length}</b>
+            <span className="w-full truncate text-[10px] leading-tight" title={item.label}>
+              {item.label}
+            </span>
+          </button>
+        ))}
       </div>
-      <div className="min-h-72 max-h-[46vh] overflow-y-auto p-3">
+      <div className="min-h-[20rem] max-h-[52vh] overflow-y-auto p-3">
         {group ? (
           <>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-bold">
-                <span className="material-symbols-outlined text-primary">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+              <h3 className="flex min-w-0 items-center gap-2 text-sm font-bold">
+                <span aria-hidden="true" className="material-symbols-outlined shrink-0 text-primary">
                   {group.icon}
                 </span>
-                {group.label}
+                <span className="truncate">{group.label}</span>
               </h3>
-              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-xs font-bold text-primary">
+              <span className="shrink-0 rounded-full bg-primary-fixed px-2 py-0.5 text-xs font-bold text-primary">
                 {group.events.length}
               </span>
             </div>
             <div className="grid gap-2">
               {group.events.map((event) => (
                 <button
-                  className="rounded-xl border border-outline-variant p-3 text-left transition hover:border-primary hover:bg-primary-fixed/30"
+                  className="min-w-0 rounded-xl border border-outline-variant p-3 text-left transition hover:border-primary hover:bg-primary-fixed/30"
                   key={event.id}
                   onClick={() => onEvent(event)}
                   type="button"
@@ -221,16 +248,17 @@ export function DayAgendaPanel({
           </>
         ) : null}
       </div>
-      {canSchedule ? (
+      {canSchedule && !past ? (
         <div className="border-t border-outline-variant p-3">
-          <Button
-            className="w-full"
-            disabled={past}
-            icon="event_available"
-            onClick={onSchedule}
-          >
-            {past ? "Fecha histórica" : "Agendar para este día"}
+          <Button className="w-full" icon="event_available" onClick={onSchedule}>
+            Agendar para este día
           </Button>
+        </div>
+      ) : null}
+      {past ? (
+        <div className="flex items-center gap-2 border-t border-outline-variant bg-surface-container-low p-3 text-sm text-on-surface-variant">
+          <span aria-hidden="true" className="material-symbols-outlined text-primary">history</span>
+          <span><b className="text-on-surface">Día histórico.</b> Puedes revisar las citas y atenciones realizadas, pero no agendar una nueva.</span>
         </div>
       ) : null}
     </Card>
