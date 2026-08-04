@@ -15,6 +15,8 @@ export default function EntitySearchSelect({
   getSearchValues = defaultGetSearchValues,
   items = [],
   label,
+  loadItems,
+  loadingMessage = "Buscando coincidencias…",
   name,
   onChange,
   placeholder = "Buscar por nombre, DNI o celular",
@@ -24,20 +26,34 @@ export default function EntitySearchSelect({
   const listboxId = useId();
   const labelId = useId();
   const rootRef = useRef(null);
+  const searchRequestRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [remoteItems, setRemoteItems] = useState(null);
+  const [remoteQuery, setRemoteQuery] = useState("");
+
+  const normalizedQuery = query.trim();
+  const currentRemoteItems =
+    normalizedQuery && remoteQuery === normalizedQuery ? remoteItems : null;
+  const searchableItems = currentRemoteItems ?? items;
+  const isSearching = Boolean(
+    loadItems && normalizedQuery && remoteQuery !== normalizedQuery,
+  );
 
   const selected = useMemo(
-    () => items.find((item) => String(getId(item)) === String(value)),
-    [getId, items, value],
+    () =>
+      [...items, ...(currentRemoteItems || [])].find(
+        (item) => String(getId(item)) === String(value),
+      ),
+    [currentRemoteItems, getId, items, value],
   );
   const visible = useMemo(
     () =>
-      items
+      searchableItems
         .filter((item) => matchesEntitySearch(item, query, getSearchValues))
         .slice(0, 40),
-    [getSearchValues, items, query],
+    [getSearchValues, query, searchableItems],
   );
 
   useEffect(() => {
@@ -47,6 +63,32 @@ export default function EntitySearchSelect({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, []);
+
+  useEffect(() => {
+    const requestId = searchRequestRef.current + 1;
+    searchRequestRef.current = requestId;
+
+    if (!loadItems || !normalizedQuery) return undefined;
+
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const results = await loadItems(normalizedQuery);
+        if (!active || requestId !== searchRequestRef.current) return;
+        setRemoteItems(Array.isArray(results) ? results : []);
+        setRemoteQuery(normalizedQuery);
+      } catch {
+        if (!active || requestId !== searchRequestRef.current) return;
+        setRemoteItems([]);
+        setRemoteQuery(normalizedQuery);
+      }
+    }, 200);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [loadItems, normalizedQuery]);
 
   const choose = (item) => {
     onChange?.(String(getId(item)), item);
@@ -130,6 +172,7 @@ export default function EntitySearchSelect({
 
         {open ? (
           <span
+            aria-busy={isSearching}
             className="absolute left-0 right-0 top-[calc(100%+.35rem)] z-[90] grid max-h-64 gap-1 overflow-y-auto rounded-2xl border border-outline-variant bg-white p-2 shadow-2xl shadow-primary/15"
             id={listboxId}
             role="listbox"
@@ -166,7 +209,12 @@ export default function EntitySearchSelect({
                 </button>
               );
             })}
-            {!visible.length ? (
+            {isSearching ? (
+              <span className="p-3 text-center text-sm text-on-surface-variant">
+                {loadingMessage}
+              </span>
+            ) : null}
+            {!isSearching && !visible.length ? (
               <span className="p-4 text-center text-sm text-on-surface-variant">
                 {emptyMessage}
               </span>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
@@ -17,6 +17,7 @@ import Tooltip from "../../components/ui/Tooltip";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import useDebouncedValue from "../../hooks/useDebouncedValue";
 import useResponsivePatientPageSize from "../../hooks/useResponsivePatientPageSize";
 import * as api from "../../services/healthService";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
@@ -175,15 +176,21 @@ export default function HealthWorkspace({ operator = false }) {
   const [attentionId, setAttentionId] = useState("");
   const [selectedTooth, setSelectedTooth] = useState(null);
   const [query, setQuery] = useState(() => searchParams.get("search") || "");
+  const debouncedQuery = useDebouncedValue(query);
   const [patientTotal, setPatientTotal] = useState(0);
   const [patientPage, setPatientPage] = useState(1);
   const patientPageSize = useResponsivePatientPageSize();
   const [patientStatus, setPatientStatus] = useState("active");
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
   const [openPatientActionsId, setOpenPatientActionsId] = useState(null);
   const [patientActionError, setPatientActionError] = useState("");
   const isPatients = moduleKey === "patients";
+  const isSearchDebouncing = isPatients && query !== debouncedQuery;
+  const requestIdRef = useRef(0);
   const load = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError("");
     try {
@@ -191,7 +198,7 @@ export default function HealthWorkspace({ operator = false }) {
         ? api.getPatientsPage({
             page: patientPage,
             page_size: patientPageSize,
-            search: query,
+            search: debouncedQuery,
             status: patientStatus === "all" ? undefined : patientStatus,
           })
         : api.getPatients();
@@ -199,6 +206,7 @@ export default function HealthWorkspace({ operator = false }) {
         patientRequest,
         api.getHealthAppointments(),
       ]);
+      if (requestId !== requestIdRef.current) return;
       if (isPatients) {
         const totalPages = Math.max(1, Math.ceil(patientRows.total / patientPageSize));
         if (patientRows.total > 0 && patientPage > totalPages) {
@@ -212,15 +220,18 @@ export default function HealthWorkspace({ operator = false }) {
         setPatientTotal(patientRows.length);
       }
       setAppointments(appointmentRows);
+      setHasLoaded(true);
     } catch (requestError) {
-      setError(requestError.message);
+      if (requestId === requestIdRef.current) setError(requestError.message);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [isPatients, patientPage, patientPageSize, patientStatus, query]);
+  }, [debouncedQuery, isPatients, patientPage, patientPageSize, patientStatus]);
   useEffect(() => {
+    if (isSearchDebouncing) return undefined;
     queueMicrotask(load);
-  }, [load]);
+    return undefined;
+  }, [isSearchDebouncing, load]);
   useLiveRefresh(load, ["/health"]);
   const done = () => {
     setModal("");
@@ -313,16 +324,21 @@ export default function HealthWorkspace({ operator = false }) {
       subtitle="Información clínica aislada y conectada para tu empresa."
       title={isPatients ? "Pacientes" : "Agenda clínica"}
     >
-      {error ? (
+      {error && !hasLoaded ? (
         <EmptyState
           description={error}
           icon="cloud_off"
           title="No se pudo cargar"
         />
       ) : null}
-      {loading ? <Card className="h-40 animate-pulse" /> : null}
-      {!loading && !error && isPatients ? (
-        <section className="grid gap-3">
+      {error && hasLoaded ? (
+        <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {loading && !hasLoaded ? <Card className="h-40 animate-pulse" /> : null}
+      {isPatients && hasLoaded ? (
+        <section aria-busy={loading} className="grid gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex min-h-11 min-w-56 flex-[1_1_24rem] items-center gap-2 rounded-xl border border-outline-variant bg-white px-3">
               <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">
@@ -335,8 +351,8 @@ export default function HealthWorkspace({ operator = false }) {
                   setPatientPage(1);
                 }}
                 placeholder="Buscar por nombre, DNI, teléfono o correo"
-                value={query}
-              />
+              value={query}
+            />
             </label>
             <label className="flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3 text-sm font-bold">
               <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">
@@ -358,6 +374,12 @@ export default function HealthWorkspace({ operator = false }) {
               </select>
             </label>
           </div>
+
+          {loading ? (
+            <p aria-live="polite" className="text-xs text-on-surface-variant">
+              Actualizando pacientes…
+            </p>
+          ) : null}
 
           {patients.length ? (
             <PatientDirectoryList

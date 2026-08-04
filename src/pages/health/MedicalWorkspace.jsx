@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import Button from "../../components/atoms/Button";
 import Card from "../../components/atoms/Card";
@@ -17,6 +17,7 @@ import medicalPatientTemplate from "../../forms/templates/health/medicalPatient.
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import useDebouncedValue from "../../hooks/useDebouncedValue";
 import useResponsivePatientPageSize from "../../hooks/useResponsivePatientPageSize";
 import {
   createMedicalAppointment,
@@ -684,15 +685,19 @@ export default function MedicalWorkspace({ operator = false }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(() => searchParams.get("search") || "");
+  const debouncedQuery = useDebouncedValue(query);
   const [patientTotal, setPatientTotal] = useState(0);
   const [patientPage, setPatientPage] = useState(1);
   const patientPageSize = useResponsivePatientPageSize();
   const [patientStatus, setPatientStatus] = useState("active");
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [openPatientActionsId, setOpenPatientActionsId] = useState(null);
   const [view, setView] = useState("week");
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [filters, setFilters] = useState({ professionalId: "", medicalServiceTypeId: "", status: "" });
   const isPatients = moduleKey === "patients";
+  const isSearchDebouncing = isPatients && query !== debouncedQuery;
+  const requestIdRef = useRef(0);
   const Shell = operator ? OperatorShell : DashboardShell;
   const administrator = ["admin", "admin_owner"].includes(user?.role);
   const capabilities = new Set(config?.capabilities || []);
@@ -702,6 +707,8 @@ export default function MedicalWorkspace({ operator = false }) {
   const canManagePatientLifecycle = ["admin", "admin_owner"].includes(user?.role);
 
   const load = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     try {
       setError("");
@@ -710,7 +717,7 @@ export default function MedicalWorkspace({ operator = false }) {
           include_inactive: patientStatus === "all",
           page: patientPage,
           page_size: patientPageSize,
-          search: query,
+          search: debouncedQuery,
           status: patientStatus === "all" ? undefined : patientStatus,
         })
         : getMedicalPatients();
@@ -724,6 +731,7 @@ export default function MedicalWorkspace({ operator = false }) {
         getMedicalProfessionals(),
         getBusinessMedicalServices(),
       ]);
+      if (requestId !== requestIdRef.current) return;
       if (isPatients) {
         const totalPages = Math.max(1, Math.ceil(patientRows.total / patientPageSize));
         if (patientRows.total > 0 && patientPage > totalPages) {
@@ -739,16 +747,19 @@ export default function MedicalWorkspace({ operator = false }) {
       setAppointments(appointmentRows);
       setProfessionals(professionalsRows);
       setServices(businessServices.map((item) => item.serviceType));
+      setHasLoaded(true);
     } catch (requestError) {
-      setError(requestError.message);
+      if (requestId === requestIdRef.current) setError(requestError.message);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [filters, isPatients, patientPage, patientPageSize, patientStatus, query]);
+  }, [debouncedQuery, filters, isPatients, patientPage, patientPageSize, patientStatus]);
 
   useEffect(() => {
+    if (isSearchDebouncing) return undefined;
     queueMicrotask(load);
-  }, [load]);
+    return undefined;
+  }, [isSearchDebouncing, load]);
   useLiveRefresh(load, ["/medical"]);
 
   const days = useMemo(() => datesForView(view, referenceDate), [referenceDate, view]);
@@ -818,15 +829,17 @@ export default function MedicalWorkspace({ operator = false }) {
       subtitle={isPatients ? "Fichas clínicas, antecedentes y trazabilidad de pacientes." : "Agenda por profesional, servicio y estado de atención."}
       title={isPatients ? "Pacientes" : "Agenda médica"}
     >
-      {error ? <EmptyState description={error} icon="cloud_off" title="No se pudo cargar" /> : null}
-      {loading ? <Card className="h-44 animate-pulse" /> : null}
-      {!loading && !error && isPatients ? (
-        <section className="grid gap-3">
+      {error && !hasLoaded ? <EmptyState description={error} icon="cloud_off" title="No se pudo cargar" /> : null}
+      {error && hasLoaded ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container" role="alert">{error}</p> : null}
+      {loading && !hasLoaded ? <Card className="h-44 animate-pulse" /> : null}
+      {isPatients && hasLoaded ? (
+        <section aria-busy={loading} className="grid gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex min-h-11 min-w-56 flex-[1_1_24rem] items-center gap-2 rounded-xl border border-outline-variant bg-white px-3"><span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">search</span><input className="min-w-0 flex-1 bg-transparent outline-none" onChange={(event) => { setQuery(event.target.value); setPatientPage(1); }} placeholder="Buscar por nombre, DNI, teléfono o correo" value={query} /></label>
             <label className="flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3 text-sm font-bold"><span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant">filter_list</span><span className="sr-only">Estado</span><select aria-label="Filtrar pacientes por estado" className="bg-transparent outline-none" onChange={(event) => { setPatientStatus(event.target.value); setPatientPage(1); }} value={patientStatus}><option value="active">Activos</option><option value="all">Todos</option><option value="inactive">Inactivos</option></select></label>
             <Button icon="content_copy" onClick={detectDuplicates} variant="secondary">Detectar duplicados</Button>
           </div>
+          {loading ? <p aria-live="polite" className="text-xs text-on-surface-variant">Actualizando pacientes…</p> : null}
           {patients.length ? <MedicalPatientList canEdit={canCreatePatient} canManageLifecycle={canManagePatientLifecycle} onDeactivate={askDeactivate} onDelete={askPermanentDelete} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onOpen={openPatient} onOpenChange={setOpenPatientActionsId} onRestore={restorePatient} openPatientActionsId={openPatientActionsId} patients={patients} /> : <EmptyState description="Prueba con otro nombre, documento o estado." icon="groups" title="No hay pacientes para mostrar" />}
           <PatientDirectoryPagination
             onPageChange={setPatientPage}

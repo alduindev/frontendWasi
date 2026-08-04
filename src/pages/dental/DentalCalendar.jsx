@@ -109,9 +109,11 @@ function AppointmentForm({
   professionals,
   onClose,
   onNewPatient,
+  onPatientSelected,
   onProcedureCreated,
   onSaved,
   canManageServices,
+  searchPatients,
 }) {
   const [step, setStep] = useState(0);
   const [formError, setFormError] = useState("");
@@ -326,8 +328,13 @@ function AppointmentForm({
                 ]}
                 items={patients}
                 label="Paciente"
+                loadItems={searchPatients}
+                loadingMessage="Buscando pacientes…"
                 name="patientId"
-                onChange={(value) => setValue("patientId", value)}
+                onChange={(value, patient) => {
+                  onPatientSelected?.(patient);
+                  setValue("patientId", value);
+                }}
                 placeholder="Nombre, DNI o celular"
                 required
                 value={draft.patientId}
@@ -1038,6 +1045,17 @@ export default function DentalCalendar({ operator = false }) {
   const canManageServices = ["admin", "admin_owner"].includes(config?.user?.role) || (config?.capabilities || []).includes("dental.catalog.manage");
   const canSchedule =
     !dentistOperator && (!operator || (config?.capabilities || []).includes("appointments.create"));
+  const searchPatients = useCallback(async (search) => {
+    const matches = await api.getPatients(search);
+    setPatients((current) => {
+      const merged = new Map(
+        current.map((patient) => [String(patient.id), patient]),
+      );
+      matches.forEach((patient) => merged.set(String(patient.id), patient));
+      return [...merged.values()];
+    });
+    return matches;
+  }, []);
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -1235,6 +1253,14 @@ export default function DentalCalendar({ operator = false }) {
           onClose={closeSchedule}
           onDraftChange={setAppointmentDraft}
           onNewPatient={() => setModal({ type: "patient" })}
+          onPatientSelected={(patient) => {
+            if (!patient) return;
+            setPatients((current) =>
+              current.some((item) => String(item.id) === String(patient.id))
+                ? current
+                : [...current, patient],
+            );
+          }}
           onProcedureCreated={(procedure) => {
             setProcedures((current) =>
               [...current, procedure].sort((left, right) =>
@@ -1259,6 +1285,7 @@ export default function DentalCalendar({ operator = false }) {
           patients={patients}
           procedures={procedures}
           professionals={professionals}
+          searchPatients={searchPatients}
         />
       ) : null}
       {modal?.type === "patient" ? (
