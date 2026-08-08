@@ -251,19 +251,18 @@ export default function HealthWorkspace({ operator = false }) {
   };
   const admin = ["admin", "admin_owner"].includes(user.role);
   const capabilities = new Set(config?.capabilities || []);
-  const dentistOperator = operator && !admin && config?.user?.functions?.some((item) => item.code === "dentist");
-  const canEditPatient = !dentistOperator && (admin || capabilities.has("patients.edit"));
+  const canEditPatient = admin || capabilities.has("patients.edit");
   const canManagePatientLifecycle = admin;
   const patientAttachmentType =
     config?.template?.dashboardKey === "dental"
       ? "dental_patient"
       : "health_patient";
   const canAttention =
-    !dentistOperator && (admin || config?.capabilities?.includes("dental.records.edit"));
+    admin || capabilities.has("dental.records.edit");
   const canEditOdontogram =
-    !dentistOperator && (admin || config?.capabilities?.includes("dental.odontogram.edit"));
+    admin || capabilities.has("dental.odontogram.edit");
   const canCreateAppointment =
-    !dentistOperator && (admin || capabilities.has("appointments.create"));
+    admin || capabilities.has("appointments.create");
   const reloadChart = async () => {
     try {
       setChart(await api.getDentalChart(selected.id));
@@ -467,7 +466,7 @@ export default function HealthWorkspace({ operator = false }) {
           admin={admin}
           attachmentEntityType={patientAttachmentType}
           canEditRecords={canAttention}
-          canEditTreatments={!dentistOperator && (admin || capabilities.has("dental.treatments.edit"))}
+          canEditTreatments={admin || capabilities.has("dental.treatments.edit")}
           chart={chart}
           close={() => setModal("")}
           exporting={exporting}
