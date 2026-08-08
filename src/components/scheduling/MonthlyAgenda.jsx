@@ -39,6 +39,7 @@ export function AgendaFilterBar({
 
 export function MonthCalendarGrid({
   canViewPast = true,
+  compact = false,
   cursor,
   eventsByDate,
   filters,
@@ -54,6 +55,7 @@ export function MonthCalendarGrid({
   today,
 }) {
   const cells = useMemo(() => buildMonthCells(cursor), [cursor]);
+  const cellSize = compact ? "min-h-[68px] p-1 sm:min-h-[92px]" : "min-h-[76px] p-1.5 sm:min-h-[108px]";
   return (
     <Card className="min-w-0 overflow-hidden">
       {showFilters && filters.length ? (
@@ -112,7 +114,7 @@ export function MonthCalendarGrid({
               return (
                 <button
                   aria-label={`${key}, ${events.length} evento(s)`}
-                  className={`relative min-h-[76px] min-w-0 overflow-hidden border-b border-r border-outline-variant p-1.5 text-left transition sm:min-h-[108px] ${cell.current ? past ? "bg-surface-container-low/70 text-on-surface-variant" : "bg-white" : "bg-surface-container-low text-on-surface-variant"} ${key === selectedDate ? "ring-2 ring-inset ring-primary" : "hover:bg-primary-fixed/30"} ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
+                  className={`relative min-w-0 overflow-hidden border-b border-r border-outline-variant text-left transition ${cellSize} ${cell.current ? past ? "bg-surface-container-low/70 text-on-surface-variant" : "bg-white" : "bg-surface-container-low text-on-surface-variant"} ${key === selectedDate ? "ring-2 ring-inset ring-primary" : "hover:bg-primary-fixed/30"} ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
                   disabled={disabled}
                   key={key}
                   onClick={() => onSelectDate(cell.date)}
@@ -131,12 +133,12 @@ export function MonthCalendarGrid({
                     ) : null}
                   </span>
                   <div className="mt-1 grid min-w-0 gap-1">
-                    {events.slice(0, 3).map((event) => {
+                    {events.slice(0, 3).map((event, index) => {
                       const meta = statusMeta?.[event.status] || statusMeta?.default;
                       return (
                         <span
                           className={`min-w-0 truncate rounded px-1 py-1 text-[9px] font-bold sm:px-1.5 sm:text-[10px] ${meta?.tone || "bg-primary-fixed text-primary"}`}
-                          key={event.id}
+                          key={`${key}-${event.id || event.startsAt || event.patient?.id || "event"}-${index}`}
                           title={getEventLabel(event)}
                         >
                           {getEventLabel(event)}
