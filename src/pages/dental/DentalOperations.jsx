@@ -120,9 +120,12 @@ function ServiceFields({ service }) {
 export default function DentalOperations({ operator = false }) {
   const { moduleKey } = useParams();
   const { config } = useAppConfig();
-  const dentistOperator = operator && config?.user?.functions?.some((item) => item.code === "dentist");
-  const canManageServices = ["admin", "admin_owner"].includes(config?.user?.role) || (config?.capabilities || []).includes("dental.catalog.manage");
-  const canWrite = !dentistOperator;
+  const administrator = ["admin", "admin_owner"].includes(config?.user?.role);
+  const capabilities = new Set(config?.capabilities || []);
+  const canManageServices = administrator || capabilities.has("dental.catalog.manage");
+  const requiredWritePermission = moduleKey === "dental-records" ? "dental.records.edit" : moduleKey === "dental-billing" ? "dental.billing.edit" : "";
+  const canWrite = administrator || Boolean(requiredWritePermission && capabilities.has(requiredWritePermission));
+  const requiresPatient = !["dental-catalog", "dental-reports"].includes(moduleKey);
   const [patients, setPatients] = useState([]);
   const [patientId, setPatientId] = useState("");
   const [rows, setRows] = useState([]);
@@ -134,10 +137,10 @@ export default function DentalOperations({ operator = false }) {
   const [serviceSaving, setServiceSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const ps = patients.length ? patients : await api.getPatients();
-    if (!patients.length) setPatients(ps);
+    const ps = requiresPatient ? (patients.length ? patients : await api.getPatients()) : [];
+    if (requiresPatient && !patients.length) setPatients(ps);
     const id = patientId || ps[0]?.id || "";
-    if (!patientId && id) setPatientId(id);
+    if (requiresPatient && !patientId && id) setPatientId(id);
     if (moduleKey === "dental-records" && id) {
       const values = await Promise.all([
         api.getDentalClinicalEntries(id),
@@ -152,7 +155,7 @@ export default function DentalOperations({ operator = false }) {
     } else if (moduleKey === "dental-reports") {
       setReport(await api.getDentalReport());
     }
-  }, [moduleKey, patientId, patients]);
+  }, [moduleKey, patientId, patients, requiresPatient]);
 
   useEffect(() => {
     queueMicrotask(load);
