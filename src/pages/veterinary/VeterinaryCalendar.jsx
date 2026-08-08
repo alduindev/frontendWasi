@@ -750,10 +750,13 @@ export default function VeterinaryCalendar({ operator = false }) {
   const reception = functions.has("veterinary-reception");
   const clinical =
     functions.has("veterinarian") || functions.has("veterinary-groomer");
-  const canSchedule = admin || reception;
-  const canManage = admin || reception;
-  const canStart = (admin || clinical) && (admin || capabilities.has("pets.edit"));
-  const canSeeBilling = admin || reception;
+  const canEditPets = admin || capabilities.has("pets.edit");
+  const canSchedule = canEditPets && (admin || reception);
+  const canManage = canEditPets && (admin || reception);
+  const canStart = (admin || clinical) && canEditPets;
+  const canSeeBilling =
+    admin ||
+    (reception && capabilities.has("pets.read") && capabilities.has("pets.edit"));
   const canViewPast = admin;
 
   const range = useMemo(() => {
