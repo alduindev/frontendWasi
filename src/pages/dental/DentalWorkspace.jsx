@@ -1895,22 +1895,15 @@ export default function DentalWorkspace({ operator = false }) {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState("");
   const [attentionId, setAttentionId] = useState("");
-  const functions = new Set(
-    config?.user?.functions?.map((item) => item.code) || [],
-  );
   const isChart = moduleKey === "odontogram",
     admin = ["admin", "admin_owner"].includes(user.role),
     patient = patients.find((x) => x.id === patientId),
-    dentistOperator = operator && !admin && functions.has("dentist"),
     canEditRecords =
-      !dentistOperator &&
-      (admin || config?.capabilities?.includes("dental.records.edit")),
+      admin || config?.capabilities?.includes("dental.records.edit"),
     canEditOdontogram =
-      !dentistOperator &&
-      (admin || config?.capabilities?.includes("dental.odontogram.edit")),
+      admin || config?.capabilities?.includes("dental.odontogram.edit"),
     canEditTreatments =
-      !dentistOperator &&
-      (admin || config?.capabilities?.includes("dental.treatments.edit")),
+      admin || config?.capabilities?.includes("dental.treatments.edit"),
     canAttention = canEditRecords;
 
   const loadPatients = useCallback(async () => {
