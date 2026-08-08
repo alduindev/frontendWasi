@@ -33,6 +33,7 @@ function OperatorAccess({
   functionCode,
   moduleCode,
   frontendKey,
+  requiredCapabilities = [],
 }) {
   const { config, isLoading } = useAppConfig();
   if (isLoading)
@@ -48,6 +49,9 @@ function OperatorAccess({
     !capability ||
     capabilities.includes(capability) ||
     (alternateCapability && capabilities.includes(alternateCapability));
+  const allowedRequiredCapabilities = requiredCapabilities.every((item) =>
+    capabilities.includes(item),
+  );
   const allowedFunction =
     !functionCode || functions.some((item) => item.code === functionCode);
   const allowedModule =
@@ -55,6 +59,7 @@ function OperatorAccess({
   const allowedFrontend =
     !frontendKey || modules.some((item) => item.frontendKey === frontendKey);
   return allowedCapability &&
+    allowedRequiredCapabilities &&
     allowedFunction &&
     allowedModule &&
     allowedFrontend ? (
@@ -107,7 +112,10 @@ export default function OperatorRoutes() {
       <Route
         path="housekeeping"
         element={
-          <OperatorAccess functionCode="housekeeping">
+          <OperatorAccess
+            capability="hospitality.housekeeping.read_assigned"
+            functionCode="housekeeping"
+          >
             <OperatorHousekeeping />
           </OperatorAccess>
         }
@@ -115,7 +123,16 @@ export default function OperatorRoutes() {
       <Route
         path="reception"
         element={
-          <OperatorAccess functionCode="reception">
+          <OperatorAccess
+            functionCode="reception"
+            requiredCapabilities={[
+              "hospitality.rooms.read",
+              "hospitality.guests.manage",
+              "hospitality.reservations.manage",
+              "hospitality.checkin",
+              "hospitality.checkout",
+            ]}
+          >
             <HospitalityReceptionWorkspace />
           </OperatorAccess>
         }
@@ -123,7 +140,10 @@ export default function OperatorRoutes() {
       <Route
         path="supervision"
         element={
-          <OperatorAccess functionCode="hospitality-supervisor">
+          <OperatorAccess
+            functionCode="hospitality-supervisor"
+            requiredCapabilities={["hospitality.staff.read", "hospitality.rooms.read"]}
+          >
             <HospitalitySupervisorWorkspace />
           </OperatorAccess>
         }
@@ -131,7 +151,10 @@ export default function OperatorRoutes() {
       <Route
         path="hotel-cashier"
         element={
-          <OperatorAccess functionCode="cashier">
+          <OperatorAccess
+            capability="hospitality.cash.manage"
+            functionCode="cashier"
+          >
             <HospitalityCashierWorkspace />
           </OperatorAccess>
         }
@@ -139,7 +162,14 @@ export default function OperatorRoutes() {
       <Route
         path="functions/room-service"
         element={
-          <OperatorAccess functionCode="room-service">
+          <OperatorAccess
+            functionCode="room-service"
+            requiredCapabilities={[
+              "hospitality.room_service.manage",
+              "hospitality.rooms.read",
+              "inventory.read",
+            ]}
+          >
             <RoomServiceWorkspace />
           </OperatorAccess>
         }
@@ -173,7 +203,7 @@ export default function OperatorRoutes() {
       <Route
         path="veterinary/pets"
         element={
-          <OperatorAccess capability="pets.read">
+          <OperatorAccess capability="pets.read" moduleCode="veterinary.pets">
             <VeterinaryOperatorDashboard />
           </OperatorAccess>
         }
@@ -181,7 +211,7 @@ export default function OperatorRoutes() {
       <Route
         path="veterinary/appointments"
         element={
-          <OperatorAccess capability="pets.read">
+          <OperatorAccess capability="pets.read" moduleCode="veterinary.pets">
             <VeterinaryCalendar operator />
           </OperatorAccess>
         }
@@ -190,7 +220,7 @@ export default function OperatorRoutes() {
       <Route
         path="veterinary/services"
         element={
-          <OperatorAccess capability="pets.read">
+          <OperatorAccess capability="pets.read" moduleCode="veterinary.pets">
             <VeterinaryServices operator />
           </OperatorAccess>
         }
@@ -201,6 +231,7 @@ export default function OperatorRoutes() {
           <OperatorAccess
             capability="pets.edit"
             functionCode="veterinary-reception"
+            moduleCode="veterinary.pets"
           >
             <VeterinaryBillingQueue operator />
           </OperatorAccess>
@@ -274,8 +305,12 @@ function MedicalModuleAccess() {
     !module.code.startsWith("health.")
   )
     return <Navigate replace to="/pos" />;
+  const capability =
+    moduleKey === "appointments"
+      ? "health.appointments.read"
+      : "health.patients.read";
   return (
-    <OperatorAccess frontendKey={moduleKey}>
+    <OperatorAccess capability={capability} frontendKey={moduleKey}>
       {moduleKey === "appointments" ? <MedicalCalendar operator /> : <MedicalWorkspace operator />}
     </OperatorAccess>
   );
@@ -284,6 +319,8 @@ function MedicalModuleAccess() {
 function FunctionAccess({ children }) {
   const { functionCode } = useParams();
   return (
-    <OperatorAccess functionCode={functionCode}>{children}</OperatorAccess>
+    <OperatorAccess functionCode={functionCode} moduleCode="hospitality.rooms">
+      {children}
+    </OperatorAccess>
   );
 }
