@@ -82,6 +82,8 @@ function PatientAlert({ patient, mobile = false }) {
 }
 
 function OpenRecordButton({ actionIcon, actionLabel, onOpen, patient }) {
+  if (!onOpen) return null;
+
   return (
     <button
       aria-label={`Abrir expediente de ${patient.firstName} ${patient.lastName}`}
@@ -202,12 +204,14 @@ export default function PatientDirectoryList({
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
-                    <OpenRecordButton
-                      actionIcon={actionIcon}
-                      actionLabel={actionLabel}
-                      onOpen={onOpen}
-                      patient={patient}
-                    />
+                    {onOpen ? (
+                      <OpenRecordButton
+                        actionIcon={actionIcon}
+                        actionLabel={actionLabel}
+                        onOpen={onOpen}
+                        patient={patient}
+                      />
+                    ) : null}
                     {actions(patient)}
                   </div>
                 </td>
@@ -233,16 +237,18 @@ export default function PatientDirectoryList({
               </p>
               <PatientAlert mobile patient={patient} />
             </div>
-            <button
-              className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-bold text-primary transition hover:bg-primary-fixed/50 hover:px-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              onClick={() => onOpen(patient)}
-              type="button"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined text-xl">
-                {actionIcon}
-              </span>
-              Abrir expediente
-            </button>
+            {onOpen ? (
+              <button
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-bold text-primary transition hover:bg-primary-fixed/50 hover:px-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                onClick={() => onOpen(patient)}
+                type="button"
+              >
+                <span aria-hidden="true" className="material-symbols-outlined text-xl">
+                  {actionIcon}
+                </span>
+                Abrir expediente
+              </button>
+            ) : null}
           </Card>
         ))}
       </div>
