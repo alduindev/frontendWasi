@@ -27,6 +27,13 @@ const navigation = [
   {
     capability: "hospitality.reservations.manage",
     functionCode: "reception",
+    requiredCapabilities: [
+      "hospitality.rooms.read",
+      "hospitality.guests.manage",
+      "hospitality.reservations.manage",
+      "hospitality.checkin",
+      "hospitality.checkout",
+    ],
     icon: "concierge",
     label: "Recepción",
     key: "reception",
@@ -35,6 +42,7 @@ const navigation = [
   {
     capability: "hospitality.staff.read",
     functionCode: "hospitality-supervisor",
+    requiredCapabilities: ["hospitality.staff.read", "hospitality.rooms.read"],
     icon: "manage_accounts",
     label: "Supervisión",
     key: "supervision",
@@ -229,6 +237,7 @@ function OperatorNavigation({ collapsed = false, onNavigate }) {
           item.key === "sales"
             ? {
                 ...item,
+                capability: "hospitality.cash.manage",
                 label: "Caja hotelera",
                 icon: "payments",
                 to: "/pos/hotel-cashier",
@@ -242,6 +251,10 @@ function OperatorNavigation({ collapsed = false, onNavigate }) {
         (!item.capability ||
           capabilities.has(item.capability) ||
           (item.alternate && capabilities.has(item.alternate))) &&
+        (!item.requiredCapabilities ||
+          item.requiredCapabilities.every((capability) =>
+            capabilities.has(capability),
+          )) &&
         (!hospitality ||
           !item.functionCode ||
           functions.has(item.functionCode)) &&
