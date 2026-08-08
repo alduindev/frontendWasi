@@ -10,7 +10,11 @@ import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import { appointmentDraftFor } from "../../utils/medicalAppointment";
-import { MedicalPatientForm, MedicalRecordModal } from "./MedicalWorkspace";
+import { medicalClinicalPermissions } from "../../utils/medicalClinicalPermissions";
+import {
+  MedicalPatientForm,
+  MedicalRecordModal,
+} from "./MedicalWorkspace";
 import {
   createMedicalAppointment,
   getBusinessMedicalServices,
@@ -176,10 +180,10 @@ export function MedicalAppointmentWizard({
                 required
                 value={draft.patientId}
               />
-              <button className="flex min-h-12 items-center justify-between rounded-xl border border-primary/30 bg-primary-fixed px-4 text-left font-bold text-primary" onClick={onNewPatient} type="button">
+              {onNewPatient ? <button className="flex min-h-12 items-center justify-between rounded-xl border border-primary/30 bg-primary-fixed px-4 text-left font-bold text-primary" onClick={onNewPatient} type="button">
                 <span className="flex items-center gap-2"><span className="material-symbols-outlined">person_add</span>Registrar paciente nuevo</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
-              </button>
+              </button> : null}
             </fieldset>
           ) : null}
           {step === 1 ? (
@@ -347,9 +351,14 @@ export default function MedicalCalendar({ operator = false }) {
   const { config } = useAppConfig();
   const administrator = ["admin", "admin_owner"].includes(user?.role);
   const capabilities = new Set(config?.capabilities || []);
-  const canSchedule = administrator || capabilities.has("health.appointments.create");
+  const canReadPatients = administrator || capabilities.has("health.patients.read");
+  const canSchedule =
+    canReadPatients &&
+    (administrator || capabilities.has("health.appointments.create"));
   const canUpdateStatus = administrator || capabilities.has("health.appointments.status");
   const canReadRecords = administrator || capabilities.has("health.records.read");
+  const canEditPatients = administrator || capabilities.has("health.patients.edit");
+  const clinicalPermissions = medicalClinicalPermissions(capabilities, administrator);
   const initialNow = new Date();
   const today = iso(initialNow);
   const [cursor, setCursor] = useState(() => new Date(initialNow.getFullYear(), initialNow.getMonth(), 1));
@@ -375,9 +384,9 @@ export default function MedicalCalendar({ operator = false }) {
     try {
       const [appointmentsRows, patientRows, professionalRows, businessServices] = await Promise.all([
         getMedicalAppointments(),
-        getMedicalPatients(),
+        canReadPatients ? getMedicalPatients() : Promise.resolve([]),
         getMedicalProfessionals(),
-        getBusinessMedicalServices(),
+        canReadPatients ? getBusinessMedicalServices() : Promise.resolve([]),
       ]);
       setAppointments(appointmentsRows);
       setPatients(patientRows);
@@ -388,7 +397,7 @@ export default function MedicalCalendar({ operator = false }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canReadPatients]);
 
   useEffect(() => {
     queueMicrotask(load);
@@ -480,10 +489,10 @@ export default function MedicalCalendar({ operator = false }) {
           </div>
         </>
       ) : null}
-      {modal === "appointment" ? <MedicalAppointmentWizard close={() => setModal("")} draft={draft} onDraftChange={setDraft} patients={patients} professionals={professionals} services={services} onNewPatient={() => setModal("patient")} onSaved={async () => { setModal(""); await load(); }} /> : null}
+      {modal === "appointment" ? <MedicalAppointmentWizard close={() => setModal("")} draft={draft} onDraftChange={setDraft} patients={patients} professionals={professionals} services={services} onNewPatient={canEditPatients ? () => setModal("patient") : undefined} onSaved={async () => { setModal(""); await load(); }} /> : null}
       {modal === "patient" ? <MedicalPatientForm close={() => setModal("appointment")} onSaved={async (patient) => { setDraft((current) => ({ ...current, patientId: patient.id })); await load(); setModal("appointment"); }} /> : null}
       {modal === "detail" && selectedAppointment ? <AppointmentDetail appointment={selectedAppointment} canUpdateStatus={canUpdateStatus} close={() => setModal("")} onOpenRecord={canReadRecords ? openRecord : undefined} onSaved={async () => { setModal(""); await load(); }} /> : null}
-      {recordPatient ? <MedicalRecordModal close={() => setRecordPatient(null)} onReload={async (patientId) => setClinicalRecord(await getMedicalClinicalRecord(patientId))} patient={recordPatient} record={clinicalRecord} /> : null}
+      {recordPatient ? <MedicalRecordModal close={() => setRecordPatient(null)} onReload={async (patientId) => setClinicalRecord(await getMedicalClinicalRecord(patientId))} patient={recordPatient} permissions={clinicalPermissions} record={clinicalRecord} /> : null}
     </Shell>
   );
 }
