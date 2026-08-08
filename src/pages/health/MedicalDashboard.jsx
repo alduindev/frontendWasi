@@ -24,6 +24,7 @@ import {
   MedicalRecordModal,
 } from "./MedicalWorkspace";
 import { appointmentDraftFor } from "../../utils/medicalAppointment";
+import { medicalClinicalPermissions } from "../../utils/medicalClinicalPermissions";
 
 const states = {
   scheduled: ["Programadas", "event", "primary"],
@@ -343,6 +344,7 @@ export default function MedicalDashboard({ operator = false }) {
     administrator || capabilities.has("health.dashboard.read");
   const canUpdateAppointmentStatus =
     administrator || capabilities.has("health.appointments.status");
+  const clinicalPermissions = medicalClinicalPermissions(capabilities, administrator);
   const Shell = operator ? OperatorShell : DashboardShell;
   const quickActions = useMemo(
     () =>
@@ -952,7 +954,7 @@ export default function MedicalDashboard({ operator = false }) {
           close={() => setActionModal("")}
           draft={appointmentDraft}
           onDraftChange={setAppointmentDraft}
-          onNewPatient={() => setActionModal("patient-from-appointment")}
+          onNewPatient={canCreatePatients ? () => setActionModal("patient-from-appointment") : undefined}
           onSaved={async () => {
             setActionModal("");
             await load();
@@ -1061,6 +1063,7 @@ export default function MedicalDashboard({ operator = false }) {
             setClinicalRecord(await getMedicalClinicalRecord(patientId))
           }
           patient={recordPatient}
+          permissions={clinicalPermissions}
           record={clinicalRecord}
         />
       ) : null}
