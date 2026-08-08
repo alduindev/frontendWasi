@@ -461,9 +461,7 @@ export default function DashboardShell({
   const dentalItems = useMemo(() => {
     if (config?.template?.dashboardKey !== 'dental') return hospitalityItems
     const items = hospitalityItems.map(item => item.routeKey === 'dental-catalog' ? { ...item, icon: 'medical_services', label: 'Servicios' } : item)
-    const financeIndex = items.findIndex(item => item.routeKey === 'dental-billing')
-    const receipts = { icon: 'receipt_long', label: 'Comprobantes', routeKey: 'dental-receipts', to: '/dashboard/invoices' }
-    return financeIndex < 0 ? items : [...items.slice(0, financeIndex + 1), receipts, ...items.slice(financeIndex + 1)]
+    return items
   }, [config, hospitalityItems])
   const veterinaryItems = useMemo(() => {
     if (config?.template?.dashboardKey !== 'veterinary') return dentalItems
