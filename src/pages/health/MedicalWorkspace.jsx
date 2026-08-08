@@ -19,6 +19,7 @@ import { useAppConfig } from "../../context/appConfigStore";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import useDebouncedValue from "../../hooks/useDebouncedValue";
 import useResponsivePatientPageSize from "../../hooks/useResponsivePatientPageSize";
+import { medicalClinicalPermissions } from "../../utils/medicalClinicalPermissions";
 import {
   createMedicalAppointment,
   createMedicalDiagnosis,
@@ -448,7 +449,15 @@ function ClinicalEditForm({ close, done, entry }) {
   </form></Modal>;
 }
 
-export function MedicalRecordModal({ close, initialTab = "summary", onEdit, onReload, patient, record }) {
+export function MedicalRecordModal({
+  close,
+  initialTab = "summary",
+  onEdit,
+  onReload,
+  patient,
+  permissions,
+  record,
+}) {
   const [clinicalType, setClinicalType] = useState("");
   const [editingEntry, setEditingEntry] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -509,12 +518,20 @@ export function MedicalRecordModal({ close, initialTab = "summary", onEdit, onRe
     orders: { type: "order", label: "Órdenes", icon: "lab_profile", remove: deleteMedicalOrder },
     results: { type: "result", label: "Resultados", icon: "science", remove: deleteMedicalResult },
   }[activeTab];
+  const canCreateEntry = Boolean(
+    tabConfig && permissions?.create?.[tabConfig.type],
+  );
+  const canEditEntry = Boolean(
+    tabConfig && permissions?.edit?.[tabConfig.type],
+  );
   const openCreate = (type) => {
+    if (!permissions?.create?.[type]) return;
     setActionError("");
     setEditingEntry(null);
     setClinicalType(type);
   };
   const openEdit = (type, item) => {
+    if (!permissions?.edit?.[type]) return;
     setActionError("");
     setClinicalType("");
     setEditingEntry({ type, item });
@@ -582,7 +599,7 @@ export function MedicalRecordModal({ close, initialTab = "summary", onEdit, onRe
             <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-outline-variant p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-3">
                 <div><h3 className="font-bold">{tabConfig.label}</h3><p className="text-xs text-on-surface-variant">Registra, edita o elimina información clínica de esta categoría.</p></div>
-                <Button icon={tabConfig.icon} onClick={() => openCreate(tabConfig.type)} size="small">Agregar</Button>
+                {canCreateEntry ? <Button icon={tabConfig.icon} onClick={() => openCreate(tabConfig.type)} size="small">Agregar</Button> : null}
               </div>
               {actionError ? <p className="mb-3 rounded-xl bg-error-container p-3 text-sm text-error">{actionError}</p> : null}
               <div className="grid gap-2 sm:grid-cols-2">
@@ -590,13 +607,13 @@ export function MedicalRecordModal({ close, initialTab = "summary", onEdit, onRe
                   const title = activeTab === "records" ? item.title : activeTab === "diagnoses" ? item.name : activeTab === "prescriptions" ? item.medication : item.name;
                   const detail = activeTab === "records" ? item.content : activeTab === "diagnoses" ? item.notes : activeTab === "prescriptions" ? `${item.dose || ""} ${item.frequency || ""} ${item.duration || ""}` : `${item.status || ""} ${item.instructions || item.summary || ""}`;
                   const stamp = item.createdAt || item.issuedAt || item.orderedAt || item.resultedAt;
-                  return <article className="rounded-xl bg-surface-container-low p-3" key={item.id}><div className="flex flex-wrap justify-between gap-2"><b>{title}</b><small>{stamp ? new Date(stamp).toLocaleString("es-PE") : ""}</small></div><p className="mt-1 text-sm text-on-surface-variant">{detail || "Sin detalle adicional"}</p><div className="mt-3 flex justify-end gap-2"><Button icon="edit" onClick={() => openEdit(tabConfig.type, item)} size="small" variant="outlined">Editar</Button><Button icon="delete" onClick={() => setPendingDelete({ item, remove: tabConfig.remove, title })} size="small" variant="danger">Eliminar</Button></div></article>;
+                  return <article className="rounded-xl bg-surface-container-low p-3" key={item.id}><div className="flex flex-wrap justify-between gap-2"><b>{title}</b><small>{stamp ? new Date(stamp).toLocaleString("es-PE") : ""}</small></div><p className="mt-1 text-sm text-on-surface-variant">{detail || "Sin detalle adicional"}</p>{canEditEntry ? <div className="mt-3 flex justify-end gap-2"><Button icon="edit" onClick={() => openEdit(tabConfig.type, item)} size="small" variant="outlined">Editar</Button><Button icon="delete" onClick={() => setPendingDelete({ item, remove: tabConfig.remove, title })} size="small" variant="danger">Eliminar</Button></div> : null}</article>;
                 })}
                 {!tabItems.length ? <EmptyState description="No hay información registrada en esta sección." icon="clinical_notes" title="Sin registros" /> : null}
               </div>
             </section>
           ) : null}
-          {activeTab === "files" ? <div className="min-h-0 flex-1 overflow-y-auto pb-2"><EntityAttachments entityId={patient.id} entityType="health_patient" /></div> : null}
+          {activeTab === "files" ? <div className="min-h-0 flex-1 overflow-y-auto pb-2"><EntityAttachments allowDelete={permissions?.attachmentDelete} allowUpload={permissions?.attachmentUpload} entityId={patient.id} entityType="health_patient" /></div> : null}
           {activeTab === "report" ? (
             <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-outline-variant bg-white">
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-low p-3"><div><p className="text-xs font-bold uppercase tracking-wide text-primary">Expediente clínico integral</p><h3 className="font-bold">Reporte médico de {patient.firstName} {patient.lastName}</h3></div><Button disabled={exporting} icon="picture_as_pdf" onClick={async () => { setExporting(true); try { await exportMedicalClinicalRecord(patient.id); } finally { setExporting(false); } }} variant="outlined">{exporting ? "Generando..." : "Descargar PDF"}</Button></div>
@@ -701,9 +718,15 @@ export default function MedicalWorkspace({ operator = false }) {
   const Shell = operator ? OperatorShell : DashboardShell;
   const administrator = ["admin", "admin_owner"].includes(user?.role);
   const capabilities = new Set(config?.capabilities || []);
+  const canReadPatients = administrator || capabilities.has("health.patients.read");
+  const canReadAppointments = administrator || capabilities.has("health.appointments.read");
   const canCreatePatient = administrator || capabilities.has("health.patients.edit");
-  const canCreateAppointment = administrator || capabilities.has("health.appointments.create");
+  const canCreateAppointment =
+    canReadPatients &&
+    (administrator || capabilities.has("health.appointments.create"));
   const canUpdateAppointmentStatus = administrator || capabilities.has("health.appointments.status");
+  const canReadRecords = administrator || capabilities.has("health.records.read");
+  const clinicalPermissions = medicalClinicalPermissions(capabilities, administrator);
   const canManagePatientLifecycle = ["admin", "admin_owner"].includes(user?.role);
 
   const load = useCallback(async () => {
@@ -723,13 +746,15 @@ export default function MedicalWorkspace({ operator = false }) {
         : getMedicalPatients();
       const [patientRows, appointmentRows, professionalsRows, businessServices] = await Promise.all([
         patientRequest,
-        getMedicalAppointments({
-          professional_id: filters.professionalId,
-          medical_service_type_id: filters.medicalServiceTypeId,
-          status: filters.status,
-        }),
-        getMedicalProfessionals(),
-        getBusinessMedicalServices(),
+        canReadAppointments
+          ? getMedicalAppointments({
+              professional_id: filters.professionalId,
+              medical_service_type_id: filters.medicalServiceTypeId,
+              status: filters.status,
+            })
+          : Promise.resolve([]),
+        canReadAppointments ? getMedicalProfessionals() : Promise.resolve([]),
+        canReadPatients ? getBusinessMedicalServices() : Promise.resolve([]),
       ]);
       if (requestId !== requestIdRef.current) return;
       if (isPatients) {
@@ -753,7 +778,7 @@ export default function MedicalWorkspace({ operator = false }) {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [debouncedQuery, filters, isPatients, patientPage, patientPageSize, patientStatus]);
+  }, [canReadAppointments, canReadPatients, debouncedQuery, filters, isPatients, patientPage, patientPageSize, patientStatus]);
 
   useEffect(() => {
     if (isSearchDebouncing) return undefined;
@@ -840,7 +865,7 @@ export default function MedicalWorkspace({ operator = false }) {
             <Button icon="content_copy" onClick={detectDuplicates} variant="secondary">Detectar duplicados</Button>
           </div>
           {loading ? <p aria-live="polite" className="text-xs text-on-surface-variant">Actualizando pacientes…</p> : null}
-          {patients.length ? <MedicalPatientList canEdit={canCreatePatient} canManageLifecycle={canManagePatientLifecycle} onDeactivate={askDeactivate} onDelete={askPermanentDelete} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onOpen={openPatient} onOpenChange={setOpenPatientActionsId} onRestore={restorePatient} openPatientActionsId={openPatientActionsId} patients={patients} /> : <EmptyState description="Prueba con otro nombre, documento o estado." icon="groups" title="No hay pacientes para mostrar" />}
+          {patients.length ? <MedicalPatientList canEdit={canCreatePatient} canManageLifecycle={canManagePatientLifecycle} onDeactivate={askDeactivate} onDelete={askPermanentDelete} onEdit={(patient) => { setEditingPatient(patient); setModal("patient"); }} onOpen={canReadRecords ? openPatient : undefined} onOpenChange={setOpenPatientActionsId} onRestore={restorePatient} openPatientActionsId={openPatientActionsId} patients={patients} /> : <EmptyState description="Prueba con otro nombre, documento o estado." icon="groups" title="No hay pacientes para mostrar" />}
           <PatientDirectoryPagination
             onPageChange={setPatientPage}
             page={patientPage}
@@ -873,8 +898,8 @@ export default function MedicalWorkspace({ operator = false }) {
       ) : null}
       {modal === "patient" ? <MedicalPatientForm close={() => { setModal(""); setEditingPatient(null); }} onSaved={completeModal} patient={editingPatient} /> : null}
       {modal === "appointment" ? <MedicalAppointmentForm close={() => setModal("")} done={completeModal} patients={patients.filter((item) => item.isActive)} professionals={professionals} services={services} /> : null}
-      {modal === "record" && selectedPatient ? <MedicalRecordModal close={() => { setModal(""); setSelectedPatient(null); }} onEdit={canCreatePatient ? (patient) => { setEditingPatient(patient); setModal("patient"); } : undefined} onReload={reloadPatientRecords} patient={selectedPatient} record={clinicalRecord} /> : null}
-      {modal === "appointment-detail" && selectedAppointment ? <MedicalAppointmentDetail appointment={selectedAppointment} canUpdateStatus={canUpdateAppointmentStatus} close={() => setModal("")} done={completeModal} onOpenRecord={(patient) => { setSelectedAppointment(null); openPatient(patient); }} /> : null}
+      {modal === "record" && selectedPatient ? <MedicalRecordModal close={() => { setModal(""); setSelectedPatient(null); }} onEdit={canCreatePatient ? (patient) => { setEditingPatient(patient); setModal("patient"); } : undefined} onReload={reloadPatientRecords} patient={selectedPatient} permissions={clinicalPermissions} record={clinicalRecord} /> : null}
+      {modal === "appointment-detail" && selectedAppointment ? <MedicalAppointmentDetail appointment={selectedAppointment} canUpdateStatus={canUpdateAppointmentStatus} close={() => setModal("")} done={completeModal} onOpenRecord={canReadRecords ? (patient) => { setSelectedAppointment(null); openPatient(patient); } : undefined} /> : null}
       {canManagePatientLifecycle && modal === "deactivate" && selectedPatient ? <Modal onClose={() => setModal("")} title="Desactivar paciente"><div className="grid gap-4 p-5"><p>La ficha se conservará junto con sus citas e historia clínica. No se eliminarán datos de atención.</p>{patientActionError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{patientActionError}</p> : null}<div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="person_off" onClick={async () => { try { setPatientActionError(""); await deactivateMedicalPatient(selectedPatient.id); setModal(""); await load(); } catch (requestError) { setPatientActionError(requestError.message || "No se pudo desactivar al paciente."); } }}>Desactivar</Button></div></div></Modal> : null}
       {canManagePatientLifecycle && modal === "permanent-delete" && selectedPatient ? <Modal onClose={() => setModal("")} title="Eliminar paciente definitivamente"><div className="grid gap-4 p-5"><p>Se eliminará definitivamente la ficha de <b>{selectedPatient.firstName} {selectedPatient.lastName}</b>. Solo se permite si no tiene citas, historia clínica, pagos ni archivos adjuntos.</p><p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">Esta acción no se puede deshacer. Si el paciente ya tiene atención registrada, usa Desactivar.</p>{patientActionError ? <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{patientActionError}</p> : null}<div className="flex justify-end gap-2"><Button onClick={() => setModal("")} type="button" variant="outlined">Cancelar</Button><Button icon="delete_forever" onClick={async () => { try { setPatientActionError(""); await permanentlyDeleteMedicalPatient(selectedPatient.id); setSelectedPatient(null); setModal(""); await load(); } catch (requestError) { setPatientActionError(requestError.message || "No se pudo eliminar al paciente."); } }} type="button" variant="danger">Eliminar definitivamente</Button></div></div></Modal> : null}
       {modal === "duplicates" ? <Modal onClose={() => setModal("")} title="Posibles pacientes duplicados"><div className="grid gap-3 p-5">{!canManagePatientLifecycle && duplicateGroups.length ? <p className="rounded-xl bg-surface-container-low p-3 text-sm text-on-surface-variant">Solo la administración puede fusionar fichas de pacientes.</p> : null}{duplicateGroups.map((group) => { const [target, ...sources] = group.patients; return <Card className="p-3" key={target.id}><p className="text-sm">Conservar ficha: <b>{target.firstName} {target.lastName} · {target.document}</b></p>{sources.map((source) => <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant pt-2" key={source.id}><span className="text-sm">{canManagePatientLifecycle ? "Fusionar" : "Posible duplicado:"} {source.firstName} {source.lastName} · {source.document}</span>{canManagePatientLifecycle ? <Button icon="merge_type" onClick={async () => { await mergeMedicalPatient(source.id, target.id); setModal(""); await load(); }} size="small">Fusionar</Button> : null}</div>)}</Card>; })}{!duplicateGroups.length ? <EmptyState description="No encontramos fichas activas con coincidencias de nombre, fecha, teléfono o correo." icon="verified" title="Sin duplicados" /> : null}</div></Modal> : null}
