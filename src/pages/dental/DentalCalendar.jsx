@@ -75,6 +75,28 @@ const dayTitle = (value) =>
     day: "numeric",
     month: "long",
   }).format(new Date(`${value}T12:00:00`));
+const limaDateTimeParts = (value) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(new Date(value))
+    .reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+};
+const appointmentRescheduleDraft = (appointment) => {
+  const starts = limaDateTimeParts(appointment.startsAt);
+  const durationMinutes = Math.max(
+    5,
+    Math.round((new Date(appointment.endsAt).getTime() - new Date(appointment.startsAt).getTime()) / 60000) || 30,
+  );
+  return { ...starts, professionalId: appointment.professionalId || "", durationMinutes };
+};
 const cls = "min-h-11 rounded-xl border border-outline-variant bg-surface px-3";
 const appointmentDraftFor = (date) => ({
   patientId: "",
@@ -663,7 +685,89 @@ function SummaryRow({ icon, label, value }) {
   );
 }
 
-function AppointmentDetail({ appointment, canEdit, onClose, onSaved }) {
+function RescheduleAppointmentModal({ appointment, onClose, onSaved, professionals }) {
+  const [draft, setDraft] = useState(() => appointmentRescheduleDraft(appointment));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const today = limaDateTimeParts(new Date()).date;
+  const change = (key, value) => {
+    setError("");
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+  const submit = async (event) => {
+    event.preventDefault();
+    const start = new Date(`${draft.date}T${draft.time}:00`);
+    if (!draft.date || !draft.time || Number.isNaN(start.getTime())) {
+      setError("Completa una fecha y hora válidas.");
+      return;
+    }
+    if (draft.date < today || start.getTime() <= Date.now()) {
+      setError("La nueva cita debe quedar en una fecha y hora futura.");
+      return;
+    }
+    if (!draft.professionalId) {
+      setError("Selecciona al odontólogo responsable.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const end = new Date(start.getTime() + Number(draft.durationMinutes || 30) * 60000);
+      await api.updateHealthAppointment(appointment.id, {
+        professionalId: draft.professionalId,
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+      });
+      await onSaved();
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo reprogramar la cita.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose} title="Reprogramar cita dental">
+      <form className="grid gap-4 p-5" onSubmit={submit}>
+        <div className="rounded-2xl bg-primary-fixed p-4 text-sm">
+          <b className="block text-base">{appointment.patient.firstName} {appointment.patient.lastName}</b>
+          <p className="mt-1 text-on-surface-variant">
+            Fecha actual: {dayTitle(limaDateTimeParts(appointment.startsAt).date)} · {limaDateTimeParts(appointment.startsAt).time}
+          </p>
+        </div>
+        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          Al mover la cita volverá a quedar como <b>Programada</b>, para confirmar la nueva asistencia y evitar cruces de horario.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-bold">
+            Nueva fecha
+            <input className={cls} min={today} onChange={(event) => change("date", event.target.value)} required type="date" value={draft.date} />
+          </label>
+          <label className="grid gap-1 text-sm font-bold">
+            Nueva hora
+            <input className={cls} onChange={(event) => change("time", event.target.value)} required type="time" value={draft.time} />
+          </label>
+        </div>
+        <label className="grid gap-1 text-sm font-bold">
+          Odontólogo responsable
+          <select className={cls} onChange={(event) => change("professionalId", event.target.value)} required value={draft.professionalId}>
+            <option value="">Selecciona un odontólogo</option>
+            {professionals.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}{item.site ? ` · ${item.site}` : ""}</option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs text-on-surface-variant">Se conserva la duración de {draft.durationMinutes} minutos y se validará la disponibilidad del profesional.</p>
+        {error ? <p className="rounded-xl bg-error-container p-3 text-sm text-error">{error}</p> : null}
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose} type="button" variant="secondary">Cancelar</Button>
+          <Button disabled={saving} icon="event_repeat" type="submit">{saving ? "Reprogramando..." : "Guardar nueva fecha"}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function AppointmentDetail({ appointment, canEdit, onClose, onSaved, professionals = [] }) {
   const { user } = useAuth();
   const { config } = useAppConfig();
   const [mode, setMode] = useState("detail");
@@ -675,13 +779,16 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const meta = statusMeta[appointment.status] || statusMeta.scheduled;
   const admin = ["admin", "admin_owner"].includes(user.role);
-  const dentistOperator = user.role === "operator" && config?.user?.functions?.some((item) => item.code === "dentist");
+  const capabilities = new Set(config?.capabilities || []);
+  const reception = config?.user?.functions?.some((item) => item.code === "dental-reception");
   const editAllowed =
-    !dentistOperator && (canEdit ??
-    (admin || (config?.capabilities || []).includes("appointments.status")));
+    canEdit ?? (admin || capabilities.has("appointments.status"));
   const canRemind =
-    admin || (config?.capabilities || []).includes("appointments.create");
+    admin || (capabilities.has("appointments.status") && (user.role !== "operator" || reception));
   const saved = onSaved || onClose;
+  const canReschedule =
+    editAllowed &&
+    ["scheduled", "confirmed"].includes(appointment.status);
   const loadChart = async () => {
     setActionError("");
     try {
@@ -736,12 +843,21 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved }) {
       setSaving(false);
     }
   };
+  if (mode === "reschedule")
+    return (
+      <RescheduleAppointmentModal
+        appointment={appointment}
+        onClose={() => setMode("detail")}
+        onSaved={saved}
+        professionals={professionals}
+      />
+    );
   if (mode === "record")
     return (
       <OdontogramModal
         admin={admin}
-        canEditRecords={!dentistOperator && (admin || config?.capabilities?.includes("dental.records.edit"))}
-        canEditTreatments={!dentistOperator && (admin || config?.capabilities?.includes("dental.treatments.edit"))}
+        canEditRecords={admin || capabilities.has("dental.records.edit")}
+        canEditTreatments={admin || capabilities.has("dental.treatments.edit")}
         chart={chart}
         close={onClose}
         exporting={exporting}
@@ -863,6 +979,16 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved }) {
               variant="secondary"
             >
               Recordar por WhatsApp
+            </Button>
+          ) : null}
+          {canReschedule ? (
+            <Button
+              disabled={saving}
+              icon="event_repeat"
+              onClick={() => setMode("reschedule")}
+              variant="secondary"
+            >
+              Reprogramar cita
             </Button>
           ) : null}
           {editAllowed && appointment.status === "scheduled" ? (
@@ -1041,10 +1167,10 @@ export default function DentalCalendar({ operator = false }) {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const dentistOperator = operator && config?.user?.functions?.some((item) => item.code === "dentist");
-  const canManageServices = ["admin", "admin_owner"].includes(config?.user?.role) || (config?.capabilities || []).includes("dental.catalog.manage");
-  const canSchedule =
-    !dentistOperator && (!operator || (config?.capabilities || []).includes("appointments.create"));
+  const administrator = ["admin", "admin_owner"].includes(config?.user?.role);
+  const capabilities = new Set(config?.capabilities || []);
+  const canManageServices = administrator || capabilities.has("dental.catalog.manage");
+  const canSchedule = administrator || capabilities.has("appointments.create");
   const searchPatients = useCallback(async (search) => {
     const matches = await api.getPatients(search);
     setPatients((current) => {
@@ -1316,6 +1442,11 @@ export default function DentalCalendar({ operator = false }) {
         <AppointmentDetail
           appointment={modal.item}
           onClose={() => setModal(null)}
+          onSaved={async () => {
+            setModal(null);
+            await load();
+          }}
+          professionals={professionals}
         />
       ) : null}
     </Shell>
