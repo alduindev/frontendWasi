@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   changeSessionPassword,
   clearSession,
+  confirmAuthenticatedSession,
   getSessionUser,
   loginUser,
   registerUser,
@@ -77,6 +78,21 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const adoptSession = useCallback(async (result) => {
+    const adoptionVersion = ++sessionVersionRef.current;
+    try {
+      const nextUser = await confirmAuthenticatedSession(result);
+      if (adoptionVersion === sessionVersionRef.current) {
+        setUser(nextUser);
+        setIsLoading(false);
+      }
+      return nextUser;
+    } catch (error) {
+      if (adoptionVersion === sessionVersionRef.current) setIsLoading(false);
+      throw error;
+    }
+  }, []);
+
   const register = useCallback(async (data) => {
     const registerVersion = ++sessionVersionRef.current;
     try {
@@ -113,13 +129,14 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: Boolean(user),
       isLoading,
+      adoptSession,
       changePassword,
       login,
       logout,
       register,
       updateUser,
     }),
-    [changePassword, isLoading, login, logout, register, updateUser, user],
+    [adoptSession, changePassword, isLoading, login, logout, register, updateUser, user],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

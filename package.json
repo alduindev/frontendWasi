@@ -9,31 +9,28 @@
     "start:dev": "vite --mode dev",
     "start:pre": "vite --mode pre",
     "start:prod": "vite --mode prod",
-
     "local": "vite --mode localhost",
     "dev": "vite --mode dev",
     "dev:local": "vite --mode localhost",
     "dev:pre": "vite --mode pre",
     "dev:prod": "vite --mode prod",
-
     "build": "vite build --mode prod",
     "build:local": "vite build --mode localhost",
     "build:dev": "vite build --mode dev",
     "build:pre": "vite build --mode pre",
     "build:prod": "vite build --mode prod",
     "build:vercel": "node scripts/build-vercel.mjs",
-
     "preview": "vite preview",
     "preview:local": "vite preview --mode localhost",
     "preview:dev": "vite preview --mode dev",
     "preview:pre": "vite preview --mode pre",
     "preview:prod": "vite preview --mode prod",
-
     "lint": "eslint ."
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",
     "framer-motion": "^12.42.2",
+    "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",

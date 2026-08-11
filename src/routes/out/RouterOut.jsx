@@ -7,6 +7,7 @@ import Pricing from '../../pages/public/Pricing'
 import PublicInfo from '../../pages/public/PublicInfo'
 import Features from '../../pages/public/Features'
 import Contact from '../../pages/public/Contact'
+import ConfirmarQr from '../../pages/out/ConfirmarQr'
 import Legal from '../../pages/public/Legal'
 
 export default function RouterOut() {
@@ -14,6 +15,7 @@ export default function RouterOut() {
     <Routes>
       <Route index element={<Landing />} />
       <Route path="login" element={<IniciarSesion />} />
+      <Route path="qr-login" element={<ConfirmarQr />} />
       <Route path="register" element={<Registro />} />
       <Route path="recover-password" element={<RecuperarContrasena />} />
       <Route path="recuperar-contrasena" element={<Navigate to="/recover-password" replace />} />

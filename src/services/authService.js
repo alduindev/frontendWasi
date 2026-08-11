@@ -1,7 +1,7 @@
 import { apiRequest } from '../api/httpClient'
 import { clearAccessToken, setAccessToken } from '../api/authToken'
 
-async function confirmAuthenticatedSession(result) {
+export async function confirmAuthenticatedSession(result) {
   const accessToken = String(result?.accessToken || '').trim()
   if (!accessToken) {
     clearAccessToken()
@@ -24,6 +24,37 @@ export async function loginUser(credentials) {
     sensitiveResponse: true,
   })
   return confirmAuthenticatedSession(result)
+}
+
+export function startQrLogin() {
+  return apiRequest('/auth/qr/start', {
+    method: 'POST',
+    sensitiveResponse: true,
+  })
+}
+
+export function pollQrLogin(data) {
+  return apiRequest('/auth/qr/poll', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    sensitiveResponse: true,
+  })
+}
+
+export function scanQrLogin(data) {
+  return apiRequest('/auth/qr/scan', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    sensitiveResponse: true,
+  })
+}
+
+export function respondQrLogin(data) {
+  return apiRequest('/auth/qr/respond', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    sensitiveResponse: true,
+  })
 }
 
 export async function registerUser(data) {
