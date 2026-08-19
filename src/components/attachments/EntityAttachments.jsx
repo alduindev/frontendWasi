@@ -20,6 +20,7 @@ const categories = [
   ['image', 'Imagen'],
   ['other', 'Otro'],
 ]
+const unavailableAttachmentMessage = 'El archivo ya no está disponible. Adjunta nuevamente una copia para recuperarlo.'
 
 function matchesPermission(user, required) {
   return (user?.permissions || []).some(permission => (
@@ -80,6 +81,16 @@ export default function EntityAttachments({
   const [saving, setSaving] = useState(false)
   const [workingId, setWorkingId] = useState('')
   const [error, setError] = useState('')
+  const [unavailableIds, setUnavailableIds] = useState(() => new Set())
+
+  const markUnavailable = attachmentId => {
+    setUnavailableIds(current => {
+      if (current.has(attachmentId)) return current
+      const next = new Set(current)
+      next.add(attachmentId)
+      return next
+    })
+  }
 
   const load = useCallback(async () => {
     if (!entityId || !entityType) return
@@ -153,7 +164,8 @@ export default function EntityAttachments({
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch (requestError) {
       previewWindow?.close()
-      setError(requestError.message || 'No se pudo abrir el archivo.')
+      if (requestError.status === 410) markUnavailable(attachment.id)
+      setError(requestError.status === 410 ? unavailableAttachmentMessage : (requestError.message || 'No se pudo abrir el archivo.'))
     } finally {
       setWorkingId('')
     }
@@ -163,7 +175,8 @@ export default function EntityAttachments({
     setWorkingId(attachment.id)
     setError('')
     try { await api.downloadAttachment(attachment.id, attachment.originalName) } catch (requestError) {
-      setError(requestError.message || 'No se pudo descargar el archivo.')
+      if (requestError.status === 410) markUnavailable(attachment.id)
+      setError(requestError.status === 410 ? unavailableAttachmentMessage : (requestError.message || 'No se pudo descargar el archivo.'))
     } finally { setWorkingId('') }
   }
 
@@ -219,21 +232,25 @@ export default function EntityAttachments({
       {error ? <p className="mt-3 rounded-xl bg-error-container p-3 text-sm text-error" role="alert">{error}</p> : null}
       {loading ? <div className="mt-3 h-24 animate-pulse rounded-2xl bg-surface-container-low" /> : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {attachments.map(attachment => (
+          {attachments.map(attachment => {
+            const unavailable = unavailableIds.has(attachment.id)
+            return (
             <Card className="min-w-0 p-3" key={attachment.id}>
               <div className="flex min-w-0 items-center gap-3">
                 <span className="material-symbols-outlined grid size-10 shrink-0 place-items-center rounded-xl bg-primary-fixed text-primary">{iconFor(attachment.mimeType)}</span>
                 <div className="min-w-0 flex-1">
                   <b className="block truncate text-sm">{attachment.originalName}</b>
+                  {unavailable ? <p className="truncate text-[11px] text-error">Archivo no disponible; adjunta una copia nueva.</p> : null}
                   <p className="truncate text-xs text-on-surface-variant">{sizeLabel(attachment.sizeBytes)} · {dateLabel(attachment.createdAt)}</p>
                   <p className="truncate text-[11px] text-on-surface-variant">{attachment.uploadedBy?.name || 'Equipo'}{attachment.notes ? ` · ${attachment.notes}` : ''}</p>
                 </div>
-                <button aria-label={`Ver ${attachment.originalName}`} className="material-symbols-outlined rounded-lg p-2 text-primary hover:bg-primary-fixed" disabled={workingId === attachment.id} onClick={() => preview(attachment)} type="button">visibility</button>
-                <button aria-label={`Descargar ${attachment.originalName}`} className="material-symbols-outlined rounded-lg p-2 text-primary hover:bg-primary-fixed" disabled={workingId === attachment.id} onClick={() => download(attachment)} type="button">download</button>
+                <button aria-label={`Ver ${attachment.originalName}`} className="material-symbols-outlined rounded-lg p-2 text-primary hover:bg-primary-fixed" disabled={workingId === attachment.id || unavailable} onClick={() => preview(attachment)} type="button">visibility</button>
+                <button aria-label={`Descargar ${attachment.originalName}`} className="material-symbols-outlined rounded-lg p-2 text-primary hover:bg-primary-fixed" disabled={workingId === attachment.id || unavailable} onClick={() => download(attachment)} type="button">download</button>
                 {canDelete ? <button aria-label={`Eliminar ${attachment.originalName}`} className="material-symbols-outlined rounded-lg p-2 text-error hover:bg-error-container" disabled={workingId === attachment.id} onClick={() => remove(attachment)} type="button">delete</button> : null}
               </div>
             </Card>
-          ))}
+            )
+          })}
           {legacyItems.map(item => (
             <Card className="min-w-0 p-3" key={`legacy-${item.id}`}>
               <div className="flex min-w-0 items-center gap-3">
