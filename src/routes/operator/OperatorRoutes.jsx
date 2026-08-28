@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import OperatorDashboard from "../../pages/operator/OperatorDashboard";
 import Alerts from "../../pages/in/Alerts";
@@ -26,6 +27,16 @@ import VeterinaryCalendar from "../../pages/veterinary/VeterinaryCalendar";
 import VeterinaryBillingQueue from "../../pages/operator/VeterinaryBillingQueue";
 import VeterinaryServices from "../../pages/veterinary/VeterinaryServices";
 
+const DENTAL_ROUTE_CAPABILITIES = {
+  patients: "patients.read",
+  odontogram: "dental.odontogram.read",
+  treatments: "dental.treatments.read",
+  "dental-records": "dental.records.read",
+  "dental-catalog": "dental.catalog.read",
+  "dental-billing": "dental.billing.read",
+  "dental-reports": "dental.reports.read",
+};
+
 function OperatorAccess({
   alternateCapability,
   capability,
@@ -35,13 +46,8 @@ function OperatorAccess({
   frontendKey,
   requiredCapabilities = [],
 }) {
-  const { config, isLoading } = useAppConfig();
-  if (isLoading)
-    return (
-      <div className="grid min-h-[50vh] place-items-center text-primary">
-        Actualizando permisos...
-      </div>
-    );
+  const { config, isLoading, refresh } = useAppConfig();
+  const [refreshRequested, setRefreshRequested] = useState(false);
   const functions = config?.user?.functions || [];
   const modules = config?.modules || [];
   const capabilities = config?.capabilities || [];
@@ -58,15 +64,33 @@ function OperatorAccess({
     !moduleCode || modules.some((item) => item.code === moduleCode);
   const allowedFrontend =
     !frontendKey || modules.some((item) => item.frontendKey === frontendKey);
-  return allowedCapability &&
+  const allowed =
+    allowedCapability &&
     allowedRequiredCapabilities &&
     allowedFunction &&
     allowedModule &&
-    allowedFrontend ? (
-    children
-  ) : (
-    <Navigate replace to="/pos" />
-  );
+    allowedFrontend;
+
+  useEffect(() => {
+    if (allowed || isLoading || refreshRequested) return undefined;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setRefreshRequested(true);
+      refresh().catch(() => {});
+    });
+    return () => {
+      active = false;
+    };
+  }, [allowed, isLoading, refresh, refreshRequested]);
+
+  if (isLoading || (!allowed && !refreshRequested))
+    return (
+      <div className="grid min-h-[50vh] place-items-center text-primary">
+        Actualizando permisos...
+      </div>
+    );
+  return allowed ? children : <Navigate replace to="/pos" />;
 }
 
 export default function OperatorRoutes() {
@@ -193,7 +217,7 @@ export default function OperatorRoutes() {
       <Route
         path="dental/appointments"
         element={
-          <OperatorAccess capability="appointments.read" frontendKey="appointments">
+          <OperatorAccess capability="appointments.read">
             <DentalCalendar operator />
           </OperatorAccess>
         }
@@ -247,12 +271,15 @@ export default function OperatorRoutes() {
 function DentalModuleAccess() {
   const { moduleKey } = useParams();
   const { config } = useAppConfig();
+  const capability = DENTAL_ROUTE_CAPABILITIES[moduleKey];
   const module = config?.modules?.find(
     (item) => item.frontendKey === moduleKey,
   );
+  if (!capability) return <Navigate replace to="/pos" />;
   if (
-    !module ||
-    (!module.code.startsWith("dental.") && module.code !== "health.patients")
+    module &&
+    !module.code.startsWith("dental.") &&
+    module.code !== "health.patients"
   )
     return <Navigate replace to="/pos" />;
   const page =
@@ -265,7 +292,7 @@ function DentalModuleAccess() {
     ) : (
       <DentalOperations operator />
     );
-  return <OperatorAccess frontendKey={moduleKey}>{page}</OperatorAccess>;
+  return <OperatorAccess capability={capability}>{page}</OperatorAccess>;
 }
 
 function ClinicalAlertsAccess() {
