@@ -117,6 +117,7 @@ export default function DentalDashboard() {
   const { user } = useAuth();
   const { config } = useAppConfig();
   const owner = ["admin_owner", "admin"].includes(user.role);
+  const dentist = config?.user?.functions?.some((item) => item.code === "dentist");
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [report, setReport] = useState(null);
@@ -709,6 +710,7 @@ export default function DentalDashboard() {
       {recordPatient && !recordLoading && !recordError ? (
         <OdontogramModal
           admin={owner}
+          canManageConsent={dentist}
           canEditRecords={owner || config?.capabilities?.includes("dental.records.edit")}
           canEditTreatments={owner || config?.capabilities?.includes("dental.treatments.edit")}
           chart={recordChart}

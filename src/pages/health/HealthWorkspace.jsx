@@ -251,6 +251,7 @@ export default function HealthWorkspace({ operator = false }) {
   };
   const admin = ["admin", "admin_owner"].includes(user.role);
   const capabilities = new Set(config?.capabilities || []);
+  const dentist = config?.user?.functions?.some((item) => item.code === "dentist");
   const canEditPatient = admin || capabilities.has("patients.edit");
   const canManagePatientLifecycle = admin;
   const patientAttachmentType =
@@ -465,6 +466,7 @@ export default function HealthWorkspace({ operator = false }) {
         <OdontogramModal
           admin={admin}
           attachmentEntityType={patientAttachmentType}
+          canManageConsent={dentist}
           canEditRecords={canAttention}
           canEditTreatments={admin || capabilities.has("dental.treatments.edit")}
           chart={chart}

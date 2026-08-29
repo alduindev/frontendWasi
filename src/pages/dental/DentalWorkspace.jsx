@@ -670,7 +670,7 @@ export function OdontogramModal({
   admin,
   attachmentEntityType = "dental_patient",
   chart,
-  canManageConsent = admin,
+  canManageConsent = false,
   canEditRecords = admin,
   canEditTreatments = admin,
   close,
@@ -1979,7 +1979,7 @@ export default function DentalWorkspace({ operator = false }) {
         {modal === "odontogram" && patient ? (
           <OdontogramModal
             admin={admin}
-            canManageConsent={canEditRecords && dentist}
+            canManageConsent={dentist}
             canEditRecords={canEditRecords}
             canEditTreatments={canEditTreatments}
             chart={chart}

@@ -781,6 +781,7 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved, professiona
   const admin = ["admin", "admin_owner"].includes(user.role);
   const capabilities = new Set(config?.capabilities || []);
   const reception = config?.user?.functions?.some((item) => item.code === "dental-reception");
+  const dentist = config?.user?.functions?.some((item) => item.code === "dentist");
   const editAllowed =
     canEdit ?? (admin || capabilities.has("appointments.status"));
   const canRemind =
@@ -856,6 +857,7 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved, professiona
     return (
       <OdontogramModal
         admin={admin}
+        canManageConsent={dentist}
         canEditRecords={admin || capabilities.has("dental.records.edit")}
         canEditTreatments={admin || capabilities.has("dental.treatments.edit")}
         chart={chart}
