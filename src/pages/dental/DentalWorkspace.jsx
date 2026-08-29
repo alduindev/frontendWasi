@@ -11,33 +11,18 @@ import { useAuth } from "../../context/authStore";
 import { useAppConfig } from "../../context/appConfigStore";
 import * as api from "../../services/healthService";
 import DentalAttentionForm from "./DentalAttentionForm";
+import DentalConsentPanel from "./DentalConsentPanel";
 import EntitySearchSelect from "../../components/ui/EntitySearchSelect";
 import { matchesEntitySearch } from "../../utils/entitySearch";
 
 // Cuadrantes en orden de lectura clínica: superior derecha → superior izquierda
 // luego inferior izquierda → inferior derecha (cruz odontológica estándar)
-const QUADRANTS = [
-  {
-    key: "ur",
-    label: "Superior derecha",
-    teeth: [18, 17, 16, 15, 14, 13, 12, 11],
-  },
-  {
-    key: "ul",
-    label: "Superior izquierda",
-    teeth: [21, 22, 23, 24, 25, 26, 27, 28],
-  },
-  {
-    key: "ll",
-    label: "Inferior izquierda",
-    teeth: [38, 37, 36, 35, 34, 33, 32, 31],
-  },
-  {
-    key: "lr",
-    label: "Inferior derecha",
-    teeth: [48, 47, 46, 45, 44, 43, 42, 41],
-  },
-];
+const DENTITION_ROWS = {
+  permanentUpper: [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28],
+  primaryUpper: [55, 54, 53, 52, 51, 61, 62, 63, 64, 65],
+  primaryLower: [85, 84, 83, 82, 81, 71, 72, 73, 74, 75],
+  permanentLower: [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38],
+};
 
 const conditionLabels = {
   healthy: "Sano",
@@ -109,12 +94,13 @@ function avatarTone(seed) {
 }
 
 function ToothSvg({ condition = "healthy", number }) {
-  const lower = number > 30,
+  const lower = [3, 4, 7, 8].includes(Math.floor(number / 10)),
+    primary = [5, 6, 7, 8].includes(Math.floor(number / 10)),
     color = conditionColors[condition] || "#fff";
   return (
     <svg
       aria-hidden="true"
-      className={`mx-auto h-10 w-8 drop-shadow-sm ${lower ? "rotate-180" : ""}`}
+      className={`mx-auto drop-shadow-sm ${primary ? "h-8 w-6" : "h-10 w-8"} ${lower ? "rotate-180" : ""}`}
       viewBox="0 0 64 86"
     >
       <path
@@ -176,6 +162,42 @@ function ConditionLegend() {
           />
           {label}
         </span>
+      ))}
+    </div>
+  );
+}
+
+function dentitionSlots(teeth) {
+  if (teeth.length === 16) return teeth;
+  return [null, null, null, ...teeth.slice(0, 5), ...teeth.slice(5), null, null, null];
+}
+
+function OdontogramTooth({ chart, onTooth, tooth }) {
+  const entry = chart.find((item) => item.toothNumber === tooth);
+  const condition = entry?.condition;
+  return (
+    <button
+      aria-label={`Pieza ${tooth}`}
+      className={`group relative flex h-[88px] min-w-0 flex-col items-center justify-end rounded-xl border p-1 transition disabled:cursor-default ${onTooth ? "hover:border-primary hover:shadow-sm" : ""} ${entry ? "border-primary/60 bg-primary-fixed" : "border-outline-variant bg-white"}`}
+      disabled={!onTooth}
+      onClick={() => onTooth?.(tooth)}
+      title={entry ? `Pieza ${tooth} · ${conditionLabels[condition]}` : `Pieza ${tooth} · Sano`}
+      type="button"
+    >
+      <ToothSvg condition={condition} number={tooth} />
+      <b className="mt-1 block text-[11px] leading-none">{tooth}</b>
+    </button>
+  );
+}
+
+function DentalArchRow({ chart, label, onTooth, teeth }) {
+  return (
+    <div className="grid min-w-[760px] grid-cols-[7rem_repeat(16,minmax(0,1fr))] gap-1">
+      <div className="flex items-center justify-end pr-2 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">{label}</div>
+      {dentitionSlots(teeth).map((tooth, index) => (
+        <div className={index === 8 ? "border-l-2 border-primary/20 pl-1" : ""} key={tooth || `blank-${label}-${index}`}>
+          {tooth ? <OdontogramTooth chart={chart} onTooth={onTooth} tooth={tooth} /> : <span aria-hidden="true" className="block h-[88px]" />}
+        </div>
       ))}
     </div>
   );
@@ -648,6 +670,7 @@ export function OdontogramModal({
   admin,
   attachmentEntityType = "dental_patient",
   chart,
+  canManageConsent = admin,
   canEditRecords = admin,
   canEditTreatments = admin,
   close,
@@ -656,6 +679,7 @@ export function OdontogramModal({
   onAttention,
   onTooth,
   patient,
+  preparedByName = "",
 }) {
   const [record, setRecord] = useState({
     appointments: [],
@@ -670,7 +694,6 @@ export function OdontogramModal({
   const [editingEntry, setEditingEntry] = useState(null);
   const [activeTab, setActiveTab] = useState("summary");
   const [odontogramView, setOdontogramView] = useState("teeth");
-  const [quadrantIndex, setQuadrantIndex] = useState(0);
   const [exportPreview, setExportPreview] = useState(false);
   const [exportError, setExportError] = useState("");
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
@@ -1277,6 +1300,7 @@ export function OdontogramModal({
                 }
                 title="Archivos del paciente"
               />
+              {attachmentEntityType === "dental_patient" ? <DentalConsentPanel canManage={canManageConsent} canAdminister={admin} patient={patient} preparedByName={preparedByName} /> : null}
             </div>
           ) : null}
 
@@ -1326,87 +1350,41 @@ export function OdontogramModal({
 
             {odontogramView === "teeth" ? (
               <>
-                <div className="mb-2 flex items-center justify-between rounded-xl bg-surface-container-low p-2">
-                  <button
-                    aria-label="Cuadrante anterior"
-                    className="material-symbols-outlined grid size-9 place-items-center rounded-full bg-white shadow-sm disabled:opacity-30"
-                    disabled={quadrantIndex === 0}
-                    onClick={() =>
-                      setQuadrantIndex((index) => Math.max(0, index - 1))
-                    }
-                    type="button"
-                  >
-                    chevron_left
-                  </button>
-                  <div className="flex min-w-0 flex-1 justify-center gap-1">
-                    {QUADRANTS.map((quadrant, index) => (
-                      <button
-                        aria-label={quadrant.label}
-                        className={`h-2.5 rounded-full transition-all ${index === quadrantIndex ? "w-8 bg-primary" : "w-2.5 bg-outline-variant"}`}
-                        key={quadrant.key}
-                        onClick={() => setQuadrantIndex(index)}
-                        type="button"
-                      />
-                    ))}
-                  </div>
-                  <span className="min-w-20 text-center text-xs font-bold">
-                    {quadrantIndex + 1} / {QUADRANTS.length}
-                  </span>
-                  <button
-                    aria-label="Cuadrante siguiente"
-                    className="material-symbols-outlined grid size-9 place-items-center rounded-full bg-white shadow-sm disabled:opacity-30"
-                    disabled={quadrantIndex === QUADRANTS.length - 1}
-                    onClick={() =>
-                      setQuadrantIndex((index) =>
-                        Math.min(QUADRANTS.length - 1, index + 1),
-                      )
-                    }
-                    type="button"
-                  >
-                    chevron_right
-                  </button>
-                </div>
                 <div className="mb-3 rounded-2xl border border-outline-variant p-3 sm:p-4">
-                  {[QUADRANTS[quadrantIndex]].map((q) => (
-                    <div key={q.key}>
-                      <p className="mb-3 text-center text-xs font-bold uppercase tracking-wide text-primary">
-                        {q.label}
-                      </p>
-                      <div className="grid grid-cols-8 gap-1.5">
-                        {q.teeth.map((tooth) => {
-                          const entry = chart.find(
-                            (x) => x.toothNumber === tooth,
-                          );
-                          return (
-                            <button
-                              className={`group relative rounded-xl border p-1.5 transition disabled:cursor-default ${onTooth ? "hover:border-primary hover:shadow-sm" : ""} ${
-                                entry
-                                  ? "border-primary/60 bg-primary-fixed"
-                                  : "border-outline-variant bg-white"
-                              }`}
-                              key={tooth}
-                              disabled={!onTooth}
-                              onClick={() => onTooth?.(tooth)}
-                              title={
-                                entry
-                                  ? `Pieza ${tooth} · ${conditionLabels[entry.condition]}`
-                                  : `Pieza ${tooth} · Sano`
-                              }
-                              type="button"
-                            >
-                              <ToothSvg
-                                condition={entry?.condition}
-                                number={tooth}
-                              />
-                              <b className="mt-1 block text-[11px] leading-none">
-                                {tooth}
-                              </b>
-                            </button>
-                          );
-                        })}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-primary">Odontograma FDI</p>
+                      <p className="mt-1 text-sm text-on-surface-variant">Dentición permanente y decidua</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[11px] font-bold text-on-surface-variant">
+                      <span className="rounded-full bg-primary-fixed px-2.5 py-1 text-primary">32 permanentes</span>
+                      <span className="rounded-full bg-surface-container-low px-2.5 py-1">20 deciduas</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 overflow-x-auto rounded-xl bg-surface-container-low p-2 sm:p-3">
+                    <div className="min-w-[760px]">
+                      <div className="mb-2 grid grid-cols-[7rem_repeat(16,minmax(0,1fr))] gap-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                        <span />
+                        <span className="col-span-8 text-center">Derecha del paciente</span>
+                        <span className="col-span-8 text-center">Izquierda del paciente</span>
+                      </div>
+                      <p className="mb-1 pl-1 text-[10px] font-bold uppercase tracking-widest text-primary">Arcada superior</p>
+                      <div className="grid gap-1.5">
+                        <DentalArchRow chart={chart} label="Permanente" onTooth={onTooth} teeth={DENTITION_ROWS.permanentUpper} />
+                        <DentalArchRow chart={chart} label="Decidua" onTooth={onTooth} teeth={DENTITION_ROWS.primaryUpper} />
+                      </div>
+                      <div className="my-2 flex items-center gap-2 px-2 text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">
+                        <span className="h-px flex-1 bg-outline-variant" />
+                        <span>Plano medio</span>
+                        <span className="h-px flex-1 bg-outline-variant" />
+                      </div>
+                      <p className="mb-1 pl-1 text-[10px] font-bold uppercase tracking-widest text-primary">Arcada inferior</p>
+                      <div className="grid gap-1.5">
+                        <DentalArchRow chart={chart} label="Decidua" onTooth={onTooth} teeth={DENTITION_ROWS.primaryLower} />
+                        <DentalArchRow chart={chart} label="Permanente" onTooth={onTooth} teeth={DENTITION_ROWS.permanentLower} />
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
                 <ConditionLegend />
               </>
@@ -1897,6 +1875,7 @@ export default function DentalWorkspace({ operator = false }) {
   const [attentionId, setAttentionId] = useState("");
   const isChart = moduleKey === "odontogram",
     admin = ["admin", "admin_owner"].includes(user.role),
+    dentist = config?.user?.functions?.some((item) => item.code === "dentist"),
     patient = patients.find((x) => x.id === patientId),
     canEditRecords =
       admin || config?.capabilities?.includes("dental.records.edit"),
@@ -2000,6 +1979,7 @@ export default function DentalWorkspace({ operator = false }) {
         {modal === "odontogram" && patient ? (
           <OdontogramModal
             admin={admin}
+            canManageConsent={canEditRecords && dentist}
             canEditRecords={canEditRecords}
             canEditTreatments={canEditTreatments}
             chart={chart}
@@ -2026,6 +2006,7 @@ export default function DentalWorkspace({ operator = false }) {
                 : null
             }
             patient={patient}
+            preparedByName={user.name}
           />
         ) : null}
         {modal === "chart" ? (
