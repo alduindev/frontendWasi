@@ -5,9 +5,11 @@ import Card from "../../components/atoms/Card";
 import Modal from "../../components/molecules/Modal";
 import Tooltip from "../../components/ui/Tooltip";
 import { environment } from "../../config/environment";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import * as api from "../../services/healthService";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-outline-variant bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+const CONSENT_REFRESH_INTERVAL_MS = 3000;
 
 const statusInfo = {
   pending: { label: "Pendiente de firma", tone: "bg-amber-100 text-amber-900", icon: "pending_actions" },
@@ -283,6 +285,35 @@ export default function DentalConsentPanel({ canAdminister = false, canManage, c
   }, [patientId]);
 
   useEffect(() => { queueMicrotask(load); }, [load]);
+
+  const loadConsents = useCallback(async ({ silent = false } = {}) => {
+    if (!patientId) return;
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
+    try {
+      setConsents(await api.getDentalConsents(patientId));
+    } catch (requestError) {
+      if (!silent) setError(requestError.message || "No se pudieron cargar los consentimientos.");
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [patientId]);
+
+  useLiveRefresh(() => loadConsents({ silent: true }), ["/health/dental/consents"]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") loadConsents({ silent: true });
+    };
+    const timer = window.setInterval(refresh, CONSENT_REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [loadConsents]);
 
   useEffect(() => {
     if (!previewConsent) return undefined;
