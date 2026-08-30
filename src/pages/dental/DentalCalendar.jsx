@@ -857,7 +857,8 @@ function AppointmentDetail({ appointment, canEdit, onClose, onSaved, professiona
     return (
       <OdontogramModal
         admin={admin}
-        canManageConsent={dentist}
+        canManageConsent={admin || dentist}
+        canSignDentist={dentist}
         canEditRecords={admin || capabilities.has("dental.records.edit")}
         canEditTreatments={admin || capabilities.has("dental.treatments.edit")}
         chart={chart}

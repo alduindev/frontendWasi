@@ -671,6 +671,7 @@ export function OdontogramModal({
   attachmentEntityType = "dental_patient",
   chart,
   canManageConsent = false,
+  canSignDentist = false,
   canEditRecords = admin,
   canEditTreatments = admin,
   close,
@@ -1300,7 +1301,7 @@ export function OdontogramModal({
                 }
                 title="Archivos del paciente"
               />
-              {attachmentEntityType === "dental_patient" ? <DentalConsentPanel canManage={canManageConsent} canAdminister={admin} patient={patient} preparedByName={preparedByName} /> : null}
+              {attachmentEntityType === "dental_patient" ? <DentalConsentPanel canManage={canManageConsent} canAdminister={admin} canSignDentist={canSignDentist} patient={patient} preparedByName={preparedByName} /> : null}
             </div>
           ) : null}
 
@@ -1979,7 +1980,8 @@ export default function DentalWorkspace({ operator = false }) {
         {modal === "odontogram" && patient ? (
           <OdontogramModal
             admin={admin}
-            canManageConsent={dentist}
+            canManageConsent={admin || dentist}
+            canSignDentist={dentist}
             canEditRecords={canEditRecords}
             canEditTreatments={canEditTreatments}
             chart={chart}

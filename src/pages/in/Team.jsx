@@ -918,6 +918,7 @@ function DentalStaffDetailModal({ attendanceItem, onClose, user }) {
       {selectedPatient ? (
         <OdontogramModal
           admin
+          canManageConsent
           chart={selectedPatient.chart}
           close={() => setSelectedPatient(null)}
           exporting={exporting}

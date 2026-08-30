@@ -466,7 +466,8 @@ export default function HealthWorkspace({ operator = false }) {
         <OdontogramModal
           admin={admin}
           attachmentEntityType={patientAttachmentType}
-          canManageConsent={dentist}
+          canManageConsent={admin || dentist}
+          canSignDentist={dentist}
           canEditRecords={canAttention}
           canEditTreatments={admin || capabilities.has("dental.treatments.edit")}
           chart={chart}

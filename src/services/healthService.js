@@ -45,6 +45,8 @@ export const getDentalConsents=id=>apiRequest(`/health/dental/consents?patient_i
 export const startDentalConsent=data=>apiRequest('/health/dental/consents',json('POST',data))
 export const renewDentalConsentQr=id=>apiRequest(`/health/dental/consents/${id}/qr`,json('POST',{}))
 export const downloadDentalConsent=id=>apiDownload(`/health/dental/consents/${id}/document`)
+export const previewDentalConsent=id=>apiBlob(`/health/dental/consents/${id}/document`)
+export const signDentalConsent=data=>apiRequest(`/health/dental/consents/${data.id}/dentist-sign`,json('POST',{signatureDataUrl:data.signatureDataUrl,accepted:true}))
 export const deleteDentalConsent=id=>apiRequest(`/health/dental/consents/${id}`,{method:'DELETE'})
 export const voidDentalConsent=(id,reason)=>apiRequest(`/health/dental/consents/${id}/void`,json('POST',{reason}))
 export const lookupPublicDentalConsent=data=>apiRequest('/health/dental/consents/public/lookup',json('POST',data))

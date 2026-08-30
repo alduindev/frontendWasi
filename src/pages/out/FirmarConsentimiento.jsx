@@ -205,7 +205,7 @@ export default function FirmarConsentimiento() {
 
           {invalid ? <div className="space-y-4 text-center"><span className="material-symbols-outlined text-6xl text-error">qr_code_2</span><h2 className="text-xl font-bold">Código no disponible</h2><p className="mx-auto max-w-md text-sm leading-6 text-on-surface-variant">{error || "Escanea un nuevo QR desde el consultorio. Los códigos tienen un tiempo limitado y solo se pueden usar una vez."}</p></div> : null}
 
-          {pageStatus === "success" ? <div className="space-y-4 py-8 text-center"><span className="material-symbols-outlined text-6xl text-emerald-600">verified</span><h2 className="text-2xl font-bold">Firma registrada</h2><p className="mx-auto max-w-md text-sm leading-6 text-on-surface-variant">El PDF oficial ya incluye los datos declarados y la firma. El consultorio puede descargarlo desde tu expediente.</p></div> : null}
+          {pageStatus === "success" ? <div className="space-y-4 py-8 text-center"><span className="material-symbols-outlined text-6xl text-emerald-600">verified</span><h2 className="text-2xl font-bold">Firma del paciente registrada</h2><p className="mx-auto max-w-md text-sm leading-6 text-on-surface-variant">Tus datos y tu firma ya están guardados. El odontólogo agregará su firma clínica desde el expediente para completar el consentimiento.</p></div> : null}
 
           {pageStatus === "ready" && consent ? (
             <form className="space-y-5" onSubmit={sign}>
