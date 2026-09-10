@@ -1,7 +1,10 @@
 import { apiRequest } from '../api/httpClient'
 export const getPlatformDashboard = () => apiRequest('/platform/dashboard')
-export const getPlatformBusinesses = () => apiRequest('/platform/businesses')
+export const getPlatformBusinesses = (includeArchived = false) => apiRequest(`/platform/businesses${includeArchived ? '?includeArchived=true' : ''}`)
 export const setBusinessStatus = (id, status) => apiRequest(`/platform/businesses/${id}/status?status=${status}`, { method: 'POST' })
+export const archiveBusiness = (id) => apiRequest(`/platform/businesses/${id}/archive`, { method: 'POST' })
+export const restoreBusiness = (id) => apiRequest(`/platform/businesses/${id}/restore`, { method: 'POST' })
+export const deleteBusiness = (id) => apiRequest(`/platform/businesses/${id}`, { method: 'DELETE' })
 export const getPlatformBusiness = (id) => apiRequest(`/platform/businesses/${id}`)
 export const resetPlatformUserPassword = (businessId, userId, reason) => apiRequest(`/platform/businesses/${businessId}/users/${userId}/password-reset`, {
   method: 'POST',

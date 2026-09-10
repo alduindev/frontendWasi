@@ -15,12 +15,21 @@ import {
   updatePlatformPlan,
 } from "../../services/platformService";
 import SubscriptionDiagnostics from "../../components/platform/SubscriptionDiagnostics";
+import { getSubscriptionEndDate } from "../../utils/subscriptionTiming";
 
 const field = "min-h-11 rounded-xl border border-outline-variant bg-white px-3";
 const money = (value, currency = "PEN") =>
   new Intl.NumberFormat("es-PE", { style: "currency", currency }).format(
     Number(value || 0),
   );
+const dateTimeFormatter = new Intl.DateTimeFormat("es-PE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const formatSubscriptionEnd = (subscription) => {
+  const date = getSubscriptionEndDate(subscription);
+  return date ? dateTimeFormatter.format(date) : "Sin fecha registrada";
+};
 const blank = {
   code: "",
   name: "",
@@ -785,6 +794,12 @@ export default function PlatformBilling() {
                     <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-primary">
                       {x.diagnostics?.statusLabel || x.status}
                     </span>
+                  </div>
+                  <div className="mt-4 rounded-xl bg-primary-fixed px-4 py-3 text-primary">
+                    <span className="block text-xs font-bold uppercase tracking-wide">
+                      Finaliza la suscripción
+                    </span>
+                    <b className="mt-1 block text-sm">{formatSubscriptionEnd(x)}</b>
                   </div>
                   <div className="mt-4 flex flex-wrap items-end gap-2">
                     <button

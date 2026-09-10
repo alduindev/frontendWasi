@@ -39,6 +39,17 @@ const eventLabels = {
   platform_subscription_updated: "Suscripción editada por Plataforma",
 };
 
+const eventDescriptions = {
+  subscription_created: "Se creó la suscripción y comenzó el ciclo inicial del negocio.",
+  payment_succeeded: "Se confirmó un pago y se inició un nuevo periodo de servicio.",
+  platform_plan_assigned: "Plataforma asignó un plan y actualizó el acceso del negocio.",
+  platform_subscription_reactivated: "Plataforma reactivó el acceso y abrió un nuevo periodo.",
+  platform_subscription_status_changed: "Plataforma modificó el estado operativo de la suscripción.",
+  platform_subscription_updated: "Plataforma actualizó el plan, ciclo o fechas de la suscripción.",
+  cancellation_scheduled: "El negocio solicitó cancelar al finalizar el periodo actual.",
+  cancellation_revoked: "Se retiró la cancelación programada del periodo.",
+};
+
 const dateFormatter = new Intl.DateTimeFormat("es-PE", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -57,6 +68,23 @@ const formatDate = (value) => {
 
 const eventLabel = (value) =>
   eventLabels[value] || String(value || "sin evento").replaceAll("_", " ");
+
+const statusLabel = (value) => statusLabels[value] || String(value || "sin estado").replaceAll("_", " ");
+
+function eventDetails(event) {
+  const metadata = event.metadata || {};
+  const details = [];
+  if (metadata.plan) details.push(`Plan asignado: ${metadata.plan}`);
+  if (metadata.previousPlan) details.push(`Plan anterior: ${metadata.previousPlan}`);
+  if (metadata.billingInterval) {
+    details.push(`Facturación: ${metadata.billingInterval === "annual" ? "anual" : "mensual"}`);
+  }
+  if (metadata.trialEndsAt) details.push(`Fin de prueba: ${formatDate(metadata.trialEndsAt)}`);
+  if (metadata.currentPeriodEnd) details.push(`Fin del periodo: ${formatDate(metadata.currentPeriodEnd)}`);
+  if (metadata.accessUntil) details.push(`Acceso hasta: ${formatDate(metadata.accessUntil)}`);
+  if (metadata.reason) details.push(`Motivo: ${metadata.reason}`);
+  return details;
+}
 
 function HistoryColumn({ children, empty, title }) {
   return (
@@ -96,22 +124,32 @@ export default function SubscriptionDiagnostics({ subscription }) {
     ["Cancelada", subscription.canceledAt],
     ["Vencimiento histórico", subscription.expiresAt],
   ].filter(([, value]) => Boolean(value));
-  const events = (subscription.events || []).slice(0, 5).map((event) => (
-    <li className="border-b border-outline-variant pb-2 last:border-0 last:pb-0" key={event.id}>
-      <b className="capitalize">{eventLabel(event.eventType)}</b>
-      <span className="block text-on-surface-variant">{formatDate(event.createdAt)}</span>
-      {event.fromStatus || event.toStatus ? (
-        <span className="block text-on-surface-variant">
-          {event.fromStatus || "sin estado"} → {event.toStatus || "sin estado"}
-        </span>
-      ) : null}
-      {event.metadata?.reason || event.metadata?.plan ? (
-        <span className="block text-on-surface-variant">
-          {event.metadata.reason || `Plan ${event.metadata.plan}`}
-        </span>
-      ) : null}
-    </li>
-  ));
+  const events = (subscription.events || []).slice(0, 5).map((event) => {
+    const details = eventDetails(event);
+    return (
+      <li className="border-b border-outline-variant pb-3 last:border-0 last:pb-0" key={event.id}>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <b>{eventLabel(event.eventType)}</b>
+            <span className="block text-on-surface-variant">{formatDate(event.createdAt)}</span>
+          </div>
+          {event.fromStatus || event.toStatus ? (
+            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-primary">
+              {statusLabel(event.fromStatus)} → {statusLabel(event.toStatus)}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-2 text-on-surface-variant">
+          {eventDescriptions[event.eventType] || "Se registró un cambio en la suscripción."}
+        </p>
+        {details.length ? (
+          <ul className="mt-2 grid gap-1 text-on-surface-variant">
+            {details.map((detail) => <li key={detail}>{detail}</li>)}
+          </ul>
+        ) : null}
+      </li>
+    );
+  });
   const payments = (subscription.payments || []).slice(0, 5).map((payment) => (
     <li className="border-b border-outline-variant pb-2 last:border-0 last:pb-0" key={payment.id}>
       <b>{money(payment.amount, payment.currency)}</b>

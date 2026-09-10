@@ -6,17 +6,21 @@ import { formatCurrency } from "../../data/dashboard";
 import {
   changeBusinessPlan,
   changeBusinessType,
+  archiveBusiness,
+  deleteBusiness,
   getPlans,
   getPlatformBusiness,
   getPlatformBusinesses,
   getPlatformDashboard,
   resetPlatformUserPassword,
+  restoreBusiness,
   setBusinessStatus,
 } from "../../services/platformService";
 import { getPlatformBusinessTypes } from "../../services/businessTypeService";
 import { getMedicalServiceTypes } from "../../services/medicalServiceTypeService";
 import AdminPasswordResetModal from "../../components/credentials/AdminPasswordResetModal";
 import SubscriptionDiagnostics from "../../components/platform/SubscriptionDiagnostics";
+import Modal from "../../components/ui/Modal";
 
 const nav = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard SaaS" },
@@ -30,6 +34,7 @@ const statusTone = {
   trial: "bg-blue-100 text-blue-800",
   suspended: "bg-error-container text-on-error-container",
   expired: "bg-amber-100 text-amber-900",
+  archived: "bg-surface-container-high text-on-surface-variant",
 };
 function Metric({ icon, label, value, note }) {
   return (
@@ -290,6 +295,83 @@ function BusinessTypeChanger({ business, onChanged }) {
   );
 }
 
+function ArchiveBusinessModal({ business, onClose, onConfirm, saving }) {
+  if (!business) return null;
+
+  return (
+    <Modal onClose={onClose} overlayClassName="!z-[250]" title="Archivar empresa">
+      <div className="p-5 sm:p-6">
+        <p className="text-sm leading-6 text-on-surface-variant">
+          {business.name} dejará de aparecer en la lista principal y sus usuarios no podrán iniciar sesión. Sus ventas, suscripciones e historial se conservarán y podrás restaurarla después.
+        </p>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-bold text-on-surface-variant"
+            disabled={saving}
+            onClick={onClose}
+            type="button"
+          >
+            Cancelar
+          </button>
+          <button
+            className="min-h-11 rounded-xl bg-error px-4 text-sm font-bold text-white disabled:opacity-50"
+            disabled={saving}
+            onClick={onConfirm}
+            type="button"
+          >
+            {saving ? "Archivando..." : "Archivar empresa"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function DeleteBusinessModal({ business, onClose, onConfirm, saving }) {
+  const [confirmation, setConfirmation] = useState("");
+  const canDelete = confirmation.trim() === business?.name?.trim();
+
+  if (!business) return null;
+
+  return (
+    <Modal onClose={onClose} overlayClassName="!z-[250]" title="Eliminar empresa permanentemente">
+      <div className="p-5 sm:p-6">
+        <p className="text-sm leading-6 text-on-surface-variant">
+          Esta acción eliminará de forma irreversible a <b>{business.name}</b>, sus usuarios, ventas, suscripción, historial y archivos adjuntos. No podrás restaurarla.
+        </p>
+        <label className="mt-5 grid gap-1 text-sm font-bold">
+          Escribe el nombre exacto para confirmar
+          <input
+            autoFocus
+            className="min-h-11 rounded-xl border border-outline-variant px-3"
+            onChange={(event) => setConfirmation(event.target.value)}
+            placeholder={business.name}
+            value={confirmation}
+          />
+        </label>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-bold text-on-surface-variant"
+            disabled={saving}
+            onClick={onClose}
+            type="button"
+          >
+            Cancelar
+          </button>
+          <button
+            className="min-h-11 rounded-xl bg-error px-4 text-sm font-bold text-white disabled:opacity-50"
+            disabled={!canDelete || saving}
+            onClick={onConfirm}
+            type="button"
+          >
+            {saving ? "Eliminando..." : "Eliminar permanentemente"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function PlatformDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -299,15 +381,20 @@ export default function PlatformDashboard() {
   const [plans, setPlans] = useState([]);
   const [detail, setDetail] = useState(null);
   const [passwordResetUser, setPasswordResetUser] = useState(null);
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [archiveSaving, setArchiveSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [menu, setMenu] = useState(false);
   const load = useCallback(async () => {
     setError("");
     try {
       const [summary, list, availablePlans] = await Promise.all([
         getPlatformDashboard(),
-        getPlatformBusinesses(),
+        getPlatformBusinesses(showArchived),
         getPlans(),
       ]);
       setData(summary);
@@ -316,7 +403,7 @@ export default function PlatformDashboard() {
     } catch (e) {
       setError(e.message);
     }
-  }, []);
+  }, [showArchived]);
   useEffect(() => {
     queueMicrotask(load);
   }, [load]);
@@ -351,6 +438,46 @@ export default function PlatformDashboard() {
     await setBusinessStatus(id, value);
     await load();
     if (detail?.business?.id === id) await open(id);
+  };
+  const archive = async () => {
+    if (!archiveTarget) return;
+    setArchiveSaving(true);
+    setError("");
+    try {
+      await archiveBusiness(archiveTarget.id);
+      setArchiveTarget(null);
+      setDetail(null);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setArchiveSaving(false);
+    }
+  };
+  const restore = async (id) => {
+    if (!id) return;
+    try {
+      await restoreBusiness(id);
+      await load();
+      if (detail?.business?.id === id) await open(id);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const permanentlyDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteSaving(true);
+    setError("");
+    try {
+      await deleteBusiness(deleteTarget.id);
+      setDeleteTarget(null);
+      setDetail(null);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDeleteSaving(false);
+    }
   };
   const plan = async (code) => {
     const businessId = detail?.business?.id;
@@ -529,9 +656,19 @@ export default function PlatformDashboard() {
         {section === "businesses" ? (
           <section className="mt-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-on-surface-variant">
-                {businesses.length} empresas registradas
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-on-surface-variant">
+                  {businesses.length} empresas visibles
+                </p>
+                <label className="flex items-center gap-2 text-sm font-bold text-on-surface-variant">
+                  <input
+                    checked={showArchived}
+                    onChange={(event) => setShowArchived(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Mostrar archivadas
+                </label>
+              </div>
               <input
                 className="min-h-11 rounded-xl border border-outline-variant bg-white px-3 outline-none focus:border-primary"
                 onChange={(e) => setQuery(e.target.value)}
@@ -566,6 +703,11 @@ export default function PlatformDashboard() {
                   <p className="mt-3 text-xs text-on-surface-variant">
                     Registrada {new Date(x.createdAt).toLocaleDateString()}
                   </p>
+                  {x.archivedAt ? (
+                    <p className="mt-1 text-xs font-bold text-on-surface-variant">
+                      Archivada {new Date(x.archivedAt).toLocaleDateString()}
+                    </p>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -714,23 +856,49 @@ export default function PlatformDashboard() {
                   Usuarios y accesos
                 </h3>
                 <div className="flex gap-2">
-                  {detail.business.status === "suspended" ? (
+                  {detail.business.archivedAt ? (
                     <button
                       className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white"
-                      onClick={() => status(detail.business.id, "active")}
+                      onClick={() => restore(detail.business.id)}
                       type="button"
                     >
-                      Restaurar
+                      Restaurar empresa
                     </button>
                   ) : (
-                    <button
-                      className="rounded-xl border border-error px-3 py-2 text-sm font-bold text-error"
-                      onClick={() => status(detail.business.id, "suspended")}
-                      type="button"
-                    >
-                      Suspender
-                    </button>
+                    <>
+                      {detail.business.status === "suspended" ? (
+                        <button
+                          className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white"
+                          onClick={() => status(detail.business.id, "active")}
+                          type="button"
+                        >
+                          Restaurar
+                        </button>
+                      ) : (
+                        <button
+                          className="rounded-xl border border-error px-3 py-2 text-sm font-bold text-error"
+                          onClick={() => status(detail.business.id, "suspended")}
+                          type="button"
+                        >
+                          Suspender
+                        </button>
+                      )}
+                      <button
+                        className="rounded-xl border border-error px-3 py-2 text-sm font-bold text-error"
+                        onClick={() => setArchiveTarget(detail.business)}
+                        type="button"
+                      >
+                        Archivar empresa
+                      </button>
+                    </>
                   )}
+                  <button
+                    className="rounded-xl border border-error px-3 py-2 text-sm font-bold text-error"
+                    onClick={() => setDeleteTarget(detail.business)}
+                    type="button"
+                  >
+                    Eliminar permanentemente
+                  </button>
                 </div>
               </div>
               <div className="mt-3 grid gap-2">
@@ -808,6 +976,22 @@ export default function PlatformDashboard() {
             return result;
           }}
           target={passwordResetUser}
+        />
+      ) : null}
+      {archiveTarget ? (
+        <ArchiveBusinessModal
+          business={archiveTarget}
+          onClose={() => setArchiveTarget(null)}
+          onConfirm={archive}
+          saving={archiveSaving}
+        />
+      ) : null}
+      {deleteTarget ? (
+        <DeleteBusinessModal
+          business={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={permanentlyDelete}
+          saving={deleteSaving}
         />
       ) : null}
     </div>
