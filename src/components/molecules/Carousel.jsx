@@ -7,7 +7,7 @@ function handleHorizontalWheel(event) {
   event.currentTarget.scrollLeft += event.deltaY
 }
 
-export default function Carousel({ ariaLabel, autoPlay = false, autoPlayInterval = 5500, children, className = '', forceMotion = false, fullWidth = false, gridClassName = '', itemClassName = '', items = [], loop = false, showIndicators = true, viewportClassName = '' }) {
+export default function Carousel({ ariaLabel, autoPlay = false, autoPlayInterval = 5500, children, className = '', controlsOnly = false, forceMotion = false, fullWidth = false, gridClassName = '', itemClassName = '', items = [], loop = false, showIndicators = true, viewportClassName = '' }) {
   const { t } = useI18n()
   const viewportRef = useRef(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -121,9 +121,9 @@ export default function Carousel({ ariaLabel, autoPlay = false, autoPlayInterval
 
       <div
         aria-label={ariaLabel}
-        className={`${fullWidth ? 'carousel-fullwidth-viewport mx-0 h-full overflow-hidden px-0 pb-0' : 'interactive-scroll min-w-0 max-w-full -mx-4 px-4 sm:mx-0 sm:px-12 snap-x snap-mandatory overflow-x-auto pb-2'} ${viewportClassName}`}
+        className={`${fullWidth ? 'carousel-fullwidth-viewport mx-0 h-full overflow-hidden px-0 pb-0' : controlsOnly ? 'carousel-controls-only min-w-0 max-w-full -mx-4 px-4 sm:mx-0 sm:px-12 overflow-hidden pb-2' : 'interactive-scroll min-w-0 max-w-full -mx-4 px-4 sm:mx-0 sm:px-12 snap-x snap-mandatory overflow-x-auto pb-2'} ${viewportClassName}`}
         onScroll={fullWidth ? undefined : updateIndex}
-        onWheel={fullWidth ? undefined : handleHorizontalWheel}
+        onWheel={fullWidth || controlsOnly ? undefined : handleHorizontalWheel}
         ref={viewportRef}
         role="region"
       >

@@ -847,6 +847,17 @@ div:has(> .wasi-page-scroller[aria-label="Acciones rápidas dentales"]) + p {
   width: 0;
 }
 
+.carousel-controls-only {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.carousel-controls-only::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
 .carousel-fullwidth-track {
   transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;

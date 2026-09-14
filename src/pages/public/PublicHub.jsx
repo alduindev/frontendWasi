@@ -40,5 +40,5 @@ export default function PublicHub() {
     window.scrollTo(0, 0);
   }, [activeTab, location.hash, location.pathname, location.search, navigate]);
 
-  return <PublicLayout compactFooter={activeTab === "home"}>{tabs[activeTab]}</PublicLayout>;
+  return <PublicLayout compactFooter homeShell={activeTab === "home"}>{tabs[activeTab]}</PublicLayout>;
 }

@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authStore";
 import WasitaMark from "../ui/WasitaMark";
-
-const links = [
-  ["/features", "Características", "features"],
-  ["/pricing", "Planes", "pricing"],
-  ["/about", "Nosotros", "about"],
-  ["/contact", "Contacto", "contact"],
-  ["/help", "Ayuda", "help"],
-];
-
-const publicTabKeys = new Set(["home", "features", "pricing", "about", "contact", "help"]);
 
 const footerGroups = [
   [
@@ -41,52 +31,24 @@ const footerGroups = [
   ],
 ];
 
-function getActiveTab(pathname, state, search, hash) {
-  const stateTab = state?.publicTab;
-  const queryTab = new URLSearchParams(search).get("tab");
-  const requestedTab = stateTab || queryTab || hash.replace(/^#/, "");
-  if (pathname === "/" && publicTabKeys.has(requestedTab)) return requestedTab;
-
-  const pathMatch = links.find(([path]) => path === pathname);
-  return pathMatch?.[2] || (pathname === "/" ? "home" : "");
-}
-
-function tabHref() {
-  return "/";
-}
-
 function CompactFooter() {
   return (
     <footer className="public-compact-footer shrink-0 border-t border-outline-variant/70 bg-surface-container-lowest px-4 py-2.5 sm:px-6">
       <div className="mx-auto flex min-h-9 max-w-7xl items-center justify-between gap-4 text-xs text-on-surface-variant">
-        <Link aria-label="Ir al inicio de Wasita" className="inline-flex shrink-0 items-center gap-2 font-heading font-extrabold text-primary" to="/">
-          <WasitaMark className="h-7 w-7" />
-        </Link>
-        <span className="inline-flex items-center gap-1.5 font-medium">
-          Creado con amor
-          <span aria-hidden="true" className="material-symbols-outlined text-sm text-primary">favorite</span>
-        </span>
         <span className="shrink-0">© {new Date().getFullYear()} Wasita</span>
       </div>
     </footer>
   );
 }
 
-export default function PublicLayout({ children, compactFooter = false }) {
+export default function PublicLayout({ children, compactFooter = false, homeShell = compactFooter }) {
   const { isAuthenticated, user, logout } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [footerSection, setFooterSection] = useState("");
   const menuButtonRef = useRef(null);
   const drawerRef = useRef(null);
   const drawerCloseButtonRef = useRef(null);
-  const activeTab = getActiveTab(
-    location.pathname,
-    location.state,
-    location.search,
-    location.hash,
-  ) || "home";
   const destination =
     user?.role === "super_admin"
       ? "/platform"
@@ -176,8 +138,8 @@ export default function PublicLayout({ children, compactFooter = false }) {
   }, [open]);
 
   return (
-    <div className={`public-site flex min-h-svh min-w-0 w-full flex-col bg-background text-on-surface ${compactFooter ? "public-home" : ""}`}>
-      <header className={`${compactFooter ? "absolute left-0 right-0" : "sticky"} top-0 z-50 shrink-0 px-3 pt-3 sm:px-4 sm:pt-4`}>
+    <div className={`public-site flex min-h-svh min-w-0 w-full flex-col bg-background text-on-surface ${homeShell ? "public-home" : ""}`}>
+      <header className={`${homeShell ? "absolute left-0 right-0" : "sticky"} top-0 z-50 shrink-0 px-3 pt-3 sm:px-4 sm:pt-4`}>
         <div className="clay-glass mx-auto max-w-7xl rounded-xl px-3 sm:px-4">
           <div className="flex min-h-16 items-center justify-between gap-3">
             <Link
@@ -304,28 +266,7 @@ export default function PublicLayout({ children, compactFooter = false }) {
               className="flex-1 px-6 py-8"
               id="public-mobile-menu"
             >
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-on-surface-variant">Explorar Wasita</p>
-              <div className="mt-4 grid gap-1.5">
-                {links.map(([, label, tab]) => (
-                  <Link
-                    aria-current={activeTab === tab ? "page" : undefined}
-                    className={`flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 text-base font-bold transition ${
-                      activeTab === tab
-                        ? "bg-primary text-white shadow-md shadow-primary/20"
-                        : "text-on-surface hover:bg-primary-fixed hover:text-primary"
-                    }`}
-                    key={tab}
-                    onClick={closeMenu}
-                    state={{ publicTab: tab }}
-                    to={tabHref(tab)}
-                  >
-                    {label}
-                    <span aria-hidden="true" className="material-symbols-outlined text-xl">arrow_forward</span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="mt-8 border-t border-outline-variant/70 pt-6">
+              <div className="flex min-h-[calc(100dvh-6rem)] flex-col justify-center border-t border-outline-variant/70 pt-6">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-on-surface-variant">Acceso</p>
                 <div className="mt-3 grid gap-2">
                 {isAuthenticated ? (
@@ -396,7 +337,7 @@ export default function PublicLayout({ children, compactFooter = false }) {
         </div>
       ) : null}
 
-      <div className={`min-w-0 w-full flex-1 ${compactFooter ? "public-home-content" : ""}`}>{children}</div>
+      <div className={`min-w-0 w-full flex-1 ${homeShell ? "public-home-content" : ""}`}>{children}</div>
 
       {compactFooter ? <CompactFooter /> : <footer
         className="relative mt-10 overflow-hidden px-3 sm:px-4 xl:mt-16"
