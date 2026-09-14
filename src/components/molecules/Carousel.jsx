@@ -15,7 +15,14 @@ export default function Carousel({ ariaLabel, autoPlay = false, autoPlayInterval
 
   const scrollByPage = (direction) => {
     const viewport = viewportRef.current
-    if (!viewport) return
+    if (!viewport && !fullWidth) return
+    if (fullWidth && count > 1) {
+      setActiveIndex((currentIndex) => {
+        if (loop) return (currentIndex + direction + count) % count
+        return Math.min(Math.max(currentIndex + direction, 0), count - 1)
+      })
+      return
+    }
     if (loop && count > 1) {
       const itemWidth = viewport.querySelector('[data-carousel-item]')?.clientWidth || viewport.clientWidth
       const currentIndex = Math.round(viewport.scrollLeft / Math.max(itemWidth, 1))
@@ -42,6 +49,10 @@ export default function Carousel({ ariaLabel, autoPlay = false, autoPlayInterval
     if (reducedMotion && !forceMotion) return undefined
 
     const timer = window.setInterval(() => {
+      if (fullWidth) {
+        setActiveIndex((currentIndex) => (loop ? (currentIndex + 1) % count : Math.min(currentIndex + 1, count - 1)))
+        return
+      }
       const viewport = viewportRef.current
       if (!viewport) return
       const itemWidth = viewport.querySelector('[data-carousel-item]')?.clientWidth || viewport.clientWidth
@@ -111,12 +122,15 @@ export default function Carousel({ ariaLabel, autoPlay = false, autoPlayInterval
       <div
         aria-label={ariaLabel}
         className={`${fullWidth ? 'carousel-fullwidth-viewport mx-0 h-full overflow-hidden px-0 pb-0' : 'interactive-scroll min-w-0 max-w-full -mx-4 px-4 sm:mx-0 sm:px-12 snap-x snap-mandatory overflow-x-auto pb-2'} ${viewportClassName}`}
-        onScroll={updateIndex}
+        onScroll={fullWidth ? undefined : updateIndex}
         onWheel={fullWidth ? undefined : handleHorizontalWheel}
         ref={viewportRef}
         role="region"
       >
-        <div className={`grid min-w-0 ${fullWidth ? 'auto-cols-[100%] h-full gap-0' : 'auto-cols-[minmax(min(230px,calc(100vw-2rem)),1fr)] sm:auto-cols-[minmax(260px,1fr)] lg:auto-cols-[minmax(280px,1fr)] gap-3'} grid-flow-col items-stretch scroll-smooth ${gridClassName}`}>
+        <div
+          className={`grid min-w-0 ${fullWidth ? 'carousel-fullwidth-track auto-cols-[100%] h-full gap-0' : 'auto-cols-[minmax(min(230px,calc(100vw-2rem)),1fr)] sm:auto-cols-[minmax(260px,1fr)] lg:auto-cols-[minmax(280px,1fr)] gap-3'} grid-flow-col items-stretch scroll-smooth ${gridClassName}`}
+          style={fullWidth ? { transform: `translateX(-${activeIndex * 100}%)` } : undefined}
+        >
           {items.length ? items.map((item, index) => (
             <div className={`min-w-0 snap-start ${fullWidth ? 'h-full' : ''} ${itemClassName}`} data-carousel-item key={item.key || index}>
               {item.node}
