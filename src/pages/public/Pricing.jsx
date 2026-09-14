@@ -22,7 +22,7 @@ const Feature = ({ icon = "check_circle", children }) => (
   </li>
 );
 
-export default function Pricing() {
+export default function Pricing({ embedded = false }) {
   const [plans, setPlans] = useState([]);
   const [addons, setAddons] = useState([]);
   const [interval, setInterval] = useState("monthly");
@@ -58,8 +58,7 @@ export default function Pricing() {
       ),
     [plans],
   );
-  return (
-    <PublicLayout>
+  const content = (
       <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <header className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-bold uppercase tracking-[.2em] text-primary">
@@ -242,6 +241,7 @@ export default function Pricing() {
           </section>
         ) : null}
       </main>
-    </PublicLayout>
   );
+
+  return embedded ? content : <PublicLayout>{content}</PublicLayout>;
 }

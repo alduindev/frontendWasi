@@ -2,11 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import IniciarSesion from '../../pages/out/IniciarSesion'
 import Registro from '../../pages/out/Registro'
 import RecuperarContrasena from '../../pages/out/RecuperarContrasena'
-import Landing from '../../pages/public/Landing'
-import Pricing from '../../pages/public/Pricing'
-import PublicInfo from '../../pages/public/PublicInfo'
-import Features from '../../pages/public/Features'
 import Contact from '../../pages/public/Contact'
+import PublicHub from '../../pages/public/PublicHub'
 import ConfirmarQr from '../../pages/out/ConfirmarQr'
 import FirmarConsentimiento from '../../pages/out/FirmarConsentimiento'
 import Legal from '../../pages/public/Legal'
@@ -14,7 +11,7 @@ import Legal from '../../pages/public/Legal'
 export default function RouterOut() {
   return (
     <Routes>
-      <Route index element={<Landing />} />
+      <Route index element={<PublicHub />} />
       <Route path="login" element={<IniciarSesion />} />
       <Route path="qr-login" element={<ConfirmarQr />} />
       <Route path="firmar-consentimiento" element={<FirmarConsentimiento />} />
@@ -22,11 +19,11 @@ export default function RouterOut() {
       <Route path="recover-password" element={<RecuperarContrasena />} />
       <Route path="recuperar-contrasena" element={<Navigate to="/recover-password" replace />} />
       <Route path="registro" element={<Navigate to="/register" replace />} />
-      <Route path="pricing" element={<Pricing />} />
-      <Route path="features" element={<Features />} />
-      <Route path="about" element={<PublicInfo type="about" />} />
-      <Route path="contact" element={<Contact />} />
-      <Route path="help" element={<PublicInfo type="help" />} />
+      <Route path="pricing" element={<Navigate replace state={{ publicTab: "pricing" }} to="/" />} />
+      <Route path="features" element={<Navigate replace state={{ publicTab: "features" }} to="/" />} />
+      <Route path="about" element={<Navigate replace state={{ publicTab: "about" }} to="/" />} />
+      <Route path="contact" element={<Navigate replace state={{ publicTab: "contact" }} to="/" />} />
+      <Route path="help" element={<Navigate replace state={{ publicTab: "help" }} to="/" />} />
       <Route path="terms" element={<Legal type="terms" />} />
       <Route path="privacy" element={<Legal type="privacy" />} />
       <Route path="complaints" element={<Contact complaint />} />

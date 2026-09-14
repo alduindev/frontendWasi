@@ -214,7 +214,7 @@ function SpinnerIcon() {
   );
 }
 
-export default function Contact({ complaint = false }) {
+export default function Contact({ complaint = false, embedded = false }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -264,8 +264,7 @@ export default function Contact({ complaint = false }) {
     }
   };
 
-  return (
-    <PublicLayout>
+  const content = (
       <main className="mx-auto grid max-w-6xl gap-10 px-4 py-20 lg:grid-cols-[.8fr_1.2fr]">
         <div className="animate-[fadeIn_0.4s_ease-out]">
           <p className="text-sm font-bold uppercase tracking-widest text-primary">
@@ -443,6 +442,7 @@ export default function Contact({ complaint = false }) {
           )}
         </section>
       </main>
-    </PublicLayout>
   );
+
+  return embedded ? content : <PublicLayout>{content}</PublicLayout>;
 }

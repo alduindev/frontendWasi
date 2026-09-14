@@ -730,6 +730,165 @@ div:has(> .wasi-page-scroller[aria-label="Acciones rápidas dentales"]) + p {
   pointer-events: none;
 }
 
+.public-site,
+.public-auth,
+.public-consent {
+  --color-primary: #5a64b3;
+  --color-primary-container: #707bc8;
+  --color-primary-fixed: #e9ebfa;
+  --color-primary-fixed-dim: #d0d5f0;
+  --color-on-primary-fixed: #2c356e;
+
+  --color-surface: #fafbfc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f5f6fa;
+  --color-surface-container: #edf0f6;
+  --color-surface-container-high: #e4e7ef;
+  --color-surface-container-highest: #dfe2eb;
+  --color-surface-variant: #e8ebf2;
+  --color-background: #f4f5f9;
+  --color-on-surface: #252938;
+  --color-on-surface-variant: #626878;
+  --color-outline: #8a90a2;
+  --color-outline-variant: #d4d8e2;
+
+  --color-secondary: #8e7cb0;
+  --color-secondary-container: #efe9f7;
+  --color-on-secondary-container: #4c3e5e;
+  --color-tertiary: #9e6b59;
+  --color-tertiary-fixed: #f7e7e0;
+  --color-tertiary-fixed-dim: #ecc5b5;
+  --color-on-tertiary-fixed: #5e2e1e;
+  --color-error: #bd5560;
+  --color-error-container: #fbe4e6;
+  --color-on-error-container: #711f2c;
+
+  --clay-radius-sm: 0.75rem;
+  --clay-radius-md: 1rem;
+  --clay-radius-lg: 1.25rem;
+  --clay-radius-xl: 1.5rem;
+  --clay-shadow-soft:
+    0 8px 24px rgba(70, 78, 112, 0.08),
+    0 1px 2px rgba(70, 78, 112, 0.06);
+  --clay-shadow-card:
+    0 12px 28px rgba(70, 78, 112, 0.1),
+    0 1px 2px rgba(70, 78, 112, 0.06);
+  --clay-shadow-hover:
+    0 16px 32px rgba(70, 78, 112, 0.13),
+    0 2px 4px rgba(70, 78, 112, 0.07);
+  --clay-shadow-primary: 0 8px 18px rgba(90, 100, 179, 0.18);
+  --clay-shadow-inset: inset 0 1px 2px rgba(70, 78, 112, 0.06);
+}
+
+.public-site .clay-card::before {
+  opacity: 0.3;
+  filter: blur(24px);
+}
+
+.public-site .clay-card:hover {
+  transform: translateY(-2px);
+}
+
+.public-site .clay-button-primary:hover,
+.public-site .clay-button-secondary:hover {
+  transform: translateY(-1px);
+  filter: none;
+}
+
+.public-site .clay-button-primary:hover {
+  box-shadow: var(--clay-shadow-primary);
+}
+
+.public-site .clay-button-secondary:hover {
+  box-shadow: var(--clay-shadow-hover);
+}
+
+.public-site .clay-card:hover .clay-icon {
+  box-shadow: var(--clay-shadow-hover);
+}
+
+.public-site .clay-glass {
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--clay-shadow-soft);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.public-site .clay-highlight::after {
+  opacity: 0.55;
+}
+
+.public-home {
+  height: 100svh;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+.public-home-content {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.public-home-content > main {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.carousel-fullwidth-viewport {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.carousel-fullwidth-viewport::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.home-slide {
+  padding-left: max(1.5rem, calc((100vw - 80rem) / 2));
+  padding-right: max(1.5rem, calc((100vw - 80rem) / 2));
+}
+
+.carousel-fullwidth-controls {
+  right: max(1.5rem, calc((100vw - 80rem) / 2 + 1.5rem));
+}
+
+@media (max-width: 640px) {
+  .home-slide {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+@keyframes carousel-autoplay-progress {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: 100;
+  }
+}
+
+.carousel-autoplay-progress {
+  animation: carousel-autoplay-progress linear forwards;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.85));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carousel-autoplay-progress {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .carousel-force-motion .carousel-autoplay-progress {
+    animation: carousel-autoplay-progress linear forwards;
+  }
+}
+
 @media (hover: none) {
   .clay-card:hover,
   .clay-button-primary:hover,

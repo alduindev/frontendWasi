@@ -1,16 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authStore";
 import WasitaMark from "../ui/WasitaMark";
-
-const links = [
-  ["/", "Inicio"],
-  ["/features", "Características"],
-  ["/pricing", "Planes"],
-  ["/about", "Nosotros"],
-  ["/contact", "Contacto"],
-  ["/help", "Ayuda"],
-];
 
 const footerGroups = [
   [
@@ -40,7 +31,24 @@ const footerGroups = [
   ],
 ];
 
-export default function PublicLayout({ children }) {
+function CompactFooter() {
+  return (
+    <footer className="public-compact-footer shrink-0 border-t border-outline-variant/70 bg-surface-container-lowest px-4 py-2.5 sm:px-6">
+      <div className="mx-auto flex min-h-9 max-w-7xl items-center justify-between gap-4 text-xs text-on-surface-variant">
+        <Link aria-label="Ir al inicio de Wasita" className="inline-flex shrink-0 items-center gap-2 font-heading font-extrabold text-primary" to="/">
+          <WasitaMark className="h-7 w-7" />
+        </Link>
+        <span className="inline-flex items-center gap-1.5 font-medium">
+          Creado con amor
+          <span aria-hidden="true" className="material-symbols-outlined text-sm text-primary">favorite</span>
+        </span>
+        <span className="shrink-0">© {new Date().getFullYear()} Wasita</span>
+      </div>
+    </footer>
+  );
+}
+
+export default function PublicLayout({ children, compactFooter = false }) {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -48,7 +56,6 @@ export default function PublicLayout({ children }) {
   const menuButtonRef = useRef(null);
   const drawerRef = useRef(null);
   const drawerCloseButtonRef = useRef(null);
-
   const destination =
     user?.role === "super_admin"
       ? "/platform"
@@ -138,9 +145,9 @@ export default function PublicLayout({ children }) {
   }, [open]);
 
   return (
-    <div className="flex min-h-svh flex-col bg-background text-on-surface">
-      <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
-        <div className="clay-glass mx-auto max-w-7xl rounded-[1.5rem] px-3 sm:px-4">
+    <div className={`public-site flex min-h-svh min-w-0 w-full flex-col bg-background text-on-surface ${compactFooter ? "public-home" : ""}`}>
+      <header className={`${compactFooter ? "absolute left-0 right-0" : "sticky"} top-0 z-50 shrink-0 px-3 pt-3 sm:px-4 sm:pt-4`}>
+        <div className="clay-glass mx-auto max-w-7xl rounded-xl px-3 sm:px-4">
           <div className="flex min-h-16 items-center justify-between gap-3">
             <Link
               aria-label="Ir al inicio de Wasita"
@@ -149,42 +156,9 @@ export default function PublicLayout({ children }) {
               to="/"
             >
               <WasitaMark className="h-11 w-11 shrink-0" />
-
-              <span className="min-w-0">
-                <span className="block truncate font-heading text-xl font-extrabold tracking-tight text-primary sm:text-2xl">
-                  WASITA
-                </span>
-
-                <span className="hidden text-[0.625rem] font-bold uppercase tracking-[0.16em] text-on-surface-variant sm:block">
-                  Gestión inteligente
-                </span>
-              </span>
             </Link>
 
-            <nav
-              aria-label="Navegación principal"
-              className="hidden items-center gap-1 rounded-2xl border border-white/70 bg-surface-container-low/75 p-1.5 shadow-inner xl:flex"
-            >
-              {links.map(([to, label]) => (
-                <NavLink
-                  className={({ isActive }) =>
-                    [
-                      "rounded-xl px-3.5 py-2.5 text-sm font-bold transition-all duration-200",
-                      isActive
-                        ? "bg-primary text-white shadow-md shadow-primary/25"
-                        : "text-on-surface-variant hover:bg-white/80 hover:text-primary",
-                    ].join(" ")
-                  }
-                  end={to === "/"}
-                  key={to}
-                  to={to}
-                >
-                  {label}
-                </NavLink>
-              ))}
-            </nav>
-
-            <div className="hidden items-center gap-2 xl:flex">
+            <div className="hidden items-center justify-self-end gap-2 xl:flex">
               {isAuthenticated ? (
                 <>
                   <Link
@@ -281,16 +255,6 @@ export default function PublicLayout({ children }) {
                 to="/"
               >
                 <WasitaMark className="h-11 w-11 shrink-0" />
-
-                <span className="min-w-0">
-                  <span className="block truncate font-heading text-xl font-extrabold tracking-tight text-primary">
-                    WASITA
-                  </span>
-
-                  <span className="block truncate text-[0.625rem] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                    Gestión inteligente
-                  </span>
-                </span>
               </Link>
 
               <button
@@ -309,34 +273,6 @@ export default function PublicLayout({ children }) {
               className="flex-1 overflow-y-auto overscroll-contain px-4 py-4"
               id="public-mobile-menu"
             >
-              <div className="clay-inset grid gap-1.5 p-2">
-                {links.map(([to, label]) => (
-                  <NavLink
-                    className={({ isActive }) =>
-                      [
-                        "flex min-h-12 items-center justify-between rounded-xl px-4 py-3 font-bold transition",
-                        isActive
-                          ? "bg-primary text-white shadow-md shadow-primary/25"
-                          : "text-on-surface-variant hover:bg-white/75 hover:text-primary",
-                      ].join(" ")
-                    }
-                    end={to === "/"}
-                    key={to}
-                    onClick={closeMenu}
-                    to={to}
-                  >
-                    {label}
-
-                    <span
-                      aria-hidden="true"
-                      className="material-symbols-outlined text-lg"
-                    >
-                      chevron_right
-                    </span>
-                  </NavLink>
-                ))}
-              </div>
-
               <div className="mt-3 grid gap-2">
                 {isAuthenticated ? (
                   <>
@@ -405,9 +341,9 @@ export default function PublicLayout({ children }) {
         </div>
       ) : null}
 
-      <div className="flex-1">{children}</div>
+      <div className={`min-w-0 w-full flex-1 ${compactFooter ? "public-home-content" : ""}`}>{children}</div>
 
-      <footer
+      {compactFooter ? <CompactFooter /> : <footer
         className="relative mt-10 overflow-hidden px-3 sm:px-4 xl:mt-16"
         style={{
           paddingBottom:
@@ -426,16 +362,6 @@ export default function PublicLayout({ children }) {
               to="/"
             >
               <WasitaMark className="h-10 w-10 shrink-0" />
-
-              <span>
-                <span className="block font-heading text-xl font-extrabold tracking-tight text-primary">
-                  WASITA
-                </span>
-
-                <span className="block text-[0.625rem] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                  Gestión inteligente
-                </span>
-              </span>
             </Link>
 
             <p className="mt-3 max-w-xl text-sm leading-6 text-on-surface-variant">
@@ -536,10 +462,6 @@ export default function PublicLayout({ children }) {
                 to="/"
               >
                 <WasitaMark className="h-12 w-12 shrink-0" />
-
-                <span className="font-heading text-2xl font-extrabold tracking-tight text-primary">
-                  WASITA
-                </span>
               </Link>
 
               <p className="mt-5 text-sm leading-7 text-on-surface-variant">
@@ -616,7 +538,7 @@ export default function PublicLayout({ children }) {
             </div>
           </div>
         </div>
-      </footer>
+      </footer>}
     </div>
   );
 }

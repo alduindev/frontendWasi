@@ -396,10 +396,7 @@ function GenericInfoPage({ type }) {
   );
 }
 
-export default function PublicInfo({ type }) {
-  return (
-    <PublicLayout>
-      {type === "about" ? <AboutSection /> : <GenericInfoPage type={type} />}
-    </PublicLayout>
-  );
+export default function PublicInfo({ embedded = false, type }) {
+  const content = type === "about" ? <AboutSection /> : <GenericInfoPage type={type} />;
+  return embedded ? content : <PublicLayout>{content}</PublicLayout>;
 }

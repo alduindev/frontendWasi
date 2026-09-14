@@ -1,0 +1,74 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="window" x1="40" y1="30" x2="1120" y2="730" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9EBF7"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="330" y1="116" x2="770" y2="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C80F5"/>
+      <stop offset="1" stop-color="#5B5FEF"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1200" height="760" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#8D93B7" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect x="20" y="20" width="1160" height="720" rx="34" fill="url(#window)" stroke="#FFFFFF" stroke-width="3" filter="url(#shadow)"/>
+  <rect x="48" y="48" width="220" height="664" rx="24" fill="#FFFFFF" stroke="#DFE2F2" stroke-width="2"/>
+  <circle cx="84" cy="88" r="18" fill="#5B5FEF"/>
+  <path d="M77 96V80L84 76L91 80V96L84 100L77 96Z" fill="white"/>
+  <rect x="114" y="78" width="92" height="10" rx="5" fill="#5B5FEF"/>
+  <rect x="114" y="96" width="64" height="7" rx="3.5" fill="#CFD3E5"/>
+  <rect x="68" y="148" width="180" height="48" rx="14" fill="#5B5FEF"/>
+  <circle cx="92" cy="172" r="10" fill="#FFFFFF" fill-opacity="0.9"/>
+  <path d="M88 172L92 168L96 172L92 176L88 172Z" fill="#5B5FEF"/>
+  <rect x="114" y="167" width="72" height="9" rx="4.5" fill="#FFFFFF"/>
+  <g opacity="0.68">
+    <circle cx="92" cy="232" r="10" fill="#C9CBFF"/><rect x="114" y="227" width="84" height="9" rx="4.5" fill="#7D8199"/>
+    <circle cx="92" cy="284" r="10" fill="#EEDCFF"/><rect x="114" y="279" width="76" height="9" rx="4.5" fill="#7D8199"/>
+    <circle cx="92" cy="336" r="10" fill="#FFE0D4"/><rect x="114" y="331" width="92" height="9" rx="4.5" fill="#7D8199"/>
+    <circle cx="92" cy="388" r="10" fill="#C9CBFF"/><rect x="114" y="383" width="66" height="9" rx="4.5" fill="#7D8199"/>
+  </g>
+  <rect x="68" y="644" width="180" height="44" rx="14" fill="#EEF0FC"/>
+  <circle cx="92" cy="666" r="13" fill="#AA563B" fill-opacity="0.22"/>
+  <rect x="114" y="658" width="70" height="8" rx="4" fill="#5C6078"/>
+  <rect x="114" y="674" width="48" height="6" rx="3" fill="#CFD3E5"/>
+  <rect x="300" y="48" width="852" height="52" rx="18" fill="#FFFFFF" stroke="#DFE2F2" stroke-width="2"/>
+  <circle cx="334" cy="74" r="11" fill="#EEF0FC"/>
+  <path d="M330 74H338M334 70V78" stroke="#5B5FEF" stroke-width="2" stroke-linecap="round"/>
+  <rect x="364" y="68" width="220" height="12" rx="6" fill="#EEF0FC"/>
+  <circle cx="1082" cy="74" r="14" fill="#C9CBFF"/>
+  <rect x="1107" y="66" width="26" height="16" rx="8" fill="#5B5FEF" fill-opacity="0.16"/>
+  <rect x="300" y="124" width="852" height="206" rx="24" fill="url(#primary)"/>
+  <text x="332" y="166" fill="#E7E8FF" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2">EXECUTIVE SUMMARY</text>
+  <text x="332" y="216" fill="white" font-family="Arial, sans-serif" font-size="34" font-weight="700">Operación en orden</text>
+  <text x="332" y="248" fill="#E7E8FF" font-family="Arial, sans-serif" font-size="16">Inventario, ventas y equipo en una sola vista.</text>
+  <rect x="332" y="278" width="300" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.25"/>
+  <rect x="332" y="278" width="222" height="10" rx="5" fill="white"/>
+  <text x="1090" y="286" fill="white" font-family="Arial, sans-serif" font-size="15" font-weight="700">74%</text>
+  <circle cx="1068" cy="178" r="34" fill="#FFFFFF" fill-opacity="0.18"/>
+  <path d="M1052 194V166L1062 172L1072 158L1084 166" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g>
+    <rect x="300" y="354" width="268" height="134" rx="22" fill="#FFFFFF" stroke="#DFE2F2" stroke-width="2"/>
+    <circle cx="338" cy="394" r="18" fill="#E7E8FF"/><path d="M328 402H348M332 398V388H344V398" stroke="#5B5FEF" stroke-width="3" stroke-linecap="round"/>
+    <text x="374" y="390" fill="#5C6078" font-family="Arial, sans-serif" font-size="14">Productos</text>
+    <text x="374" y="428" fill="#202238" font-family="Arial, sans-serif" font-size="28" font-weight="700">1,248</text>
+    <rect x="326" y="456" width="152" height="8" rx="4" fill="#E7E9F6"/><rect x="326" y="456" width="110" height="8" rx="4" fill="#7C80F5"/>
+  </g>
+  <g>
+    <rect x="584" y="354" width="268" height="134" rx="22" fill="#FFFFFF" stroke="#DFE2F2" stroke-width="2"/>
+    <circle cx="622" cy="394" r="18" fill="#EEDCFF"/><path d="M613 401H631M616 397V387H628V397M610 404H634" stroke="#9258D6" stroke-width="3" stroke-linecap="round"/>
+    <text x="658" y="390" fill="#5C6078" font-family="Arial, sans-serif" font-size="14">Ventas hoy</text>
+    <text x="658" y="428" fill="#202238" font-family="Arial, sans-serif" font-size="28" font-weight="700">S/ 8,420</text>
+    <rect x="610" y="456" width="152" height="8" rx="4" fill="#E7E9F6"/><rect x="610" y="456" width="126" height="8" rx="4" fill="#9258D6"/>
+  </g>
+  <rect x="868" y="354" width="284" height="134" rx="22" fill="#FFFFFF" stroke="#DFE2F2" stroke-width="2"/>
+  <text x="900" y="390" fill="#5C6078" font-family="Arial, sans-serif" font-size="14">Alertas de stock</text>
+  <text x="900" y="434" fill="#202238" font-family="Arial, sans-serif" font-size="30" font-weight="700">12</text>
+  <rect x="1000" y="412" width="114" height="36" rx="18" fill="#FFE0D4"/><text x="1021" y="435" fill="#AA563B" font-family="Arial, sans-serif" font-size="14" font-weight="700">Revisar</text>
+  <rect x="300" y="512" width="852" height="200" rx="24" fill="#FFFFFF" stroke="#DFE2F2" stroke-width="2"/>
+  <text x="332" y="550" fill="#202238" font-family="Arial, sans-serif" font-size="17" font-weight="700">Actividad de la semana</text>
+  <text x="332" y="576" fill="#7D8199" font-family="Arial, sans-serif" font-size="13">Ventas comparadas con el periodo anterior</text>
+  <path d="M350 674C412 630 450 652 504 614C562 572 594 638 650 596C706 554 746 616 806 574C866 532 906 584 958 548C1014 510 1066 548 1112 530" stroke="#5B5FEF" stroke-width="5" stroke-linecap="round"/>
+  <path d="M350 674C412 630 450 652 504 614C562 572 594 638 650 596C706 554 746 616 806 574C866 532 906 584 958 548C1014 510 1066 548 1112 530V684H350V674Z" fill="#E7E8FF" fill-opacity="0.5"/>
+  <g fill="#CFD3E5"><rect x="350" y="690" width="44" height="5" rx="2.5"/><rect x="480" y="690" width="44" height="5" rx="2.5"/><rect x="610" y="690" width="44" height="5" rx="2.5"/><rect x="740" y="690" width="44" height="5" rx="2.5"/><rect x="870" y="690" width="44" height="5" rx="2.5"/><rect x="1000" y="690" width="44" height="5" rx="2.5"/></g>
+</svg>

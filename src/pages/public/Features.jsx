@@ -416,7 +416,7 @@ const modalTabs = [
   },
 ];
 
-export default function Features() {
+export default function Features({ embedded = false }) {
   const carouselRef = useRef(null);
 
   const dragStateRef = useRef({
@@ -597,8 +597,8 @@ export default function Features() {
     };
   }, [selectedFeature]);
 
-  return (
-    <PublicLayout>
+  const content = (
+    <>
       <main className="relative overflow-hidden text-on-surface">
         <div className="pointer-events-none absolute -left-32 top-20 h-80 w-80 rounded-full bg-primary-fixed-dim/30 blur-3xl" />
 
@@ -612,57 +612,70 @@ export default function Features() {
 
             <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-secondary-container/55 blur-3xl" />
 
-            <div className="relative z-10 max-w-3xl">
-              <span className="clay-badge px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em]">
-                <span
-                  aria-hidden="true"
-                  className="material-symbols-outlined text-base text-primary"
-                >
-                  widgets
-                </span>
-                Características
-              </span>
-
-              <h1 className="mt-7 font-heading text-4xl font-extrabold leading-tight tracking-tight text-on-surface sm:text-5xl lg:text-6xl">
-                Una plataforma para operar y crecer
-              </h1>
-
-              <p className="mt-6 max-w-2xl text-base leading-8 text-on-surface-variant sm:text-lg">
-                Descubre cada módulo sin sobrecargar la pantalla. Filtra por
-                categoría, desliza las tarjetas y consulta todos los detalles
-                dentro de una ventana organizada.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <span className="clay-badge px-4 py-2.5 text-sm font-bold">
+            <div className="relative z-10 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+              <div className="max-w-3xl">
+                <span className="clay-badge px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em]">
                   <span
                     aria-hidden="true"
-                    className="material-symbols-outlined text-lg text-primary"
+                    className="material-symbols-outlined text-base text-primary"
                   >
-                    swipe
+                    widgets
                   </span>
-                  Carrusel deslizable
+                  Características
                 </span>
 
-                <span className="clay-badge px-4 py-2.5 text-sm font-bold">
-                  <span
-                    aria-hidden="true"
-                    className="material-symbols-outlined text-lg text-primary"
-                  >
-                    tab
-                  </span>
-                  Contenido organizado
-                </span>
+                <h1 className="mt-7 font-heading text-4xl font-extrabold leading-tight tracking-tight text-on-surface sm:text-5xl lg:text-6xl">
+                  Una plataforma para operar y crecer
+                </h1>
 
-                <span className="clay-badge px-4 py-2.5 text-sm font-bold">
-                  <span
-                    aria-hidden="true"
-                    className="material-symbols-outlined text-lg text-primary"
-                  >
-                    open_in_new
+                <p className="mt-6 max-w-2xl text-base leading-8 text-on-surface-variant sm:text-lg">
+                  Descubre cada módulo sin sobrecargar la pantalla. Filtra por
+                  categoría, desliza las tarjetas y consulta todos los detalles
+                  dentro de una ventana organizada.
+                </p>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <span className="clay-badge px-4 py-2.5 text-sm font-bold">
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-outlined text-lg text-primary"
+                    >
+                      swipe
+                    </span>
+                    Carrusel deslizable
                   </span>
-                  Detalles por módulo
-                </span>
+
+                  <span className="clay-badge px-4 py-2.5 text-sm font-bold">
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-outlined text-lg text-primary"
+                    >
+                      tab
+                    </span>
+                    Contenido organizado
+                  </span>
+
+                  <span className="clay-badge px-4 py-2.5 text-sm font-bold">
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-outlined text-lg text-primary"
+                    >
+                      open_in_new
+                    </span>
+                    Detalles por módulo
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/65 p-2 shadow-xl shadow-primary/10">
+                <img
+                  alt="Vista de inventario y acciones rápidas de Wasita"
+                  className="h-auto w-full rounded-[1.35rem]"
+                  height="760"
+                  loading="lazy"
+                  src="/wasita-operations-preview.svg"
+                  width="1200"
+                />
               </div>
             </div>
           </section>
@@ -1242,6 +1255,8 @@ export default function Features() {
           </div>
         </div>
       ) : null}
-    </PublicLayout>
+    </>
   );
+
+  return embedded ? content : <PublicLayout>{content}</PublicLayout>;
 }
