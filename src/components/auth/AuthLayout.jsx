@@ -79,7 +79,7 @@ export default function AuthLayout({
           </div>
         </section>
 
-        <section className="flex min-h-full items-center justify-center px-4 py-7 sm:px-8 lg:px-14">
+        <section className="flex min-h-full items-start justify-center px-4 py-5 sm:items-center sm:px-8 sm:py-7 lg:px-14">
           <div className="w-full max-w-[430px]">
             <div className="mb-7 flex items-center justify-between gap-3 lg:hidden">
               <Link aria-label="Volver al inicio de Wasita" className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" to="/"><BrandLogo compact markOnly /></Link>

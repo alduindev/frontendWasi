@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authStore";
 import WasitaMark from "../ui/WasitaMark";
+
+const links = [
+  ["/features", "Características", "features"],
+  ["/pricing", "Planes", "pricing"],
+  ["/about", "Nosotros", "about"],
+  ["/contact", "Contacto", "contact"],
+  ["/help", "Ayuda", "help"],
+];
+
+const publicTabKeys = new Set(["home", "features", "pricing", "about", "contact", "help"]);
 
 const footerGroups = [
   [
@@ -31,6 +41,20 @@ const footerGroups = [
   ],
 ];
 
+function getActiveTab(pathname, state, search, hash) {
+  const stateTab = state?.publicTab;
+  const queryTab = new URLSearchParams(search).get("tab");
+  const requestedTab = stateTab || queryTab || hash.replace(/^#/, "");
+  if (pathname === "/" && publicTabKeys.has(requestedTab)) return requestedTab;
+
+  const pathMatch = links.find(([path]) => path === pathname);
+  return pathMatch?.[2] || (pathname === "/" ? "home" : "");
+}
+
+function tabHref() {
+  return "/";
+}
+
 function CompactFooter() {
   return (
     <footer className="public-compact-footer shrink-0 border-t border-outline-variant/70 bg-surface-container-lowest px-4 py-2.5 sm:px-6">
@@ -50,12 +74,19 @@ function CompactFooter() {
 
 export default function PublicLayout({ children, compactFooter = false }) {
   const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [footerSection, setFooterSection] = useState("");
   const menuButtonRef = useRef(null);
   const drawerRef = useRef(null);
   const drawerCloseButtonRef = useRef(null);
+  const activeTab = getActiveTab(
+    location.pathname,
+    location.state,
+    location.search,
+    location.hash,
+  ) || "home";
   const destination =
     user?.role === "super_admin"
       ? "/platform"
@@ -242,7 +273,7 @@ export default function PublicLayout({ children, compactFooter = false }) {
           <aside
             aria-label="Menú principal"
             aria-modal="true"
-            className="clay-card absolute inset-y-2 right-2 flex h-[calc(100dvh-1rem)] w-[min(24rem,calc(100vw-1rem))] max-w-full flex-col overflow-hidden rounded-[1.75rem]"
+            className="clay-card absolute inset-0 flex h-full w-full max-w-none flex-col overflow-y-auto rounded-none bg-surface-container-lowest"
             ref={drawerRef}
             role="dialog"
             tabIndex={-1}
@@ -270,10 +301,33 @@ export default function PublicLayout({ children, compactFooter = false }) {
 
             <nav
               aria-label="Navegación móvil"
-              className="flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+              className="flex-1 px-6 py-8"
               id="public-mobile-menu"
             >
-              <div className="mt-3 grid gap-2">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-on-surface-variant">Explorar Wasita</p>
+              <div className="mt-4 grid gap-1.5">
+                {links.map(([, label, tab]) => (
+                  <Link
+                    aria-current={activeTab === tab ? "page" : undefined}
+                    className={`flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 text-base font-bold transition ${
+                      activeTab === tab
+                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                        : "text-on-surface hover:bg-primary-fixed hover:text-primary"
+                    }`}
+                    key={tab}
+                    onClick={closeMenu}
+                    state={{ publicTab: tab }}
+                    to={tabHref(tab)}
+                  >
+                    {label}
+                    <span aria-hidden="true" className="material-symbols-outlined text-xl">arrow_forward</span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mt-8 border-t border-outline-variant/70 pt-6">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-on-surface-variant">Acceso</p>
+                <div className="mt-3 grid gap-2">
                 {isAuthenticated ? (
                   <>
                     <Link
@@ -335,6 +389,7 @@ export default function PublicLayout({ children, compactFooter = false }) {
                     </Link>
                   </>
                 )}
+                </div>
               </div>
             </nav>
           </aside>
