@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Button from "../../components/atoms/Button";
 import { environment } from "../../config/environment";
+import Skeleton from "../../components/ui/Skeleton";
 import { lookupPublicDentalConsent, signPublicDentalConsent } from "../../services/healthService";
 
 const documentTypes = ["DNI", "CE", "Pasaporte", "Otro"];
@@ -192,7 +193,7 @@ export default function FirmarConsentimiento() {
 
   const invalid = pageStatus === "invalid";
   return (
-    <main className="min-h-screen bg-slate-100 px-3 py-5 text-on-surface sm:px-6 sm:py-10">
+    <main className="public-consent min-h-screen bg-background px-3 py-5 text-on-surface sm:px-6 sm:py-10">
       <section className="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-xl shadow-slate-900/10">
         <header className="bg-primary px-5 py-6 text-white sm:px-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-fixed">{environment.appName}</p>
@@ -201,7 +202,24 @@ export default function FirmarConsentimiento() {
         </header>
 
         <div className="p-5 sm:p-8">
-          {pageStatus === "loading" ? <div className="grid min-h-64 place-items-center text-center"><span className="material-symbols-outlined animate-pulse text-5xl text-primary">qr_code_scanner</span><p className="mt-3 text-sm text-on-surface-variant">Validando el código seguro…</p></div> : null}
+          {pageStatus === "loading" ? (
+            <div
+              aria-busy="true"
+              aria-label="Validando consentimiento"
+              className="grid gap-4 py-6"
+              role="status"
+            >
+              <span className="sr-only">Validando el consentimiento...</span>
+              <Skeleton className="h-4 w-44 rounded-full" />
+              <Skeleton className="h-7 w-3/4 rounded-full" />
+              <Skeleton className="h-4 w-full rounded-full" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-12 rounded-xl" />
+                <Skeleton className="h-12 rounded-xl" />
+              </div>
+              <Skeleton className="h-44 rounded-2xl" />
+            </div>
+          ) : null}
 
           {invalid ? <div className="space-y-4 text-center"><span className="material-symbols-outlined text-6xl text-error">qr_code_2</span><h2 className="text-xl font-bold">Código no disponible</h2><p className="mx-auto max-w-md text-sm leading-6 text-on-surface-variant">{error || "Escanea un nuevo QR desde el consultorio. Los códigos tienen un tiempo limitado y solo se pueden usar una vez."}</p></div> : null}
 

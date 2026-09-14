@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthButton from "../../components/molecules/AuthButton";
 import AuthLayout from "../../components/organisms/AuthLayout";
+import Skeleton from "../../components/ui/Skeleton";
 import { useAuth } from "../../context/authStore";
 import { respondQrLogin, scanQrLogin } from "../../services/authService";
 
@@ -89,9 +90,15 @@ export default function ConfirmarQr() {
     >
       <div aria-live="polite" className="text-center">
         {pageStatus === "loading" ? (
-          <div className="flex flex-col items-center py-8">
-            <span aria-hidden="true" className="material-symbols-outlined animate-pulse text-6xl text-primary">qr_code_scanner</span>
-            <p className="mt-5 text-sm font-semibold text-on-surface-variant">Validando código...</p>
+          <div
+            aria-busy="true"
+            aria-label="Validando código"
+            className="grid justify-items-center gap-4 py-8"
+            role="status"
+          >
+            <Skeleton className="h-20 w-20 rounded-2xl" />
+            <Skeleton className="h-4 w-36 rounded-full" />
+            <Skeleton className="h-3 w-56 max-w-full rounded-full" />
           </div>
         ) : null}
 

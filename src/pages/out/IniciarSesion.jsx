@@ -5,6 +5,7 @@ import AuthButton from "../../components/molecules/AuthButton";
 import AuthField from "../../components/molecules/AuthField";
 import PasswordField from "../../components/molecules/PasswordField";
 import AuthLayout from "../../components/organisms/AuthLayout";
+import Skeleton from "../../components/ui/Skeleton";
 import { environment } from "../../config/environment";
 import { useAuth } from "../../context/authStore";
 import { useI18n } from "../../hooks/useI18n";
@@ -155,7 +156,7 @@ export default function IniciarSesion() {
     }
   };
   return (
-    <AuthLayout>
+    <AuthLayout showProductPreview={false}>
       <div className="mb-7 sm:mb-8">
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.22em] text-primary-container">
           {t("auth.login.eyebrow")}
@@ -277,8 +278,16 @@ export default function IniciarSesion() {
             <img alt="Código QR temporal para iniciar sesión" className="block h-64 w-64" src={qrCode} />
           </div>
         ) : (
-          <div className="flex h-72 w-72 items-center justify-center rounded-3xl border border-outline-variant bg-surface-container-low">
-            <span aria-hidden="true" className="material-symbols-outlined animate-pulse text-5xl text-primary">qr_code_2</span>
+          <div
+            aria-busy="true"
+            aria-label="Generando código QR"
+            className="grid h-72 w-72 place-items-center rounded-3xl border border-outline-variant bg-surface-container-low p-8"
+            role="status"
+          >
+            <div className="grid justify-items-center gap-3">
+              <Skeleton className="h-48 w-48 rounded-2xl" />
+              <Skeleton className="h-3 w-24 rounded-full" />
+            </div>
           </div>
         )}
         <p className="mt-5 max-w-sm text-sm font-semibold leading-6 text-on-surface-variant">{qrStatusLabel(qrStatus)}</p>

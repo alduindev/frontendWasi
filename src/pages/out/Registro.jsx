@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthButton from "../../components/molecules/AuthButton";
 import AuthField from "../../components/molecules/AuthField";
 import PasswordField from "../../components/molecules/PasswordField";
+import FormSkeleton from "../../components/auth/FormSkeleton";
 import AuthLayout from "../../components/organisms/AuthLayout";
 import { useAuth } from "../../context/authStore";
 import { getBusinessTypes } from "../../services/businessTypeService";
@@ -496,7 +497,7 @@ export default function Registro() {
       ) : null}
 
       {loading ? (
-        <div className="h-64 animate-pulse rounded-2xl bg-surface-container" />
+        <FormSkeleton fieldCount={5} showProgress />
       ) : null}
 
       {!loading && currentStep.key === "account" ? (
