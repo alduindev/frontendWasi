@@ -19,6 +19,7 @@ export const getSubscriptionCheckoutStatus = (attemptId, paymentId = '') => {
 }
 export const cancelSubscription = () => apiRequest('/subscription/cancel', { method:'POST' })
 export const reactivateSubscription = () => apiRequest('/subscription/reactivate', { method:'POST' })
+export const requestSubscriptionReactivation = () => apiRequest('/subscription/reactivation-request', { method:'POST' })
 export const createAddOnCheckout = (id, quantity = 1, provider = 'mercado_pago') => apiRequest(
   `/subscription/add-ons/${encodeURIComponent(id)}/checkout?quantity=${encodeURIComponent(quantity)}&provider=${encodeURIComponent(provider)}`,
   { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() } },

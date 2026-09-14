@@ -33,6 +33,7 @@ const eventLabels = {
   addon_activated: "Complemento activado",
   cancellation_scheduled: "Cancelación programada",
   cancellation_revoked: "Cancelación revocada",
+  reactivation_requested: "Reactivación solicitada",
   platform_plan_assigned: "Plan aplicado por Plataforma",
   platform_subscription_reactivated: "Suscripción reactivada por Plataforma",
   platform_subscription_status_changed: "Estado actualizado por Plataforma",
@@ -48,6 +49,7 @@ const eventDescriptions = {
   platform_subscription_updated: "Plataforma actualizó el plan, ciclo o fechas de la suscripción.",
   cancellation_scheduled: "El negocio solicitó cancelar al finalizar el periodo actual.",
   cancellation_revoked: "Se retiró la cancelación programada del periodo.",
+  reactivation_requested: "La empresa solicitó recuperar el acceso; Plataforma debe validar el pago y reactivar el plan.",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-PE", {

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 
 const modalStack = []
 
-export default function Modal({ children, closeOnBackdrop = false, contentClassName = '', dialogClassName = '', fixedHeight = false, onClose, overlayClassName = '', title }) {
+export default function Modal({ children, closeOnBackdrop = false, contentClassName = '', dialogClassName = '', dismissible = true, fixedHeight = false, onClose, overlayClassName = '', title }) {
   const id = useRef(Symbol('modal'))
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -40,14 +40,16 @@ export default function Modal({ children, closeOnBackdrop = false, contentClassN
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-outline-variant bg-white px-4 py-3 sm:px-5 sm:py-4">
           <h2 className="min-w-0 font-heading text-xl font-bold leading-tight text-on-surface sm:text-2xl" id={titleId}>{title}</h2>
-          <button
-            aria-label="Cerrar"
-            className="material-symbols-outlined min-h-11 min-w-11 shrink-0 rounded-full p-2 text-on-surface-variant hover:bg-surface-container-low"
-            onClick={onClose}
-            type="button"
-          >
-            close
-          </button>
+          {dismissible ? (
+            <button
+              aria-label="Cerrar"
+              className="material-symbols-outlined min-h-11 min-w-11 shrink-0 rounded-full p-2 text-on-surface-variant hover:bg-surface-container-low"
+              onClick={onClose}
+              type="button"
+            >
+              close
+            </button>
+          ) : null}
         </div>
         <div className={contentClassName || 'min-h-0 overflow-y-auto'}>{children}</div>
       </motion.div>
