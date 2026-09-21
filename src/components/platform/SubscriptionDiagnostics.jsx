@@ -1,3 +1,5 @@
+import { parseSubscriptionDate } from '../../utils/subscriptionTiming';
+
 const statusLabels = {
   trial: "En prueba",
   trialing: "En prueba",
@@ -49,7 +51,7 @@ const eventDescriptions = {
   platform_subscription_updated: "Plataforma actualizó el plan, ciclo o fechas de la suscripción.",
   cancellation_scheduled: "El negocio solicitó cancelar al finalizar el periodo actual.",
   cancellation_revoked: "Se retiró la cancelación programada del periodo.",
-  reactivation_requested: "La empresa solicitó recuperar el acceso; Plataforma debe validar el pago y reactivar el plan.",
+  reactivation_requested: "La empresa solicitó recuperar el acceso; el superadmin debe revisar la cuenta y habilitar un período vigente.",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-PE", {
@@ -64,8 +66,8 @@ const money = (value, currency = "PEN") =>
 
 const formatDate = (value) => {
   if (!value) return "Sin fecha";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "Sin fecha" : dateFormatter.format(parsed);
+  const parsed = parseSubscriptionDate(value);
+  return parsed ? dateFormatter.format(parsed) : "Sin fecha";
 };
 
 const eventLabel = (value) =>
@@ -76,6 +78,7 @@ const statusLabel = (value) => statusLabels[value] || String(value || "sin estad
 function eventDetails(event) {
   const metadata = event.metadata || {};
   const details = [];
+  if (event.eventType === "reactivation_requested") details.push(metadata.status === "resolved" ? "Solicitud atendida" : "Pendiente de revisión");
   if (metadata.plan) details.push(`Plan asignado: ${metadata.plan}`);
   if (metadata.previousPlan) details.push(`Plan anterior: ${metadata.previousPlan}`);
   if (metadata.billingInterval) {

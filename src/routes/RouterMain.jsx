@@ -15,6 +15,8 @@ import { useAuth } from "../context/authStore";
 import NetworkActivity from "../components/ui/NetworkActivity";
 import WasitaLoadingScreen from "../components/ui/WasitaLoadingScreen";
 import RouterOut from "./out/RouterOut";
+import SubscriptionExpiryAlert from "../components/subscription/SubscriptionExpiryAlert";
+import PlatformRequestAlerts from "../components/platform/PlatformRequestAlerts";
 
 const AdminRoutes = lazy(() => import("./in/RouterIn"));
 const OperatorRoutes = lazy(() => import("./operator/OperatorRoutes"));
@@ -171,17 +173,21 @@ export default function RouterMain() {
   return (
     <I18nProvider>
       <AuthProvider>
-        <AppConfigProvider>
           <ToastProvider>
             <NetworkActivity />
             <BrowserRouter>
               <RouteScrollReset />
-              <OnboardingProvider>
-                <AppRoutes />
-              </OnboardingProvider>
+              <PlatformRequestAlerts>
+              <SubscriptionExpiryAlert>
+                <AppConfigProvider>
+                  <OnboardingProvider>
+                    <AppRoutes />
+                  </OnboardingProvider>
+                </AppConfigProvider>
+              </SubscriptionExpiryAlert>
+              </PlatformRequestAlerts>
             </BrowserRouter>
           </ToastProvider>
-        </AppConfigProvider>
       </AuthProvider>
     </I18nProvider>
   );

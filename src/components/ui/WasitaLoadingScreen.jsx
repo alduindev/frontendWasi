@@ -2,12 +2,14 @@ import WasitaMark from "./WasitaMark";
 
 const WELCOME_TEXT = "BIENVENIDO A WASITA";
 
-export default function WasitaLoadingScreen() {
+export default function WasitaLoadingScreen({ accessibleLabel = "Preparando Wasita", statusText = "", variant = "default", welcomeText = WELCOME_TEXT }) {
+  const isLogout = variant === "logout";
+
   return (
     <div
-      aria-label="Preparando Wasita"
+      aria-label={accessibleLabel}
       aria-live="polite"
-      className="wasita-loading-screen"
+      className={`wasita-loading-screen ${isLogout ? "wasita-logout-screen" : ""}`}
       role="status"
     >
       <div className="wasita-loading-content">
@@ -20,7 +22,7 @@ export default function WasitaLoadingScreen() {
         </div>
 
         <p className="wasita-loading-welcome" aria-hidden="true">
-          {Array.from(WELCOME_TEXT).map((letter, index) => (
+          {Array.from(welcomeText).map((letter, index) => (
             <span
               className="wasita-loading-letter"
               key={`${letter}-${index}`}
@@ -30,7 +32,8 @@ export default function WasitaLoadingScreen() {
             </span>
           ))}
         </p>
-        <span className="sr-only">Preparando tu espacio en Wasita</span>
+        {statusText ? <p className="wasita-loading-status">{statusText}</p> : null}
+        <span className="sr-only">{accessibleLabel}</span>
       </div>
     </div>
   );

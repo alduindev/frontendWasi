@@ -4,9 +4,11 @@ export const SUBSCRIPTION_ALERT_WINDOW_DAYS = 10.5
 
 const ALERTABLE_STATUSES = new Set(['active', 'trialing'])
 
-function parseDate(value) {
+export function parseSubscriptionDate(value) {
   if (!value) return null
-  const date = new Date(value)
+  // Legacy API datetimes are UTC but do not include an offset.
+  const normalized = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value) && !/(Z|[+-]\d{2}:\d{2})$/i.test(value) ? `${value}Z` : value
+  const date = new Date(normalized)
   return Number.isNaN(date.getTime()) ? null : date
 }
 
@@ -18,7 +20,7 @@ export function getSubscriptionDeadline(subscription) {
     ? [['trial', subscription.trialEndsAt], ['trial', subscription.currentPeriodEnd]]
     : [['subscription', subscription.currentPeriodEnd], ['subscription', subscription.nextBillingAt], ['subscription', subscription.trialEndsAt]]
   const candidate = candidates.find(([, value]) => Boolean(value))
-  const endAt = parseDate(candidate?.[1])
+  const endAt = parseSubscriptionDate(candidate?.[1])
   if (!endAt) return null
 
   return { endAt, kind: candidate[0] }
@@ -32,7 +34,7 @@ export function getSubscriptionEndDate(subscription) {
     : subscription.status === 'trialing'
       ? subscription.trialEndsAt || subscription.currentPeriodEnd || subscription.expiresAt
       : subscription.currentPeriodEnd || subscription.trialEndsAt || subscription.expiresAt
-  return parseDate(value)
+  return parseSubscriptionDate(value)
 }
 
 export function getSubscriptionExpiryAlert(subscription, now = new Date()) {
@@ -46,6 +48,13 @@ export function getSubscriptionExpiryAlert(subscription, now = new Date()) {
 }
 
 export function formatSubscriptionRemaining(daysRemaining) {
+  if (daysRemaining < 1) {
+    const minutes = Math.ceil(daysRemaining * 24 * 60)
+    if (minutes <= 1) return 'menos de un minuto'
+    if (minutes < 60) return `${minutes} minutos`
+    const hours = Math.ceil(minutes / 60)
+    return `${hours} hora${hours === 1 ? '' : 's'}`
+  }
   const days = Math.max(1, Math.ceil(daysRemaining))
   if (days < 7) return `${days} día${days === 1 ? '' : 's'}`
 

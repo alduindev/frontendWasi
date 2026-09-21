@@ -6,6 +6,7 @@ const idempotencyKey = () => (
 )
 
 export const getSubscription = () => apiRequest('/subscription')
+export const getSubscriptionAccess = () => apiRequest('/subscription/access', { signal: AbortSignal.timeout(15_000) })
 export const getUsage = () => apiRequest('/subscription/usage')
 export const getAddOns = () => apiRequest('/add-ons')
 export const createSubscriptionCheckout = (data) => apiRequest('/subscription/checkout', {

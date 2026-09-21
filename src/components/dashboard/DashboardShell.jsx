@@ -18,7 +18,6 @@ import Badge from '../atoms/Badge'
 import BrandLogo from '../molecules/BrandLogo'
 import ConfirmDialog from '../molecules/ConfirmDialog'
 import PreferenceControls from '../molecules/PreferenceControls'
-import SubscriptionExpiryAlert from '../subscription/SubscriptionExpiryAlert'
 
 const NOTIFICATION_REFRESH_INTERVAL_MS = 30_000
 
@@ -645,12 +644,12 @@ export default function DashboardShell({
 
       <ConfirmDialog
         description={t('auth.logoutDescription')}
+        logoutTransition
         onCancel={() => setConfirmLogout(false)}
         onConfirm={handleLogout}
         open={confirmLogout}
         title={t('auth.logoutTitle')}
       />
-      <SubscriptionExpiryAlert />
     </div>
   )
 }

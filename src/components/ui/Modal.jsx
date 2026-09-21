@@ -8,24 +8,39 @@ export default function Modal({ children, closeOnBackdrop = false, contentClassN
   const id = useRef(Symbol('modal'))
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
+  const dismissibleRef = useRef(dismissible)
   const [titleId] = useState(() => `modal-${crypto.randomUUID()}`)
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
+  useEffect(() => { dismissibleRef.current = dismissible }, [dismissible])
   useEffect(() => {
     const modalId = id.current
     modalStack.push(modalId)
+    const previousFocus = document.activeElement
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && modalStack.at(-1) === modalId) onCloseRef.current?.()
+      if (modalStack.at(-1) !== modalId) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        if (dismissibleRef.current) onCloseRef.current?.()
+      }
+      if (event.key === 'Tab') {
+        const controls = [...(dialogRef.current?.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]') || [])].filter((element) => element.getClientRects().length)
+        const first = controls[0]
+        const last = controls.at(-1)
+        if (!first) { event.preventDefault(); dialogRef.current?.focus() }
+        else if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement))) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && (document.activeElement === last || !controls.includes(document.activeElement))) { event.preventDefault(); first.focus() }
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     dialogRef.current?.focus()
-    return () => { window.removeEventListener('keydown', handleKeyDown); document.body.style.overflow = previousOverflow; const index = modalStack.lastIndexOf(modalId); if (index >= 0) modalStack.splice(index, 1) }
+    return () => { window.removeEventListener('keydown', handleKeyDown); document.body.style.overflow = previousOverflow; const index = modalStack.lastIndexOf(modalId); if (index >= 0) modalStack.splice(index, 1); if (previousFocus?.isConnected) previousFocus.focus() }
   }, [])
 
   return createPortal(
-    <div className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/35 p-2 backdrop-blur-sm sm:p-4 ${overlayClassName}`} onMouseDown={closeOnBackdrop ? onClose : undefined}>
+    <div className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/35 p-2 backdrop-blur-sm sm:p-4 ${overlayClassName}`} onMouseDown={dismissible && closeOnBackdrop ? onClose : undefined}>
       <motion.div
         aria-labelledby={titleId}
         aria-modal="true"

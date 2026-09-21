@@ -240,6 +240,12 @@ textarea {
     var(--color-background);
 }
 
+.wasita-logout-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+
 .wasita-loading-screen::before,
 .wasita-loading-screen::after {
   position: absolute;
@@ -320,6 +326,18 @@ textarea {
   text-align: center;
 }
 
+.wasita-loading-status {
+  margin: -0.75rem 0 0;
+  color: var(--color-on-surface-variant);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.wasita-logout-screen .wasita-loading-logo {
+  animation: wasita-loader-goodbye 1.7s ease-in-out infinite;
+}
+
 .wasita-loading-letter {
   display: inline-block;
   opacity: 0;
@@ -360,6 +378,18 @@ textarea {
   }
 }
 
+@keyframes wasita-loader-goodbye {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  50% {
+    opacity: 0.82;
+    transform: translateY(-0.4rem) rotate(-4deg) scale(1.03);
+  }
+}
+
 @keyframes wasita-loader-orbit {
   to {
     transform: rotate(360deg);
@@ -370,7 +400,8 @@ textarea {
   .wasita-loading-glow,
   .wasita-loading-logo,
   .wasita-loading-orbit,
-  .wasita-loading-letter {
+  .wasita-loading-letter,
+  .wasita-logout-screen .wasita-loading-logo {
     animation: none;
   }
 

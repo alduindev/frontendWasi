@@ -23,6 +23,7 @@ export const createPlatformAddOn = (data) => apiRequest('/platform/add-ons',{met
 export const getPlatformCoupons = () => apiRequest('/platform/coupons')
 export const createPlatformCoupon = (data) => apiRequest('/platform/coupons',{method:'POST',body:JSON.stringify(data)})
 export const getPlatformSubscriptions = () => apiRequest('/platform/subscriptions')
+export const getPlatformSubscriptionRequests = () => apiRequest('/platform/subscription-requests', { signal: AbortSignal.timeout(15_000) })
 export const getPlatformPayments = () => apiRequest('/platform/payments')
 export const getPlatformModules = () => apiRequest('/platform/modules')
 export const getIndustryTemplates = () => apiRequest('/platform/industry-templates')

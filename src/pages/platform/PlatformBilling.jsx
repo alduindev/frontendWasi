@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { usePlatformRequests } from "../../context/platformRequestsStore";
 import Modal from "../../components/ui/Modal";
 import {
   createPlatformAddOn,
@@ -8,6 +9,7 @@ import {
   getPlatformAddOns,
   getPlatformCoupons,
   getPlatformModules,
+  getPlatformBusiness,
   getPlatformPayments,
   getPlatformPlans,
   getPlatformSubscriptions,
@@ -15,7 +17,7 @@ import {
   updatePlatformPlan,
 } from "../../services/platformService";
 import SubscriptionDiagnostics from "../../components/platform/SubscriptionDiagnostics";
-import { getSubscriptionEndDate } from "../../utils/subscriptionTiming";
+import { getSubscriptionEndDate, parseSubscriptionDate } from "../../utils/subscriptionTiming";
 
 const field = "min-h-11 rounded-xl border border-outline-variant bg-white px-3";
 const money = (value, currency = "PEN") =>
@@ -284,8 +286,8 @@ function PlanModal({ item, modules, onClose, onSaved }) {
 
 const toDateTimeInput = (value) => {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return "";
+  const date = parseSubscriptionDate(value);
+  if (!date) return "";
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
     .toISOString()
     .slice(0, 16);
@@ -381,6 +383,11 @@ function SubscriptionEditorModal({ subscription, plans, onClose, onSaved }) {
           <button className="mt-3 min-h-10 rounded-xl bg-primary px-4 font-bold text-white" onClick={activateWithoutTrial} type="button">
             Activar sin prueba desde hoy
           </button>
+          <button className="mt-3 ml-2 min-h-10 rounded-xl border border-error px-4 font-bold text-error" onClick={() => setV((current) => ({ ...current, status: "suspended" }))} type="button">
+            Suspender acceso
+          </button>
+          {v.status === "suspended" ? <p className="mt-3 font-bold text-error">Al guardar, todos los usuarios de esta empresa perderán el acceso a los módulos. Podrás reactivarla desde este mismo editor.</p> : null}
+          <p className="mt-2 text-xs">Los cambios se aplican al guardar. La activación es manual y no registra un cobro.</p>
         </div>
         <label className="grid gap-1 text-sm font-bold">
           Plan
@@ -574,7 +581,10 @@ function QuickCreate({ type, onClose, onSaved }) {
   );
 }
 export default function PlatformBilling() {
-  const [tab, setTab] = useState("subscriptions");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = ["requests", "subscriptions", "plans", "addons", "coupons", "payments"].includes(searchParams.get("tab")) ? searchParams.get("tab") : "subscriptions";
+  const setTab = (value) => setSearchParams({ tab: value });
+  const requests = usePlatformRequests();
   const [plans, setPlans] = useState([]);
   const [addons, setAddons] = useState([]);
   const [coupons, setCoupons] = useState([]);
@@ -584,6 +594,10 @@ export default function PlatformBilling() {
   const [modal, setModal] = useState(null);
   const [error, setError] = useState("");
   const [subscriptionQuery, setSubscriptionQuery] = useState("");
+  const [onlyRequests, setOnlyRequests] = useState(false);
+  const [reviewing, setReviewing] = useState(null);
+  const [notice, setNotice] = useState("");
+  const hasRequest = (subscription) => requests?.items.some((request) => request.subscriptionId === subscription.id);
   const load = useCallback(async () => {
     try {
       const [p, a, c, s, pay, m] = await Promise.all([
@@ -609,21 +623,35 @@ export default function PlatformBilling() {
     queueMicrotask(load);
   }, [load]);
   const done = () => {
+    if (modal?.type === "subscription") setNotice("Suscripción actualizada. El negocio comprobará su acceso automáticamente; también puede usar «Comprobar acceso».");
     setModal(null);
     load();
+    void requests?.refresh();
+  };
+  const reviewRequest = async (request) => {
+    setReviewing(request.id);
+    setError("");
+    setNotice("");
+    try {
+      const result = await getPlatformBusiness(request.business.id);
+      if (!result.subscription) throw new Error("Esta empresa ya no tiene una suscripción. Actualiza la bandeja.");
+      setModal({ type: "subscription", item: { ...result.subscription, business: result.business } });
+    } catch (failure) { setError(failure.message); }
+    finally { setReviewing(null); }
   };
   const normalizedSubscriptionQuery = subscriptionQuery.trim().toLowerCase();
-  const visibleSubscriptions = subscriptions.filter((subscription) =>
+  const visibleSubscriptions = subscriptions.filter((subscription) => !onlyRequests || hasRequest(subscription)).filter((subscription) =>
     !normalizedSubscriptionQuery ||
     `${subscription.business.name} ${subscription.plan.name} ${subscription.status} ${subscription.diagnostics?.reasonCode || ""}`
       .toLowerCase()
       .includes(normalizedSubscriptionQuery),
   );
   const tabs = [
+    ["requests", `Solicitudes (${requests?.count ?? 0})`],
+    ["subscriptions", "Suscripciones"],
     ["plans", "Planes"],
     ["addons", "Complementos"],
     ["coupons", "Cupones"],
-    ["subscriptions", "Suscripciones"],
     ["payments", "Pagos"],
   ];
   return (
@@ -672,17 +700,48 @@ export default function PlatformBilling() {
             {error}
           </p>
         ) : null}
+        {notice ? <p role="status" className="mt-5 rounded-xl bg-emerald-50 p-4 text-emerald-900">{notice}</p> : null}
         <nav className="mt-6 flex gap-2 overflow-x-auto">
           {tabs.map(([id, label]) => (
             <button
               className={`min-h-11 whitespace-nowrap rounded-xl px-4 font-bold ${tab === id ? "bg-primary text-white" : "border border-outline-variant bg-white"}`}
               key={id}
+              aria-current={tab === id ? "page" : undefined}
               onClick={() => setTab(id)}
             >
               {label}
             </button>
           ))}
         </nav>
+        {tab === "requests" ? (
+          <section className="mt-5 space-y-4" aria-label="Solicitudes de reactivación">
+            <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-white p-5">
+              <div>
+                <h2 className="font-heading text-xl font-bold">Solicitudes de reactivación</h2>
+                <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">Revisa las empresas que solicitaron recuperar su acceso. Define el plan y el período antes de guardar. Las solicitudes atendidas quedan registradas en el historial de cada suscripción.</p>
+                <p className="mt-2 text-xs text-on-surface-variant">Actualización automática cada 30 segundos. Las más antiguas aparecen primero.</p>
+              </div>
+              <button className="min-h-11 rounded-xl border px-4 font-bold" onClick={() => requests?.refresh()} type="button">Actualizar solicitudes</button>
+            </header>
+            {requests?.error ? <p role="alert" className="rounded-xl bg-error-container p-4 text-error">{requests.error}</p> : null}
+            {requests?.loading ? <p role="status" className="p-5">Cargando solicitudes...</p> : requests?.items.length ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                {requests.items.map((request) => <article className="rounded-2xl border border-outline-variant bg-white p-5" key={request.id}>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="font-heading text-lg font-bold">{request.business.name}</h3>
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950">Pendiente de revisión</span>
+                  </div>
+                  <dl className="mt-4 grid gap-2 text-sm">
+                    <div><dt className="inline text-on-surface-variant">Plan actual: </dt><dd className="inline font-bold">{request.planName}</dd></div>
+                    <div><dt className="inline text-on-surface-variant">Solicitante: </dt><dd className="inline">{request.requestedBy} · {request.requestedRole === "operator" ? "Operador" : "Administrador"}</dd></div>
+                    <div><dt className="inline text-on-surface-variant">Recibida: </dt><dd className="inline">{parseSubscriptionDate(request.createdAt) ? dateTimeFormatter.format(parseSubscriptionDate(request.createdAt)) : "Sin fecha"}</dd></div>
+                  </dl>
+                  <button className="mt-4 min-h-11 w-full rounded-xl bg-primary px-4 font-bold text-white disabled:opacity-50" disabled={Boolean(reviewing) || !plans.length} onClick={() => reviewRequest(request)} type="button">{reviewing === request.id ? "Abriendo..." : "Revisar y gestionar suscripción"}</button>
+                </article>)}
+              </div>
+            ) : !requests?.error ? <div className="rounded-2xl border border-dashed border-outline-variant bg-white p-8 text-center"><h3 className="font-bold">No hay solicitudes pendientes</h3><p className="mt-2 text-sm text-on-surface-variant">Las nuevas solicitudes aparecerán aquí. Puedes administrar cualquier empresa desde la pestaña Suscripciones.</p></div> : null}
+          </section>
+        ) : null}
         {tab === "plans" ? (
           <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {plans.map((x) => (
@@ -781,6 +840,13 @@ export default function PlatformBilling() {
               <p className="mt-3 text-sm text-on-surface-variant">
                 Mostrando {visibleSubscriptions.length} de {subscriptions.length} suscripciones.
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-sm font-bold">
+                  <input checked={onlyRequests} onChange={(event) => setOnlyRequests(event.target.checked)} type="checkbox" />
+                  Solicitudes pendientes ({subscriptions.filter(hasRequest).length})
+                </label>
+                <button className="min-h-11 rounded-xl border px-4 text-sm font-bold" onClick={load} type="button">Actualizar</button>
+              </div>
             </header>
             {visibleSubscriptions.map((x) => (
                 <article className="rounded-2xl border bg-white p-4" key={x.id}>
@@ -802,6 +868,7 @@ export default function PlatformBilling() {
                     <b className="mt-1 block text-sm">{formatSubscriptionEnd(x)}</b>
                   </div>
                   <div className="mt-4 flex flex-wrap items-end gap-2">
+                    {hasRequest(x) ? <span className="rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-950">Reactivación solicitada · pendiente de revisión</span> : null}
                     <button
                       className="min-h-11 rounded-xl bg-primary px-4 text-sm font-bold text-white"
                       onClick={() => setModal({ type: "subscription", item: x })}

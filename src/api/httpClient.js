@@ -32,6 +32,10 @@ function networkActivity(phase, path, method = 'GET') {
   }))
 }
 
+function notifySubscriptionBlocked(response) {
+  if (response.status === 402) window.dispatchEvent(new CustomEvent('wasi:subscription-blocked'))
+}
+
 export async function apiRequest(path, options = {}) {
   const { sensitiveResponse = false, ...requestOptions } = options
   const requestAccessToken = getAccessToken()
@@ -47,6 +51,7 @@ export async function apiRequest(path, options = {}) {
     }
     const payload = response.status === 204 ? null : await response.json().catch(() => null)
     if (!response.ok) {
+      notifySubscriptionBlocked(response)
       const isCurrentAuthenticatedRequest = (
         Boolean(requestAccessToken)
         && getAccessToken() === requestAccessToken
@@ -78,6 +83,7 @@ export async function apiDownload(path) {
   try {
     const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
     if (!response.ok) {
+      notifySubscriptionBlocked(response)
       const payload = await response.json().catch(() => null)
       throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
     }
@@ -101,6 +107,7 @@ export async function apiBlob(path) {
   try {
     const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: requestHeaders() })
     if (!response.ok) {
+      notifySubscriptionBlocked(response)
       const payload = await response.json().catch(() => null)
       throw new ApiError(errorMessage(payload, `Error HTTP ${response.status}`), response.status, payload)
     }

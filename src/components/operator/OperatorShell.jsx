@@ -5,7 +5,6 @@ import Avatar from "../atoms/Avatar";
 import BrandLogo from "../molecules/BrandLogo";
 import ConfirmDialog from "../molecules/ConfirmDialog";
 import AttendanceWidget from "./AttendanceWidget";
-import SubscriptionExpiryAlert from "../subscription/SubscriptionExpiryAlert";
 import { useAuth } from "../../context/authStore";
 import { useResponsiveSidebar } from "../../hooks/useResponsiveSidebar";
 import { useAppConfig } from "../../context/appConfigStore";
@@ -728,12 +727,12 @@ export default function OperatorShell({ action, children, title, subtitle }) {
       </div>
       <ConfirmDialog
         description="Se cerrara tu sesion de trabajo."
+        logoutTransition
         onCancel={() => setConfirmLogout(false)}
         onConfirm={signOut}
         open={confirmLogout}
         title="Cerrar sesion"
       />
-      <SubscriptionExpiryAlert />
     </div>
   );
 }
