@@ -76,7 +76,7 @@ function NavList({ collapsed, items, onNavigate, t, variant }) {
   const isDesktop = variant === 'desktop'
 
   return (
-    <nav aria-label={t('nav.overview')} className={isDesktop ? 'flex-1 space-y-1' : 'grid gap-2'}>
+    <nav aria-label={t('nav.overview')} className={isDesktop ? 'min-h-0 flex-1 space-y-1 overflow-y-auto pb-2' : 'grid gap-2'}>
       {items.map((item) => (
         <NavLink
           className={({ isActive }) =>
@@ -108,10 +108,10 @@ function NavList({ collapsed, items, onNavigate, t, variant }) {
   )
 }
 
-function DesktopSidebar({ collapsed, items, onToggleCollapse, t }) {
+function DesktopSidebar({ collapsed, items, onToggleCollapse, t, workspace }) {
   return (
     <aside
-      className={`fixed left-0 top-0 z-50 hidden h-full flex-col border-r border-outline-variant bg-surface py-5 transition-[width] duration-200 ease-out lg:flex ${
+      className={`fixed left-0 top-0 z-50 hidden h-full flex-col border-r border-white/80 bg-[linear-gradient(160deg,#ffffff_0%,#faf9ff_58%,#f0edff_100%)] py-5 shadow-[8px_0_28px_rgba(49,46,129,0.04)] transition-[width] duration-200 ease-out lg:flex ${
         collapsed ? 'w-[84px]' : 'w-[248px]'
       }`}
       data-onboarding="sidebar"
@@ -135,11 +135,20 @@ function DesktopSidebar({ collapsed, items, onToggleCollapse, t }) {
       </div>
 
       <NavList collapsed={collapsed} items={items} t={t} variant="desktop" />
+      <div className={`mx-3 mt-4 rounded-2xl border border-white/90 bg-white/80 p-3 shadow-sm transition ${collapsed ? 'grid place-items-center px-2' : ''}`}>
+        <span className="material-symbols-outlined text-primary">{workspace.icon}</span>
+        {!collapsed ? (
+          <div className="mt-2 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">{workspace.eyebrow}</p>
+            <p className="mt-1 truncate text-sm font-bold text-on-surface">{workspace.name}</p>
+          </div>
+        ) : null}
+      </div>
     </aside>
   )
 }
 
-function MobileDrawer({ items, onClose, onNavigateAway, open, t }) {
+function MobileDrawer({ items, onClose, onNavigateAway, open, t, workspace }) {
   const panelRef = useRef(null)
   const location = useLocation()
 
@@ -190,6 +199,13 @@ function MobileDrawer({ items, onClose, onNavigateAway, open, t }) {
               >
                 close
               </button>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-primary-fixed/60 p-3 text-on-primary-fixed">
+              <span className="material-symbols-outlined grid h-10 w-10 place-items-center rounded-xl bg-white/80 text-primary">{workspace.icon}</span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">{workspace.eyebrow}</p>
+                <p className="truncate text-sm font-bold">{workspace.name}</p>
+              </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <NavList items={items} onNavigate={onClose} t={t} variant="mobile" />
@@ -507,6 +523,11 @@ export default function DashboardShell({
   const hospitality = config?.template?.dashboardKey === 'hospitality'
   const dental = config?.template?.dashboardKey === 'dental'
   const veterinary = config?.template?.dashboardKey === 'veterinary'
+  const workspace = useMemo(() => ({
+    eyebrow: 'Vista de administración',
+    icon: dental ? 'dentistry' : veterinary ? 'pets' : hospitality ? 'hotel' : 'storefront',
+    name: config?.business?.name || user?.site || 'Tu negocio',
+  }), [config?.business?.name, dental, hospitality, user?.site, veterinary])
   useEffect(() => {
     if (!hospitality&&!dental&&!veterinary) return undefined
     let active = true
@@ -557,18 +578,19 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="min-h-svh w-full overflow-x-hidden bg-background text-on-surface">
-      <DesktopSidebar collapsed={collapsed} items={visibleNavItems} onToggleCollapse={toggleCollapsed} t={t} />
+    <div className={`dashboard-shell min-h-svh w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,rgba(129,120,255,0.12),transparent_32rem),linear-gradient(180deg,#fbfaff_0%,#f7f5f0_38rem)] text-on-surface ${dental ? 'dashboard-shell--dental' : ''}`}>
+      <DesktopSidebar collapsed={collapsed} items={visibleNavItems} onToggleCollapse={toggleCollapsed} t={t} workspace={workspace} />
       <MobileDrawer
         items={visibleNavItems}
         onClose={closeMobile}
         onNavigateAway={closeMobile}
         open={mobileOpen}
         t={t}
+        workspace={workspace}
       />
 
       <header
-        className={`sticky top-0 z-40 h-16 border-b border-outline-variant bg-surface/95 px-2 py-2 backdrop-blur transition-[left] duration-200 ease-out sm:px-4 lg:fixed lg:right-0 lg:px-6 lg:py-0 ${
+        className={`sticky top-0 z-40 h-16 border-b border-white/90 bg-white/80 px-2 py-2 shadow-[0_8px_24px_rgba(49,46,129,0.05)] backdrop-blur-xl transition-[left] duration-200 ease-out sm:px-4 lg:fixed lg:right-0 lg:px-6 lg:py-0 ${
           collapsed ? 'lg:left-[84px]' : 'lg:left-[248px]'
         }`}
       >
@@ -618,18 +640,20 @@ export default function DashboardShell({
 
       <main className={`min-h-svh min-w-0 px-3 py-4 transition-[margin] duration-200 ease-out sm:px-4 lg:px-5 lg:pt-20 ${collapsed ? 'lg:ml-[84px]' : 'lg:ml-[248px]'}`}>
         <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col">
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-            <span>{t('dashboard.breadcrumbRoot')}</span>
-            <span aria-hidden="true">/</span>
-            <span>{activeLabel}</span>
-          </div>
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="min-w-0">
-              <h1 className="font-heading text-2xl font-bold leading-tight text-on-surface lg:text-[28px]">{resolvedTitle}</h1>
-              {subtitle ? <p className="mt-1 max-w-3xl text-sm leading-5 text-on-surface-variant">{subtitle}</p> : null}
+          <section className="dashboard-title-panel mb-4 overflow-hidden rounded-3xl border border-white/90 bg-white/75 px-4 py-4 shadow-[0_12px_32px_rgba(49,46,129,0.06)] backdrop-blur-sm sm:px-5">
+            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+              <span>{workspace.eyebrow}</span>
+              <span aria-hidden="true">/</span>
+              <span>{activeLabel}</span>
             </div>
-            {action ? <div data-onboarding="page-action">{action}</div> : null}
-          </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="min-w-0">
+                <h1 className="font-heading text-2xl font-bold leading-tight text-on-surface lg:text-[28px]">{resolvedTitle}</h1>
+                {subtitle ? <p className="mt-1 max-w-3xl text-sm leading-5 text-on-surface-variant">{subtitle}</p> : null}
+              </div>
+              {action ? <div data-onboarding="page-action">{action}</div> : null}
+            </div>
+          </section>
           <motion.div
             animate={{ opacity: 1, y: 0 }}
             className="min-w-0"

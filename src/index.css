@@ -60,6 +60,78 @@
   }
 }
 
+.dashboard-shell--dental .dashboard-title-panel {
+  margin-bottom: 0.75rem;
+  border-radius: 1.25rem;
+  padding: 0.75rem 1rem;
+}
+
+.dashboard-shell--dental .dental-metrics-rail {
+  gap: 0.5rem;
+}
+
+.dashboard-shell--dental .dental-metrics-rail > .dental-metric-item {
+  flex: 0 0 calc((100% - 0.5rem) / 2);
+}
+
+.dashboard-shell--dental .dental-metric {
+  min-height: 6.5rem;
+  border-radius: 1.25rem;
+  padding: 0.625rem;
+  box-shadow: 0 8px 24px rgba(31, 24, 39, 0.06);
+}
+
+.dashboard-shell--dental .dental-view-switch {
+  margin-top: 0.75rem;
+  border-radius: 1rem;
+}
+
+.dashboard-shell--dental .dental-section-card {
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 24px rgba(31, 24, 39, 0.06);
+}
+
+@media (min-width: 640px) {
+  .dashboard-shell--dental .dashboard-title-panel {
+    margin-bottom: 1rem;
+    border-radius: 1.5rem;
+    padding: 0.875rem 1.25rem;
+  }
+
+  .dashboard-shell--dental .dental-metrics-rail {
+    gap: 0.75rem;
+  }
+
+  .dashboard-shell--dental .dental-metrics-rail > .dental-metric-item {
+    flex-basis: calc((100% - 1.5rem) / 3);
+  }
+
+  .dashboard-shell--dental .dental-metric {
+    min-height: 7rem;
+    border-radius: 1.5rem;
+    padding: 0.75rem;
+  }
+
+  .dashboard-shell--dental .dental-view-switch {
+    margin-top: 1rem;
+    border-radius: 1.25rem;
+  }
+
+  .dashboard-shell--dental .dental-section-card {
+    border-radius: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-shell--dental .dental-metrics-rail {
+    gap: 1rem;
+  }
+
+  .dashboard-shell--dental .dental-metrics-rail > .dental-metric-item {
+    flex-basis: calc((100% - 3rem) / 4);
+  }
+}
+
 :root {
   font-family:
     "Work Sans",
@@ -907,6 +979,35 @@ div:has(> .wasi-page-scroller[aria-label="Acciones rápidas dentales"]) + p {
   .home-slide {
     padding-left: 1.25rem;
     padding-right: 1.25rem;
+  }
+}
+
+/*
+ * A landing slide used to be locked to the viewport height. On compact
+ * screens (and when browser zoom makes the usable height short), that made
+ * the second column disappear behind the compact footer. Let the page grow
+ * and scroll in those contexts; wide screens keep the cinematic carousel.
+ */
+@media (max-width: 1023px), (max-height: 720px) {
+  .public-home {
+    height: auto;
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .public-home-content,
+  .public-home-content > main,
+  .public-home .carousel-fullwidth-viewport,
+  .public-home .carousel-fullwidth-track {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .public-home .home-slide {
+    height: auto;
+    min-height: max(34rem, calc(100svh - 3.5rem));
   }
 }
 

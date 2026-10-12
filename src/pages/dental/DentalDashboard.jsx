@@ -74,7 +74,7 @@ function Metric({ icon, label, value, note, onClick }) {
   return (
     <button
       aria-label={`Ver detalle de ${label}`}
-      className="group relative min-h-28 w-full overflow-hidden rounded-3xl border border-outline-variant bg-white p-3 text-left shadow-[0_12px_40px_rgba(31,24,39,0.06)] transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+      className="dental-metric group relative min-h-28 w-full overflow-hidden rounded-3xl border border-outline-variant bg-white p-3 text-left shadow-[0_12px_40px_rgba(31,24,39,0.06)] transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
       data-no-drag
       onClick={onClick}
       type="button"
@@ -86,15 +86,15 @@ function Metric({ icon, label, value, note, onClick }) {
       <span className="material-symbols-outlined absolute right-3 top-3 text-lg text-primary opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
         arrow_outward
       </span>
-      <p className="relative mt-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+      <p className="relative mt-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant sm:mt-2 sm:text-[11px]">
         {label}
       </p>
-      <p className="relative text-2xl font-extrabold">{value}</p>
+      <p className="relative text-xl font-extrabold sm:text-2xl">{value}</p>
       <div className="relative flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-[11px] text-on-surface-variant">
+        <p className="min-w-0 truncate text-[10px] text-on-surface-variant sm:text-[11px]">
           {note}
         </p>
-        <span className="shrink-0 text-[10px] font-bold text-primary">
+        <span className="hidden shrink-0 text-[10px] font-bold text-primary sm:inline">
           Ver detalle
         </span>
       </div>
@@ -316,7 +316,7 @@ export default function DentalDashboard() {
         </p>
       ) : null}
       <HorizontalScroller
-        className="lg:justify-center"
+        className="dental-metrics-rail lg:justify-center"
         label="Indicadores dentales"
       >
         {[
@@ -353,7 +353,7 @@ export default function DentalDashboard() {
           },
         ].map((metric) => (
           <div
-            className="w-[70vw] max-w-72 shrink-0 snap-start sm:w-60 lg:w-64"
+            className="dental-metric-item shrink-0 snap-start"
             key={metric.id}
           >
             <Metric
@@ -366,23 +366,23 @@ export default function DentalDashboard() {
           </div>
         ))}
       </HorizontalScroller>
-      <div className="mx-auto mt-3 grid w-full max-w-2xl grid-cols-3 rounded-2xl border border-outline-variant bg-white p-1">
+      <div className="dental-view-switch mx-auto mt-3 grid w-full max-w-2xl grid-cols-3 rounded-2xl border border-outline-variant bg-white p-1">
         <button
-          className={`min-h-10 rounded-xl px-2 text-sm font-bold ${view === "flow" ? "bg-primary text-white" : "text-on-surface-variant"}`}
+          className={`min-h-9 rounded-lg px-1.5 text-xs font-bold sm:min-h-10 sm:rounded-xl sm:px-2 sm:text-sm ${view === "flow" ? "bg-primary text-white" : "text-on-surface-variant"}`}
           onClick={() => setView("flow")}
           type="button"
         >
           Flujo clínico
         </button>
         <button
-          className={`min-h-10 rounded-xl px-2 text-sm font-bold ${view === "agenda" ? "bg-primary text-white" : "text-on-surface-variant"}`}
+          className={`min-h-9 rounded-lg px-1.5 text-xs font-bold sm:min-h-10 sm:rounded-xl sm:px-2 sm:text-sm ${view === "agenda" ? "bg-primary text-white" : "text-on-surface-variant"}`}
           onClick={() => setView("agenda")}
           type="button"
         >
           Agenda
         </button>
         <button
-          className="flex min-h-10 items-center justify-center gap-1 rounded-xl px-2 text-sm font-bold text-primary hover:bg-primary-fixed"
+          className="flex min-h-9 items-center justify-center gap-1 rounded-lg px-1.5 text-xs font-bold text-primary hover:bg-primary-fixed sm:min-h-10 sm:rounded-xl sm:px-2 sm:text-sm"
           onClick={() => setQuickOpen(true)}
           type="button"
         >
@@ -391,10 +391,10 @@ export default function DentalDashboard() {
         </button>
       </div>
       {view === "flow" && owner ? (
-        <section className="mt-3">
+        <section className="mt-2 sm:mt-3">
           <div className="mb-2 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold">Operación de hoy</h2>
+              <h2 className="text-base font-bold sm:text-lg">Operación de hoy</h2>
               <p className="text-xs text-on-surface-variant">
                 Selecciona un estado para revisar sus pacientes.
               </p>
@@ -403,18 +403,18 @@ export default function DentalDashboard() {
               Actualiza cada 15 s
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 md:grid-cols-4">
             {groups.map(([status, rows]) => {
               const [label, icon, color] = states[status];
               return (
                 <button
-                  className={`flex min-h-14 items-center justify-between rounded-xl border p-2.5 text-left transition ${activeStatus === status ? `${tone[color]} border-current shadow-sm` : "border-outline-variant bg-white"}`}
+                  className={`flex min-h-12 items-center justify-between rounded-xl border p-2 text-left text-xs transition sm:min-h-14 sm:p-2.5 sm:text-sm ${activeStatus === status ? `${tone[color]} border-current shadow-sm` : "border-outline-variant bg-white"}`}
                   key={status}
                   onClick={() => setActiveStatus(status)}
                   type="button"
                 >
-                  <span className="flex items-center gap-2 text-sm font-bold">
-                    <span className="material-symbols-outlined text-xl">
+                  <span className="flex items-center gap-1.5 font-bold sm:gap-2">
+                    <span className="material-symbols-outlined text-lg sm:text-xl">
                       {icon}
                     </span>
                     {label}
@@ -424,8 +424,8 @@ export default function DentalDashboard() {
               );
             })}
           </div>
-          <Card className="mt-2 min-h-40 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-outline-variant px-3 py-2">
+          <Card className="dental-section-card mt-2 min-h-40 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-outline-variant px-2.5 py-2 sm:px-3">
               <b>{states[activeStatus][0]}</b>
               <span className="text-xs text-on-surface-variant">
                 {activeRows.length} paciente(s)
@@ -472,31 +472,31 @@ export default function DentalDashboard() {
         </section>
       ) : null}
       {view === "agenda" ? (
-        <section className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
-          <Card className="overflow-hidden">
-            <div className="flex items-center justify-between border-b p-3">
+        <section className="mt-2 grid gap-2 sm:mt-3 sm:gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
+          <Card className="dental-section-card overflow-hidden">
+            <div className="flex items-center justify-between border-b p-2.5 sm:p-3">
               <div>
-                <h2 className="text-lg font-bold">Agenda de hoy</h2>
+                <h2 className="text-base font-bold sm:text-lg">Agenda de hoy</h2>
                 <p className="text-xs text-on-surface-variant">
                   Recepción confirma la llegada.
                 </p>
               </div>
               <Link
-                className="rounded-xl border px-3 py-2 text-sm font-bold text-primary"
+                className="rounded-lg border px-2.5 py-1.5 text-xs font-bold text-primary sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm"
                 to="/dashboard/appointments"
               >
                 Calendario
               </Link>
             </div>
-            <div className="grid max-h-64 gap-2 overflow-y-auto p-3">
+            <div className="grid max-h-64 gap-1.5 overflow-y-auto p-2.5 sm:gap-2 sm:p-3">
               {todayItems.map((x) => (
                 <div
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant p-3"
+                  className="flex flex-col items-stretch gap-2 rounded-xl border border-outline-variant p-2 sm:flex-row sm:items-center sm:p-3"
                   key={x.id}
                 >
                   <button
                     aria-label={`Abrir expediente de ${x.patient.firstName} ${x.patient.lastName}`}
-                    className="group flex min-w-0 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                    className="group flex min-w-0 w-full items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 sm:w-auto sm:gap-2.5"
                     onClick={() => openPatientRecord(x.patient)}
                     type="button"
                   >
@@ -517,12 +517,12 @@ export default function DentalDashboard() {
                     </span>
                   </button>
                   {checked.has(x.id) ? (
-                    <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+                    <span className="self-start rounded-full bg-emerald-50 px-2 py-1.5 text-xs font-bold text-emerald-800 sm:self-auto sm:px-3 sm:py-2">
                       Llegada registrada
                     </span>
                   ) : (
                     <button
-                      className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white"
+                      className="min-h-9 w-full rounded-lg bg-primary px-2.5 py-1.5 text-xs font-bold text-white sm:w-auto sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm"
                       onClick={() => checkIn(x)}
                       type="button"
                     >
@@ -538,7 +538,7 @@ export default function DentalDashboard() {
               ) : null}
             </div>
           </Card>
-          <Card className="p-3">
+          <Card className="dental-section-card p-2.5 sm:p-3">
             <h2 className="font-bold">Carga por odontólogo</h2>
             <div className="mt-2 grid max-h-40 gap-2 overflow-y-auto">
               {workload.map(([name, count]) => (
