@@ -6,13 +6,13 @@ const slides = [
   {
     key: "overview",
     node: (
-      <article className="home-slide grid h-full min-h-0 gap-8 rounded-none bg-primary p-7 text-white shadow-[0_18px_36px_rgba(70,78,112,0.16)] sm:px-16 sm:py-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-20 lg:py-16">
+      <article className="home-slide grid h-auto min-h-0 gap-6 rounded-none bg-primary px-6 pb-24 pt-28 text-white shadow-[0_18px_36px_rgba(70,78,112,0.16)] sm:gap-8 sm:px-16 sm:pb-24 sm:pt-28 lg:h-full lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-20 lg:py-16">
         <div>
           <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-fixed">
             <span className="h-2 w-2 rounded-full bg-primary-fixed" />
             Gestión simple. Decisiones claras.
           </span>
-          <h1 className="mt-7 max-w-2xl font-heading text-4xl font-extrabold leading-[1.04] tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="mt-7 max-w-2xl font-heading text-[clamp(2rem,8vw,3.75rem)] font-extrabold leading-[1.04] tracking-tight text-white">
             Tu negocio bajo control, desde cualquier lugar.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-7 text-primary-fixed sm:text-lg">
@@ -52,13 +52,13 @@ const slides = [
   {
     key: "inventory",
     node: (
-      <article className="home-slide grid h-full min-h-0 gap-8 rounded-none border border-outline-variant bg-surface-container-lowest p-7 shadow-[0_12px_28px_rgba(70,78,112,0.08)] sm:px-16 sm:py-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-20 lg:py-16">
+      <article className="home-slide grid h-auto min-h-0 gap-6 rounded-none border border-outline-variant bg-surface-container-lowest px-6 pb-24 pt-28 shadow-[0_12px_28px_rgba(70,78,112,0.08)] sm:gap-8 sm:px-16 sm:pb-24 sm:pt-28 lg:h-full lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-20 lg:py-16">
         <div>
           <span className="clay-badge px-4 py-2 text-xs font-bold uppercase tracking-[0.16em]">
             <span className="material-symbols-outlined text-base text-primary">inventory_2</span>
             Operación diaria
           </span>
-          <h2 className="mt-7 max-w-xl font-heading text-4xl font-extrabold leading-tight text-on-surface sm:text-5xl">
+          <h2 className="mt-7 max-w-xl font-heading text-[clamp(2rem,7vw,3rem)] font-extrabold leading-tight text-on-surface">
             Inventario al día, sin adivinar.
           </h2>
           <p className="mt-5 max-w-lg text-base leading-7 text-on-surface-variant sm:text-lg">
@@ -86,13 +86,13 @@ const slides = [
   {
     key: "team",
     node: (
-      <article className="home-slide grid h-full min-h-0 gap-8 rounded-none border border-primary-fixed-dim/70 bg-primary-fixed p-7 sm:px-16 sm:py-10 lg:grid-cols-[1fr_0.85fr] lg:items-center lg:px-20 lg:py-16">
+      <article className="home-slide grid h-auto min-h-0 gap-6 rounded-none border border-primary-fixed-dim/70 bg-primary-fixed px-6 pb-24 pt-28 sm:gap-8 sm:px-16 sm:pb-24 sm:pt-28 lg:h-full lg:grid-cols-[1fr_0.85fr] lg:items-center lg:px-20 lg:py-16">
         <div>
           <span className="clay-badge px-4 py-2 text-xs font-bold uppercase tracking-[0.16em]">
             <span className="material-symbols-outlined text-base text-primary">groups</span>
             Equipo conectado
           </span>
-          <h2 className="mt-7 max-w-xl font-heading text-4xl font-extrabold leading-tight text-on-primary-fixed sm:text-5xl">
+          <h2 className="mt-7 max-w-xl font-heading text-[clamp(2rem,7vw,3rem)] font-extrabold leading-tight text-on-primary-fixed">
             Cada persona sabe qué hacer.
           </h2>
           <p className="mt-5 max-w-lg text-base leading-7 text-on-primary-fixed/75 sm:text-lg">
@@ -129,13 +129,13 @@ const slides = [
   {
     key: "decisions",
     node: (
-      <article className="home-slide grid h-full min-h-0 gap-8 rounded-none border border-secondary-container bg-secondary-container p-7 sm:px-16 sm:py-10 lg:grid-cols-[1fr_0.85fr] lg:items-center lg:px-20 lg:py-16">
+      <article className="home-slide grid h-auto min-h-0 gap-6 rounded-none border border-secondary-container bg-secondary-container px-6 pb-24 pt-28 sm:gap-8 sm:px-16 sm:pb-24 sm:pt-28 lg:h-full lg:grid-cols-[1fr_0.85fr] lg:items-center lg:px-20 lg:py-16">
         <div>
           <span className="clay-badge px-4 py-2 text-xs font-bold uppercase tracking-[0.16em]">
             <span className="material-symbols-outlined text-base text-secondary">monitoring</span>
             Supervisión
           </span>
-          <h2 className="mt-7 max-w-xl font-heading text-4xl font-extrabold leading-tight text-on-secondary-container sm:text-5xl">
+          <h2 className="mt-7 max-w-xl font-heading text-[clamp(2rem,7vw,3rem)] font-extrabold leading-tight text-on-secondary-container">
             Decisiones más claras, cada semana.
           </h2>
           <p className="mt-5 max-w-lg text-base leading-7 text-on-secondary-container/75 sm:text-lg">
@@ -154,16 +154,16 @@ const slides = [
 
 export default function Landing({ embedded = false }) {
   const content = (
-    <main className="flex min-h-0 flex-1 w-full flex-col overflow-hidden text-on-surface selection:bg-primary-fixed-dim selection:text-on-primary-fixed">
+    <main className="flex min-h-0 w-full flex-1 flex-col overflow-visible text-on-surface selection:bg-primary-fixed-dim selection:text-on-primary-fixed lg:overflow-hidden">
       <section className="flex min-h-0 flex-1 items-stretch px-0 py-0">
         <Carousel
           ariaLabel="Presentación de Wasita"
           autoPlay
           autoPlayInterval={6000}
-          className="h-full w-full"
+          className="h-auto min-h-0 w-full lg:h-full"
           forceMotion
           fullWidth
-          itemClassName="h-full w-full"
+          itemClassName="h-auto w-full lg:h-full"
           items={slides}
           loop
           showIndicators={false}

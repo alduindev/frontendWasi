@@ -140,8 +140,8 @@ export default function PublicLayout({ children, compactFooter = false, homeShel
   return (
     <div className={`public-site flex min-h-svh min-w-0 w-full flex-col bg-background text-on-surface ${homeShell ? "public-home" : ""}`}>
       <header className={`${homeShell ? "absolute left-0 right-0" : "sticky"} top-0 z-50 shrink-0 px-3 pt-3 sm:px-4 sm:pt-4`}>
-        <div className="clay-glass mx-auto max-w-7xl rounded-xl px-3 sm:px-4">
-          <div className="flex min-h-16 items-center justify-between gap-3">
+        <div className="clay-glass mx-auto max-w-7xl rounded-xl px-2 sm:px-4">
+          <div className="flex min-h-16 min-w-0 items-center justify-between gap-2 sm:gap-3">
             <Link
               aria-label="Ir al inicio de Wasita"
               className="group flex min-w-0 items-center gap-3 rounded-2xl px-2 py-2"
@@ -206,7 +206,7 @@ export default function PublicLayout({ children, compactFooter = false, homeShel
               )}
             </div>
 
-            <div className="xl:hidden">
+            <div className="shrink-0 xl:hidden">
               <button
                 aria-controls="public-mobile-menu"
                 aria-expanded={open}

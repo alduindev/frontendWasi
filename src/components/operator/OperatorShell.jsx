@@ -311,6 +311,13 @@ export default function OperatorShell({ action, children, title, subtitle }) {
   const hospitality = config?.template?.dashboardKey === "hospitality";
   const dental = config?.template?.dashboardKey === "dental";
   const veterinary = config?.template?.dashboardKey === "veterinary";
+  const workspace = veterinary
+    ? { icon: "pets", label: "Operación veterinaria" }
+    : dental
+      ? { icon: "dentistry", label: "Operación clínica" }
+      : hospitality
+        ? { icon: "hotel", label: "Operación hotelera" }
+        : { icon: "point_of_sale", label: "Punto de venta" };
   const unread = veterinary
     ? notifications.length
     : notifications.filter((item) => !item.readAt).length;
@@ -451,12 +458,15 @@ export default function OperatorShell({ action, children, title, subtitle }) {
         )}
       </div>
       {!collapsed || mobile ? (
-        <div className="mt-7 overflow-hidden rounded-2xl bg-primary-fixed p-3 text-on-primary-fixed">
-          <p className="text-xs font-bold uppercase tracking-wider">
-            {dental || veterinary ? "Área clínica" : "Punto de venta"}
-          </p>
-          <p className="mt-1 truncate font-bold">{user.name}</p>
-          <p className="truncate text-xs">{user.site}</p>
+        <div className="mt-7 overflow-hidden rounded-2xl border border-primary/10 bg-[linear-gradient(135deg,rgba(238,236,255,0.96),rgba(255,255,255,0.9))] p-3 text-on-primary-fixed shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-sm">{workspace.icon}</span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">{workspace.label}</p>
+              <p className="mt-1 truncate font-bold">{user.name}</p>
+              <p className="truncate text-xs">{user.site}</p>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="mt-7 flex justify-center">
@@ -482,9 +492,9 @@ export default function OperatorShell({ action, children, title, subtitle }) {
   );
 
   return (
-    <div className="min-h-svh overflow-x-hidden bg-[#f7f4ef] text-on-surface">
+    <div className="min-h-svh overflow-x-hidden bg-[radial-gradient(circle_at_top_right,rgba(129,120,255,0.14),transparent_30rem),linear-gradient(180deg,#fbfaff_0%,#f7f4ef_38rem)] text-on-surface">
       <aside
-        className={`fixed inset-y-0 left-0 z-50 hidden border-r border-outline-variant bg-white p-4 transition-[width] duration-200 ease-out lg:block ${collapsed ? "w-[84px]" : "w-64"}`}
+      className={`fixed inset-y-0 left-0 z-50 hidden overflow-y-auto border-r border-white/80 bg-white/85 p-4 shadow-[8px_0_28px_rgba(49,46,129,0.04)] backdrop-blur-xl transition-[width] duration-200 ease-out lg:block ${collapsed ? "w-[84px]" : "w-64"}`}
         data-onboarding="sidebar"
       >
         {sidebarBody()}
@@ -522,7 +532,7 @@ export default function OperatorShell({ action, children, title, subtitle }) {
       <div
         className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-[84px]" : "lg:pl-64"}`}
       >
-        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-outline-variant bg-white/95 px-3 backdrop-blur sm:px-5">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-white/90 bg-white/80 px-3 shadow-[0_8px_24px_rgba(49,46,129,0.05)] backdrop-blur-xl sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <button
               aria-controls="operator-mobile-navigation"
@@ -551,6 +561,10 @@ export default function OperatorShell({ action, children, title, subtitle }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-2 rounded-full border border-primary/10 bg-primary-fixed/60 px-3 py-1.5 text-xs font-bold text-primary md:inline-flex">
+              <span className="material-symbols-outlined text-base">{workspace.icon}</span>
+              {workspace.label}
+            </span>
             <div className="relative" ref={notificationsRef}>
               <button
                 aria-label="Notificaciones"
@@ -705,10 +719,11 @@ export default function OperatorShell({ action, children, title, subtitle }) {
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1600px] p-3 sm:p-5">
-          <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
+          <section className="mb-5 overflow-hidden rounded-3xl border border-white/90 bg-white/75 p-4 shadow-[0_12px_32px_rgba(49,46,129,0.06)] backdrop-blur-sm sm:p-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                Operaciones
+                {workspace.label}
               </p>
               <h1 className="mt-1 font-heading text-2xl font-bold sm:text-3xl">
                 {title}
@@ -721,6 +736,7 @@ export default function OperatorShell({ action, children, title, subtitle }) {
             </div>
             {action ? <div className="shrink-0">{action}</div> : null}
           </div>
+          </section>
           <AttendanceWidget />
           <div data-onboarding="page-content">{children}</div>
         </main>

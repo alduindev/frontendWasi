@@ -180,21 +180,21 @@ export default function HospitalityDashboard() {
         <>
           <div className="mx-auto mb-3 grid w-full max-w-2xl grid-cols-3 rounded-2xl border border-outline-variant bg-white p-1">
             <button
-              className={`min-h-10 rounded-xl px-2 text-sm font-bold ${tab === "operation" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant"}`}
+              className={`min-h-10 whitespace-nowrap rounded-xl px-1 text-xs font-bold sm:px-2 sm:text-sm ${tab === "operation" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant"}`}
               onClick={() => setTab("operation")}
               type="button"
             >
               Operación
             </button>
             <button
-              className={`min-h-10 rounded-xl px-2 text-sm font-bold ${tab === "admin" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant"}`}
+              className={`min-h-10 whitespace-nowrap rounded-xl px-1 text-xs font-bold sm:px-2 sm:text-sm ${tab === "admin" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant"}`}
               onClick={() => setTab("admin")}
               type="button"
             >
               Administración
             </button>
             <button
-              className="flex min-h-10 items-center justify-center gap-1 rounded-xl px-2 text-sm font-bold text-primary hover:bg-primary-fixed"
+              className="flex min-h-10 items-center justify-center gap-1 rounded-xl px-1 text-xs font-bold text-primary hover:bg-primary-fixed sm:px-2 sm:text-sm"
               onClick={() => setQuickOpen(true)}
               type="button"
             >

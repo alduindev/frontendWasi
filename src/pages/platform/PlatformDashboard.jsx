@@ -36,18 +36,42 @@ const statusTone = {
   expired: "bg-amber-100 text-amber-900",
   archived: "bg-surface-container-high text-on-surface-variant",
 };
-function Metric({ icon, label, value, note }) {
+const statusLabel = {
+  active: "Activa",
+  trial: "En prueba",
+  suspended: "Suspendida",
+  expired: "Vencida",
+  archived: "Archivada",
+};
+const metricTone = {
+  violet: "from-primary/15 via-white to-white text-primary",
+  sky: "from-sky-100 via-white to-white text-sky-700",
+  amber: "from-amber-100 via-white to-white text-amber-700",
+  emerald: "from-emerald-100 via-white to-white text-emerald-700",
+  rose: "from-rose-100 via-white to-white text-rose-700",
+  slate: "from-slate-100 via-white to-white text-slate-700",
+};
+function Metric({ icon, label, value, note, tone = "violet", compact = false }) {
   return (
-    <article className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
-      <span className="material-symbols-outlined text-primary">{icon}</span>
-      <p className="mt-3 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-        {label}
-      </p>
-      <p className="mt-1 font-heading text-2xl font-bold text-on-surface">
-        {value}
-      </p>
+    <article className={`group relative overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-br ${metricTone[tone] || metricTone.violet} ${compact ? "p-3" : "p-4 sm:p-5"} shadow-[0_10px_30px_rgba(49,46,129,0.07)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(49,46,129,0.12)]`}>
+      <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-current opacity-[0.07]" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.13em] text-on-surface-variant">
+            {label}
+          </p>
+          <p className={`${compact ? "mt-1 text-lg" : "mt-2 text-2xl sm:text-3xl"} truncate font-heading font-extrabold tracking-tight text-on-surface`}>
+            {value}
+          </p>
+        </div>
+        {icon ? (
+          <span className="material-symbols-outlined flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xl shadow-sm">
+            {icon}
+          </span>
+        ) : null}
+      </div>
       {note ? (
-        <p className="mt-1 text-xs text-on-surface-variant">{note}</p>
+        <p className="relative mt-2 text-xs font-medium text-on-surface-variant">{note}</p>
       ) : null}
     </article>
   );
@@ -492,16 +516,19 @@ export default function PlatformDashboard() {
   };
   const Sidebar = () => (
     <aside
-      className={`fixed inset-y-0 left-0 z-[150] w-64 border-r border-white/10 bg-[#1d1020] p-5 text-white transition-transform lg:translate-x-0 ${menu ? "translate-x-0" : "-translate-x-full"}`}
+      className={`fixed inset-y-0 left-0 z-[150] flex w-72 flex-col overflow-hidden border-r border-white/10 bg-[#17132c] p-4 text-white shadow-2xl transition-transform lg:translate-x-0 ${menu ? "translate-x-0" : "-translate-x-full"}`}
     >
       <p className="font-heading text-2xl font-extrabold">WASITA</p>
       <p className="mt-2 text-xs font-bold uppercase tracking-widest text-primary-fixed">
         Administración SaaS
       </p>
-      <nav className="mt-8 grid gap-2">
+      <div className="mt-6 px-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.17em] text-white/45">Plataforma</p>
+      </div>
+      <nav className="mt-2 grid gap-1.5">
         {nav.map((item) => (
           <button
-            className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold ${section === item.id ? "bg-white text-primary" : "text-white/80 hover:bg-white/10"}`}
+            className={`group flex min-h-12 items-center gap-3 rounded-xl px-3.5 text-left text-sm font-bold transition ${section === item.id ? "bg-white text-primary shadow-[0_8px_22px_rgba(0,0,0,0.18)]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
             key={item.id}
             onClick={() => {
               setSection(item.id);
@@ -509,26 +536,34 @@ export default function PlatformDashboard() {
             }}
             type="button"
           >
-            <span className="material-symbols-outlined">{item.icon}</span>
+            <span className={`material-symbols-outlined text-xl ${section === item.id ? "text-primary" : "text-white/60 group-hover:text-primary-fixed"}`}>{item.icon}</span>
             {item.label}
           </button>
         ))}
       </nav>
-      <div className="absolute bottom-5 left-5 right-5">
-        <p className="truncate text-sm font-bold">{user.name}</p>
-        <p className="truncate text-xs text-white/60">{user.email}</p>
+      <div className="mt-auto rounded-2xl border border-white/10 bg-black/15 p-3.5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-fixed font-heading text-sm font-extrabold text-primary">
+            {user.name?.trim()?.charAt(0)?.toUpperCase() || "A"}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">{user.name}</p>
+            <p className="truncate text-xs text-white/55">{user.email}</p>
+          </div>
+        </div>
         <button
-          className="mt-3 min-h-11 w-full rounded-xl border border-white/30 text-sm font-bold"
+          className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-sm font-bold text-white/85 transition hover:bg-white/10"
           onClick={exit}
           type="button"
         >
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">logout</span>
           Cerrar sesión
         </button>
       </div>
     </aside>
   );
   return (
-    <div className="min-h-svh overflow-x-hidden bg-background text-on-surface">
+    <div className="min-h-svh overflow-x-hidden bg-[#f6f7fc] text-on-surface">
       <Sidebar />
       {menu ? (
         <button
@@ -538,11 +573,14 @@ export default function PlatformDashboard() {
           type="button"
         />
       ) : null}
-      <main className="min-w-0 p-3 sm:p-5 lg:ml-64 lg:p-7">
-        <header className="flex items-center gap-3">
+      <main className="relative min-w-0 p-3 sm:p-5 lg:ml-72 lg:p-7 xl:p-9">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-28 -top-40 h-96 w-96 rounded-full bg-primary-fixed/45 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute left-1/3 top-52 h-64 w-64 rounded-full bg-secondary-container/40 blur-3xl" />
+        <header className="relative flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/75 p-3.5 shadow-[0_8px_30px_rgba(49,46,129,0.06)] backdrop-blur-sm sm:p-4">
+          <div className="flex min-w-0 items-center gap-3">
           <button
             aria-label="Abrir menú"
-            className="material-symbols-outlined min-h-11 min-w-11 rounded-xl border border-outline-variant lg:hidden"
+            className="material-symbols-outlined min-h-11 min-w-11 rounded-xl border border-outline-variant bg-white text-on-surface shadow-sm lg:hidden"
             onClick={() => setMenu(true)}
             type="button"
           >
@@ -556,6 +594,15 @@ export default function PlatformDashboard() {
               {nav.find((x) => x.id === section)?.label}
             </h1>
           </div>
+          </div>
+          <button
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-white px-3.5 text-sm font-bold text-on-surface transition hover:border-primary hover:text-primary"
+            onClick={load}
+            type="button"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
+            <span className="hidden sm:inline">Actualizar</span>
+          </button>
         </header>
         {error ? (
           <div className="mt-5 rounded-xl bg-error-container p-4 text-on-error-container">
@@ -564,53 +611,100 @@ export default function PlatformDashboard() {
         ) : null}
         {section === "dashboard" ? (
           <>
-            <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <section className="relative mt-5 overflow-hidden rounded-3xl bg-[#211b47] px-5 py-6 text-white shadow-[0_20px_42px_rgba(48,43,99,0.22)] sm:px-7 sm:py-8">
+              <div aria-hidden="true" className="absolute -right-12 -top-20 h-64 w-64 rounded-full border-[28px] border-primary-fixed/20" />
+              <div aria-hidden="true" className="absolute right-24 top-10 h-24 w-24 rounded-full bg-secondary/30 blur-2xl" />
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-2xl">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-primary-fixed">
+                    <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,0.15)]" />
+                    Operaci&oacute;n de plataforma
+                  </span>
+                  <h2 className="mt-4 font-heading text-2xl font-extrabold tracking-tight sm:text-3xl">Todo el negocio, con una vista m&aacute;s clara.</h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/70 sm:text-base">Supervisa empresas, suscripciones y actividad desde un solo centro de control.</p>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  <button
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-primary shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-fixed"
+                    onClick={() => navigate("/platform/billing?tab=requests")}
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="material-symbols-outlined text-lg">notifications_active</span>
+                    Ver solicitudes
+                  </button>
+                  <button
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/15"
+                    onClick={() => setSection("businesses")}
+                    type="button"
+                  >
+                    Empresas
+                    <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+            <section aria-label="Resumen de plataforma" className="relative mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Metric
                 icon="domain"
                 label="Empresas"
                 value={data?.businesses ?? "—"}
                 note={`${data?.trialBusinesses || 0} en prueba`}
+                tone="violet"
               />
               <Metric
                 icon="group"
                 label="Usuarios"
                 value={data?.users ?? "—"}
                 note={`${data?.operators || 0} operadores`}
+                tone="sky"
               />
               <Metric
                 icon="payments"
+                tone="amber"
                 label="MRR"
                 value={data ? formatCurrency(data.mrr) : "—"}
                 note={`ARR ${data ? formatCurrency(data.arr) : "—"}`}
               />
               <Metric
                 icon="shopping_cart"
+                tone="emerald"
                 label="Ventas globales"
                 value={data ? formatCurrency(data.globalSales) : "—"}
               />
+            </section>
+            <section aria-label="Indicadores operativos" className="relative mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <Metric
                 icon="check_circle"
                 label="Empresas activas"
+                compact
+                tone="emerald"
                 value={data?.activeBusinesses ?? "—"}
               />
               <Metric
                 icon="pause_circle"
                 label="Suspendidas"
+                compact
+                tone={(data?.suspendedBusinesses || data?.expiredBusinesses) ? "rose" : "slate"}
                 value={data?.suspendedBusinesses ?? "—"}
               />
               <Metric
                 icon="inventory_2"
                 label="Productos"
+                compact
+                tone="sky"
                 value={data?.products ?? "—"}
               />
               <Metric
                 icon="image"
+                compact
+                tone="violet"
                 label="Imágenes"
                 value={data?.images ?? "—"}
               />
             </section>
-            <section className="mt-6 rounded-2xl border border-outline-variant bg-white p-5">
-              <div className="flex justify-between">
+            <section className="relative mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.55fr)]">
+              <div className="rounded-3xl border border-white/80 bg-white/85 p-5 shadow-[0_12px_32px_rgba(49,46,129,0.07)] backdrop-blur-sm sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-heading text-xl font-bold">
                     Empresas recientes
@@ -643,19 +737,36 @@ export default function PlatformDashboard() {
                       </span>
                     </span>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[x.status]}`}
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[x.status] || statusTone.archived}`}
                     >
-                      {x.status}
+                      {statusLabel[x.status] || x.status}
                     </span>
                   </button>
                 ))}
               </div>
+              </div>
+              <aside className="overflow-hidden rounded-3xl border border-primary-fixed-dim/60 bg-primary-fixed p-5 text-on-primary-fixed shadow-[0_12px_32px_rgba(49,46,129,0.08)] sm:p-6">
+                <span className="material-symbols-outlined flex h-11 w-11 items-center justify-center rounded-2xl bg-white/75 text-primary shadow-sm">monitoring</span>
+                <p className="mt-5 text-xs font-bold uppercase tracking-[0.14em] text-primary">Estado operativo</p>
+                <p className="mt-2 font-heading text-3xl font-extrabold">{(data?.suspendedBusinesses || 0) + (data?.expiredBusinesses || 0)}</p>
+                <p className="mt-1 text-sm leading-6 text-on-primary-fixed/70">empresas requieren revisi&oacute;n por suspensi&oacute;n o vencimiento.</p>
+                <div className="mt-6 grid gap-2">
+                  <button className="inline-flex min-h-11 items-center justify-between rounded-xl bg-white px-3.5 text-sm font-bold text-primary transition hover:bg-primary-fixed-dim" onClick={() => setSection("businesses")} type="button">
+                    Revisar empresas
+                    <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_forward</span>
+                  </button>
+                  <button className="inline-flex min-h-11 items-center justify-between rounded-xl border border-primary/15 bg-white/45 px-3.5 text-sm font-bold text-on-primary-fixed transition hover:bg-white/70" onClick={() => navigate("/platform/billing?tab=requests")} type="button">
+                    Suscripciones
+                    <span aria-hidden="true" className="material-symbols-outlined text-lg">workspace_premium</span>
+                  </button>
+                </div>
+              </aside>
             </section>
           </>
         ) : null}
         {section === "businesses" ? (
-          <section className="mt-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <section className="relative mt-5">
+            <div className="flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/80 p-3.5 shadow-[0_8px_26px_rgba(49,46,129,0.05)] backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm text-on-surface-variant">
                   {businesses.length} empresas visibles
@@ -670,7 +781,7 @@ export default function PlatformDashboard() {
                 </label>
               </div>
               <input
-                className="min-h-11 rounded-xl border border-outline-variant bg-white px-3 outline-none focus:border-primary"
+                className="min-h-11 w-full rounded-xl border border-outline-variant bg-white px-3 outline-none transition focus:border-primary sm:w-72"
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar empresa o estado"
                 value={query}
@@ -679,19 +790,19 @@ export default function PlatformDashboard() {
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {visible.map((x) => (
                 <button
-                  className="rounded-2xl border border-outline-variant bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg"
+                  className="group rounded-3xl border border-white/80 bg-white/85 p-4 text-left shadow-[0_8px_24px_rgba(49,46,129,0.05)] transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_16px_30px_rgba(49,46,129,0.12)]"
                   key={x.id}
                   onClick={() => open(x.id)}
                   type="button"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <span className="material-symbols-outlined flex h-11 w-11 items-center justify-center rounded-xl bg-primary-fixed text-primary">
+                    <span className="material-symbols-outlined flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-fixed text-primary transition group-hover:scale-105">
                       store
                     </span>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[x.status]}`}
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${statusTone[x.status] || statusTone.archived}`}
                     >
-                      {x.status}
+                      {statusLabel[x.status] || x.status}
                     </span>
                   </div>
                   <h2 className="mt-4 font-heading text-lg font-bold">
